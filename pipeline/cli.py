@@ -1,0 +1,391 @@
+"""Command line entry point.
+
+    python3 -m pipeline.cli <command> --help
+
+Commands, in the order design-spec.md section 8 says to use them:
+
+    pools              show the frozen pools and the design space size
+    validate           gate a config, batch or session file
+    emit-unity-pools   regenerate unity/PoolConstants.cs from pools.py
+    generate           ask Claude for candidates for one target label
+    generate-all       every emotion plus the neutral control arm
+    random-control     the uniform-draw control arm (no API calls)
+    merge              combine run files into one pool of rooms
+    build-session      draw one participant's trial list
+    export-unity       strip pipeline-only fields, write an engine-ready batch
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+
+from .pools import (
+    BRIGHTNESSES,
+    EMOTIONS,
+    HUES,
+    NEUTRAL_LABEL,
+    SATURATIONS,
+    SHAPES,
+    TEXTURES,
+    UNASSIGNED_LABEL,
+    WALL_VALUE,
+    design_space_size,
+)
+from .schema import unity_config
+from .validate import format_violations, validate_batch
+
+
+def _load(path: str) -> dict | list:
+    with open(path, encoding="utf-8") as handle:
+        return json.load(handle)
+
+
+def _rooms_of(payload: dict | list) -> list[dict]:
+    """Accept a single config, a `{"rooms": [...]}` batch, a session, or a bare list."""
+    if isinstance(payload, list):
+        return payload
+    for key in ("rooms", "trials"):
+        if key in payload:
+            return payload[key]
+    return [payload]
+
+
+def _is_session(payload: dict | list) -> bool:
+    return isinstance(payload, dict) and "trials" in payload
+
+
+def _write(path: str | None, payload: dict) -> None:
+    text = json.dumps(payload, indent=2, ensure_ascii=False) + "\n"
+    if path is None or path == "-":
+        sys.stdout.write(text)
+        return
+    with open(path, "w", encoding="utf-8") as handle:
+        handle.write(text)
+    print(f"wrote {path}")
+
+
+# ---------------------------------------------------------------- commands
+
+
+def cmd_pools(args: argparse.Namespace) -> int:
+    print("LLM-controlled pools (design-spec.md section 3)")
+    print(f"  hue        ({len(HUES):2d}) {', '.join(str(v) for v in HUES)}")
+    print(f"  saturation ({len(SATURATIONS):2d}) {', '.join(str(v) for v in SATURATIONS)}")
+    print(f"  brightness ({len(BRIGHTNESSES):2d}) {', '.join(str(v) for v in BRIGHTNESSES)}")
+    print(f"  texture    ({len(TEXTURES):2d}) {', '.join(TEXTURES)}")
+    print()
+    print("Researcher-set, never an LLM output")
+    print(f"  shape      ({len(SHAPES):2d}) {', '.join(SHAPES)}")
+    print(f"  wall HSV value  {WALL_VALUE} (fixed -- brightness lives on the light)")
+    print()
+    print(f"design space          {design_space_size()} rooms")
+    print(f"design space x shape  {design_space_size(include_shape=True)} rooms")
+    return 0
+
+
+def cmd_validate(args: argparse.Namespace) -> int:
+    exit_code = 0
+    for path in args.files:
+        payload = _load(path)
+        trials = _rooms_of(payload)
+        session = _is_session(payload)
+
+        accepted, rejected = validate_batch(
+            [unity_config(room) for room in trials],
+            check_duplicate_ids=not session,
+        )
+        kind = "trials" if session else "rooms"
+        print(f"{path}: {len(accepted)} valid {kind}, {len(rejected)} rejected")
+        for room, violations in rejected:
+            room_id = room.get("id", "<no id>") if isinstance(room, dict) else "<not an object>"
+            print(f"  {room_id}")
+            print(format_violations(violations))
+        if rejected:
+            exit_code = 1
+
+        if session:
+            # Room ids repeat across shapes here; trial_id is the unique key the
+            # response log joins on, so that is what has to be checked.
+            trial_ids = [t.get("trial_id") for t in trials if isinstance(t, dict)]
+            duplicates = {i for i in trial_ids if trial_ids.count(i) > 1}
+            missing = sum(1 for i in trial_ids if not isinstance(i, str))
+            if duplicates or missing:
+                print(f"  duplicate trial_ids: {sorted(duplicates)}; without a trial_id: {missing}")
+                exit_code = 1
+    return exit_code
+
+
+def cmd_emit_unity_pools(args: argparse.Namespace) -> int:
+    from .emit_unity import render
+
+    text = render()
+    if args.out == "-":
+        sys.stdout.write(text)
+    else:
+        with open(args.out, "w", encoding="utf-8") as handle:
+            handle.write(text)
+        print(f"wrote {args.out}")
+    return 0
+
+
+def _generate_one(client, label: str, args: argparse.Namespace):
+    from .generate import generate_candidates
+
+    print(f"generating {args.count} candidates for '{label}' with {args.model}")
+    return generate_candidates(
+        client,
+        label,
+        args.count,
+        model=args.model,
+        sketch=args.sketch,
+        chunk_size=args.chunk_size,
+    )
+
+
+def _report(result) -> None:
+    from .generate import duplicate_rate
+
+    print(
+        f"  {label_summary(result)} | requests: {result.requests} | "
+        f"rejected: {len(result.rejected)} ({result.rejection_rate:.0%}) | "
+        f"duplicate combinations: {duplicate_rate(result.rooms):.0%}"
+    )
+
+
+def label_summary(result) -> str:
+    return f"{result.target_label}: {len(result.rooms)} rooms"
+
+
+def cmd_generate(args: argparse.Namespace) -> int:
+    from .generate import GenerationError, make_client, run_metadata, save_batch
+
+    try:
+        client = make_client()
+        result = _generate_one(client, args.emotion, args)
+    except GenerationError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+
+    _report(result)
+    save_batch(
+        args.out,
+        run_metadata(args.model, {"target_emotion": args.emotion, "requested": args.count}),
+        result.rooms,
+        result.rejected,
+    )
+    print(f"wrote {args.out}")
+    return 0
+
+
+def cmd_generate_all(args: argparse.Namespace) -> int:
+    from .generate import GenerationError, make_client, run_metadata, save_batch
+
+    labels = list(EMOTIONS) + ([NEUTRAL_LABEL] if not args.no_neutral else [])
+    rooms: list[dict] = []
+    rejected: list[dict] = []
+
+    try:
+        client = make_client()
+        for label in labels:
+            result = _generate_one(client, label, args)
+            _report(result)
+            rooms.extend(result.rooms)
+            rejected.extend(result.rejected)
+    except GenerationError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+
+    save_batch(
+        args.out,
+        run_metadata(args.model, {"labels": labels, "requested_per_label": args.count}),
+        rooms,
+        rejected,
+    )
+    print(f"wrote {args.out} ({len(rooms)} rooms)")
+    return 0
+
+
+def cmd_random_control(args: argparse.Namespace) -> int:
+    from .controls import random_rooms
+    from .generate import run_metadata, save_batch
+
+    rooms = random_rooms(args.count, seed=args.seed, unique=args.unique)
+    save_batch(
+        args.out,
+        run_metadata(
+            "none (uniform random draw)",
+            {"target_emotion": UNASSIGNED_LABEL, "seed": args.seed, "unique": args.unique},
+        ),
+        rooms,
+    )
+    print(f"wrote {args.out} ({len(rooms)} control rooms, seed {args.seed})")
+    return 0
+
+
+def cmd_merge(args: argparse.Namespace) -> int:
+    rooms: list[dict] = []
+    sources: list[str] = []
+    for path in args.files:
+        payload = _load(path)
+        rooms.extend(_rooms_of(payload))
+        sources.append(path)
+
+    accepted, rejected = validate_batch([unity_config(room) for room in rooms])
+    if rejected:
+        print(f"error: {len(rejected)} rooms failed validation; not merging", file=sys.stderr)
+        for room, violations in rejected:
+            print(f"  {room.get('id', '<no id>')}", file=sys.stderr)
+            print(format_violations(violations), file=sys.stderr)
+        return 1
+
+    _write(args.out, {"meta": {"merged_from": sources}, "rooms": accepted})
+    return 0
+
+
+def cmd_build_session(args: argparse.Namespace) -> int:
+    from .session import MINUTES_PER_ROOM, TRIAL_BUDGET_MINUTES, build_session
+
+    rooms = _rooms_of(_load(args.batch))
+    try:
+        session = build_session(
+            rooms,
+            participant=args.participant,
+            seed=args.seed,
+            variants_per_emotion=args.variants,
+            neutral_trials=args.neutral,
+            random_trials=args.random,
+        )
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+
+    print(
+        f"{len(session.trials)} trials x {MINUTES_PER_ROOM} min = "
+        f"{session.minutes:.1f} min of trial time"
+    )
+    if session.over_budget:
+        print(
+            f"WARNING: over the {TRIAL_BUDGET_MINUTES:.0f} min trial budget in "
+            f"design-spec.md section 6. Drop variants or control rooms.",
+            file=sys.stderr,
+        )
+
+    _write(
+        args.out,
+        {
+            "meta": {
+                "participant": session.participant,
+                "seed": session.seed,
+                "batch": args.batch,
+                "trial_minutes": session.minutes,
+            },
+            "trials": session.trials,
+        },
+    )
+    return 0
+
+
+def cmd_export_unity(args: argparse.Namespace) -> int:
+    payload = _load(args.file)
+    trials = _rooms_of(payload)
+
+    if _is_session(payload):
+        # Exporting a session: the engine looks rooms up by id, and the response log
+        # joins on trial_id, so those two keys have to be the same string. Room ids
+        # repeat across shapes, trial_ids do not. Presentation order is preserved.
+        trials = [{**trial, "id": trial.get("trial_id", trial.get("id"))} for trial in trials]
+
+    rooms = [unity_config(room) for room in trials]
+    accepted, rejected = validate_batch(rooms)
+    if rejected:
+        print(
+            f"error: {len(rejected)} rooms failed validation; nothing exported",
+            file=sys.stderr,
+        )
+        for room, violations in rejected:
+            print(f"  {room.get('id', '<no id>')}", file=sys.stderr)
+            print(format_violations(violations), file=sys.stderr)
+        return 1
+
+    _write(args.out, {"rooms": accepted})
+    return 0
+
+
+# ---------------------------------------------------------------- parser
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(prog="pipeline", description=__doc__)
+    sub = parser.add_subparsers(dest="command", required=True)
+
+    sub.add_parser("pools", help="show the frozen pools").set_defaults(func=cmd_pools)
+
+    p = sub.add_parser("validate", help="validate config, batch or session files")
+    p.add_argument("files", nargs="+")
+    p.set_defaults(func=cmd_validate)
+
+    p = sub.add_parser("emit-unity-pools", help="regenerate unity/PoolConstants.cs")
+    p.add_argument("--out", default="unity/PoolConstants.cs")
+    p.set_defaults(func=cmd_emit_unity_pools)
+
+    def add_generation_args(sp: argparse.ArgumentParser) -> None:
+        sp.add_argument("--count", type=int, default=50, help="candidates per label (spec: 50-100)")
+        sp.add_argument("--model", default="claude-opus-5")
+        sp.add_argument("--chunk-size", type=int, default=25, help="candidates per request")
+        sp.add_argument(
+            "--sketch",
+            action="store_true",
+            help="also ask for a 2D ASCII sanity check (spec section 7)",
+        )
+
+    p = sub.add_parser("generate", help="candidates for one target label")
+    p.add_argument("--emotion", required=True, choices=list(EMOTIONS) + [NEUTRAL_LABEL])
+    p.add_argument("--out", required=True)
+    add_generation_args(p)
+    p.set_defaults(func=cmd_generate)
+
+    p = sub.add_parser("generate-all", help="every emotion plus the neutral arm")
+    p.add_argument("--out", default="runs/llm_rooms.json")
+    p.add_argument("--no-neutral", action="store_true", help="skip the neutral control arm")
+    add_generation_args(p)
+    p.set_defaults(func=cmd_generate_all)
+
+    p = sub.add_parser("random-control", help="uniform-draw control arm, no API calls")
+    p.add_argument("--count", type=int, default=16)
+    p.add_argument("--seed", type=int, required=True, help="record this in the paper")
+    p.add_argument("--unique", action="store_true", help="reject repeat draws (biases the sample)")
+    p.add_argument("--out", default="runs/random_control.json")
+    p.set_defaults(func=cmd_random_control)
+
+    p = sub.add_parser("merge", help="combine run files into one pool of rooms")
+    p.add_argument("files", nargs="+")
+    p.add_argument("--out", default="-")
+    p.set_defaults(func=cmd_merge)
+
+    p = sub.add_parser("build-session", help="draw one participant's trial list")
+    p.add_argument("--batch", required=True)
+    p.add_argument("--participant", required=True)
+    p.add_argument("--seed", type=int, required=True)
+    p.add_argument("--variants", type=int, default=2, help="rooms per emotion")
+    p.add_argument("--neutral", type=int, default=0, help="neutral control trials")
+    p.add_argument("--random", type=int, default=0, help="random control trials")
+    p.add_argument("--out", default="-")
+    p.set_defaults(func=cmd_build_session)
+
+    p = sub.add_parser("export-unity", help="write an engine-ready batch")
+    p.add_argument("file")
+    p.add_argument("--out", default="-")
+    p.set_defaults(func=cmd_export_unity)
+
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = build_parser().parse_args(argv)
+    return args.func(args)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

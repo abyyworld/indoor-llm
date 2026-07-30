@@ -1,0 +1,67 @@
+{
+  "meta": {
+    "purpose": "Deliberately broken. Every room here must be REJECTED, by the Python validator and by the C# loader. The spec (section 4) names the first two failure modes explicitly. Use it to prove the gate works: `python3 -m pipeline.cli validate configs/INVALID_do_not_ship.json` must exit non-zero."
+  },
+  "rooms": [
+    {
+      "id": "invalid_hue_off_pool",
+      "target_emotion": "calm",
+      "source": "handwritten",
+      "hue": 217,
+      "saturation": 0.2,
+      "brightness": 0.6,
+      "texture": "plaster",
+      "rationale": "hue 217 is not a pool value."
+    },
+    {
+      "id": "invalid_texture_invented",
+      "target_emotion": "calm",
+      "source": "handwritten",
+      "hue": 210,
+      "saturation": 0.2,
+      "brightness": 0.6,
+      "texture": "velvet",
+      "rationale": "velvet is not in the texture pool."
+    },
+    {
+      "id": "invalid_brightness_missing",
+      "target_emotion": "depressed",
+      "source": "handwritten",
+      "hue": 240,
+      "saturation": 0.5,
+      "texture": "brick",
+      "rationale": "brightness is absent -- in C# this would otherwise arrive as 0."
+    },
+    {
+      "id": "invalid_saturation_between_pool_values",
+      "target_emotion": "tense",
+      "source": "handwritten",
+      "hue": 0,
+      "saturation": 0.35,
+      "brightness": 0.4,
+      "texture": "brick",
+      "rationale": "0.35 sits between two pool values and must not be snapped to either."
+    },
+    {
+      "id": "invalid_shape_not_a_pool_value",
+      "target_emotion": "excited",
+      "source": "handwritten",
+      "hue": 60,
+      "saturation": 0.8,
+      "brightness": 1.0,
+      "texture": "plaster",
+      "rationale": "Shape must be a researcher-set pool value.",
+      "shape": "spiral"
+    },
+    {
+      "id": "invalid_hue_off_pool",
+      "target_emotion": "calm",
+      "source": "handwritten",
+      "hue": 0,
+      "saturation": 0.2,
+      "brightness": 0.6,
+      "texture": "plaster",
+      "rationale": "Duplicate id -- valid on its own, but it collides with the first room."
+    }
+  ]
+}

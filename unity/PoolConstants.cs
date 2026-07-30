@@ -1,0 +1,79 @@
+// GENERATED FILE -- DO NOT EDIT BY HAND.
+//
+// Source of truth: pipeline/pools.py
+// Regenerate with:  python3 -m pipeline.cli emit-unity-pools
+//
+// design-spec.md section 3.
+
+namespace EmotionRooms
+{
+    /// <summary>The frozen parameter pools, mirrored from the Python pipeline.</summary>
+    public static class PoolConstants
+    {
+        /// <summary>HSV hue of the wall colour, in degrees.</summary>
+        public static readonly int[] Hues = { 0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330 };
+
+        /// <summary>HSV saturation of the wall colour.</summary>
+        public static readonly float[] Saturations = { 0.2f, 0.5f, 0.8f };
+
+        /// <summary>Normalised intensity of the room's light source.</summary>
+        public static readonly float[] Brightnesses = { 0.2f, 0.4f, 0.6f, 0.8f, 1.0f };
+
+        /// <summary>Greyscale wall materials.</summary>
+        public static readonly string[] Textures = { "plaster", "brick", "wood_grain", "fabric_weave" };
+
+        /// <summary>Researcher-set room geometry. Never an LLM output.</summary>
+        public static readonly string[] Shapes = { "linear", "curved" };
+
+        /// <summary>Legal values of target_emotion, including the control labels.</summary>
+        public static readonly string[] TargetLabels = { "calm", "excited", "depressed", "tense", "neutral", "unassigned" };
+
+        /// <summary>How a room's parameters were chosen -- the experimental arm.</summary>
+        public static readonly string[] Sources = { "llm", "random", "handwritten" };
+
+        /// <summary>Fixed HSV value of wall albedo. Brightness lives on the light.</summary>
+        public const float WallValue = 0.85f;
+
+        /// <summary>Tolerance for float pool membership after narrowing to float32.</summary>
+        public const float FloatTolerance = 0.0001f;
+
+        /// <summary>Total distinct rooms the pools can express, ignoring shape.</summary>
+        public const int DesignSpaceSize = 720;
+
+        public static bool Contains(int[] pool, int value)
+        {
+            for (int i = 0; i < pool.Length; i++)
+            {
+                if (pool[i] == value) return true;
+            }
+            return false;
+        }
+
+        public static bool Contains(float[] pool, float value)
+        {
+            for (int i = 0; i < pool.Length; i++)
+            {
+                float delta = pool[i] - value;
+                if (delta < 0f) delta = -delta;
+                if (delta <= FloatTolerance) return true;
+            }
+            return false;
+        }
+
+        public static bool Contains(string[] pool, string value)
+        {
+            if (value == null) return false;
+            for (int i = 0; i < pool.Length; i++)
+            {
+                if (pool[i] == value) return true;
+            }
+            return false;
+        }
+
+        public static string Join(int[] pool) { return string.Join(", ", System.Array.ConvertAll(pool, v => v.ToString())); }
+
+        public static string Join(float[] pool) { return string.Join(", ", System.Array.ConvertAll(pool, v => v.ToString())); }
+
+        public static string Join(string[] pool) { return string.Join(", ", pool); }
+    }
+}

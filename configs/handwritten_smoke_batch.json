@@ -1,0 +1,52 @@
+{
+  "meta": {
+    "purpose": "Hand-written loader smoke test (design-spec.md section 8.3). Covers all four textures, both extremes of the brightness pool, all three saturations, warm and cool hues, and both room shapes. If every room in this batch builds and looks right, the loader is done.",
+    "source": "handwritten"
+  },
+  "rooms": [
+    {
+      "id": "handwritten_smoke_001",
+      "target_emotion": "calm",
+      "source": "handwritten",
+      "hue": 210,
+      "saturation": 0.2,
+      "brightness": 0.6,
+      "texture": "plaster",
+      "rationale": "Baseline: the spec section 4 example, mid brightness, linear room.",
+      "shape": "linear"
+    },
+    {
+      "id": "handwritten_smoke_002",
+      "target_emotion": "excited",
+      "source": "handwritten",
+      "hue": 30,
+      "saturation": 0.8,
+      "brightness": 1.0,
+      "texture": "brick",
+      "rationale": "Top of the brightness pool at full saturation -- checks the bright end does not blow out.",
+      "shape": "curved"
+    },
+    {
+      "id": "handwritten_smoke_003",
+      "target_emotion": "depressed",
+      "source": "handwritten",
+      "hue": 240,
+      "saturation": 0.5,
+      "brightness": 0.2,
+      "texture": "fabric_weave",
+      "rationale": "Bottom of the brightness pool -- checks a dim room actually reads as dim, ambient included.",
+      "shape": "linear"
+    },
+    {
+      "id": "handwritten_smoke_004",
+      "target_emotion": "neutral",
+      "source": "handwritten",
+      "hue": 0,
+      "saturation": 0.2,
+      "brightness": 0.8,
+      "texture": "wood_grain",
+      "rationale": "Hue 0 -- checks the hue/360 conversion at the wrap point, and the fourth texture.",
+      "shape": "curved"
+    }
+  ]
+}

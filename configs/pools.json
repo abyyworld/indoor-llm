@@ -1,0 +1,52 @@
+{
+  "_README": [
+    "Pool membership as DATA. pipeline/pools.py loads this file and derives the prompt",
+    "text, the output schema, the validator, the control arms and unity/PoolConstants.cs",
+    "from it. Editing the numbers here is the whole job of 'filling in the values' --",
+    "scene brief section 7 step 4: 'ideally this step only touches data, not the Unity",
+    "scene itself'. After editing, re-run:",
+    "    python3 -m pipeline.cli emit-unity-pools --out unity/PoolConstants.cs",
+    "    python3 -m unittest discover -s tests",
+    "and re-validate every run already collected, because rooms valid under the old",
+    "pools may not be valid under the new ones."
+  ],
+
+  "provisional": true,
+  "_provisional_why": [
+    "TRUE until Mengkai's literature review lands. Scene brief section 4: 'Exactly which",
+    "values are permitted for these three is still being finalised through the literature",
+    "review and not yet locked in; please do not build against specific numbers or",
+    "category labels for these three variables at this stage.'",
+    "The values below are placeholders chosen to keep the pipeline runnable and testable.",
+    "Two things are expected to change: hue is likely to become warm/cool/neutral",
+    "CATEGORIES rather than 12 numeric degrees (10 Jul meeting note), and saturation is",
+    "likely to be fixed as a low constant rather than manipulated -- which would make the",
+    "manipulated set three variables, not four. Neither is settled; do not pre-empt them.",
+    "Set this flag to false only when Mengkai confirms the values are locked."
+  ],
+
+  "manipulated": {
+    "hue": [0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330],
+    "saturation": [0.2, 0.5, 0.8],
+    "brightness": [0.2, 0.4, 0.6, 0.8, 1.0],
+    "texture": ["plaster", "brick", "wood_grain", "fabric_weave"]
+  },
+  "_manipulated_notes": {
+    "hue": "HSV hue of the wall colour, in degrees. 30 degrees apart, no wraparound duplicate of 0.",
+    "saturation": "HSV saturation of the wall colour.",
+    "brightness": "Normalised intensity of the room's light. NOT a surface property.",
+    "texture": "Wall material. The maps are greyscale so the hue tints them."
+  },
+
+  "researcher_set": {
+    "shapes": ["linear", "curved"],
+    "wall_value": 0.85
+  },
+  "_researcher_set_notes": {
+    "shapes": "Between-subjects, one per participant. Never an LLM output, never in the pool.",
+    "wall_value": "Wall HSV *value*, fixed. Confirmed: light is neutral white and carries intensity only, so how bright the room looks is the light's job. 0.85 not 1.0 keeps albedo physically sane so bright rooms do not blow out."
+  },
+
+  "emotions": ["calm", "excited", "depressed", "tense"],
+  "_emotions_note": "The four diagonal quadrants of Russell's circumplex, named by Mengkai (scene brief section 1). Note 'depressed', not 'sad'."
+}
