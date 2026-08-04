@@ -10,18 +10,11 @@
     "and re-validate every run already collected, because rooms valid under the old",
     "pools may not be valid under the new ones."
   ],
-  "provisional": true,
+  "provisional": false,
   "_provisional_why": [
-    "TRUE until Mengkai's literature review lands. Scene brief section 4: 'Exactly which",
-    "values are permitted for these three is still being finalised through the literature",
-    "review and not yet locked in; please do not build against specific numbers or",
-    "category labels for these three variables at this stage.'",
-    "The values below are placeholders chosen to keep the pipeline runnable and testable.",
-    "Two things are expected to change: hue is likely to become warm/cool/neutral",
-    "CATEGORIES rather than 12 numeric degrees (10 Jul meeting note), and saturation is",
-    "likely to be fixed as a low constant rather than manipulated -- which would make the",
-    "manipulated set three variables, not four. Neither is settled; do not pre-empt them.",
-    "Set this flag to false only when Mengkai confirms the values are locked."
+    "FALSE as of 3 Aug 2026. Every manipulated pool is now Mengkai's final value:",
+    "hue and saturation 30 Jul, roughness and material type 3 Aug, illuminance 3 Aug.",
+    "Nothing in this file is a placeholder any more."
   ],
   "manipulated": {
     "hue": [
@@ -41,11 +34,10 @@
       0.4
     ],
     "brightness": [
-      30,
-      100,
+      150,
       300,
-      700,
-      900
+      500,
+      750
     ],
     "texture": [
       "plaster",
@@ -77,18 +69,13 @@
       "et al. (2024)."
     ],
     "brightness": [
-      "ENGINEERING DEFAULT, 2 Aug 2026 -- NOT literature-derived. Replace when Mengkai's",
-      "ranges land; this is a data edit and nothing downstream moves.",
+      "FINAL, 3 Aug 2026 (Mengkai). Four illuminance levels in LUX: 150, 300, 500, 750.",
       "",
-      "Units are now LUX, not the old normalised 0.2-1.0. Five levels spanning ordinary",
-      "interior practice: ~30 lx is a dim room at night, ~100 lx ordinary residential",
-      "ambient, ~300 lx light task work, ~700 lx a bright commercial interior, ~900 lx",
-      "brighter still. That range is general knowledge about buildings, NOT evidence about",
-      "emotion, and must not be cited as if it were.",
-      "",
-      "Sanity check only, not grounding: her 4a samples had the model choosing ~900-950 lx",
-      "for excited and ~35 lx for depressed unprompted, which these brackets cover.",
-      "See emotion_illuminance_bands below for which level suits which emotion."
+      "ONE POOL FOR ALL FOUR EMOTIONS, not a per-emotion range. That is a change of kind,",
+      "not just of value: the earlier design had a band per emotion, so a scene's lux could",
+      "be checked against what its target emotion called for. With a single shared pool",
+      "there is no per-emotion expectation to check against, so the illuminance",
+      "manipulation check no longer has anything to test."
     ],
     "texture": [
       "FINAL, 3 Aug 2026 (Mengkai): plaster, concrete, textile.",
@@ -150,30 +137,23 @@
   "_emotions_note": "The four diagonal quadrants of Russell's circumplex, named by Mengkai (scene brief section 1). Note 'depressed', not 'sad'.",
   "emotion_illuminance_bands": {
     "_comment": [
-      "ENGINEERING DEFAULT, NOT literature-derived. Used by the manipulation check to ask",
-      "whether a scene's illuminance suits its target emotion. Replace wholesale when the",
-      "real ranges arrive.",
-      "Reasoning, stated so it can be checked: on the circumplex, arousal maps to light",
-      "level and valence maps mainly to hue. So the two high-arousal emotions get bright",
-      "bands and the two low-arousal ones get dim bands, and warm/cool hue carries the",
-      "valence split. This is a design-consistency argument, not evidence."
+      "ALL NULL as of 3 Aug 2026. Illuminance is one shared pool of four levels rather",
+      "than a band per emotion, so no emotion has a literature-derived range to check a",
+      "scene against.",
+      "",
+      "Null means 'no locked range': check_illuminance reports that status rather than a",
+      "pass or fail, and manipulation_check counts those separately from misses. The",
+      "machinery stays because it costs nothing and per-emotion bands may return; it",
+      "simply has nothing to assert right now.",
+      "",
+      "Worth stating in the write-up: illuminance now has no manipulation check. Whether",
+      "the model picked a lux level appropriate to its target is a question the design",
+      "can no longer answer, because no level is designated appropriate to any emotion."
     ],
-    "depressed": [
-      20,
-      60
-    ],
-    "calm": [
-      75,
-      175
-    ],
-    "tense": [
-      600,
-      800
-    ],
-    "excited": [
-      800,
-      1000
-    ]
+    "calm": null,
+    "excited": null,
+    "tense": null,
+    "depressed": null
   },
   "roughness_levels": {
     "_comment": [
@@ -190,5 +170,18 @@
     "smooth": 0.75,
     "metallic": 0.0
   },
-  "roughness_required": true
+  "roughness_required": true,
+  "aggregation": {
+    "_comment": [
+      "FINAL, 3 Aug 2026 (Mengkai). Medoid selection over the N samples per cell: keep the",
+      "single real sample closest to the middle of the batch, so the result is always one",
+      "of the model's actual outputs and never a per-variable blend. Satisfies the",
+      "constraint she set on 31 Jul by construction. Implemented in pipeline/aggregate.py."
+    ],
+    "method": "medoid",
+    "samples_per_cell": 30,
+    "cells": 8,
+    "field_weights": "equal",
+    "_weights_note": "Equal across the five fields; no literature basis to weight one over another."
+  }
 }

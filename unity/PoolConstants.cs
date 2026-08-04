@@ -17,7 +17,7 @@ namespace EmotionRooms
         public static readonly float[] Saturations = { 0.2f, 0.4f };
 
         /// <summary>Normalised intensity of the room's light source.</summary>
-        public static readonly float[] Brightnesses = { 30f, 100f, 300f, 700f, 900f };
+        public static readonly float[] Brightnesses = { 150f, 300f, 500f, 750f };
 
         /// <summary>Greyscale wall materials.</summary>
         public static readonly string[] Textures = { "plaster", "concrete", "textile" };
@@ -41,7 +41,7 @@ namespace EmotionRooms
         public const float FloatTolerance = 0.0001f;
 
         /// <summary>Total distinct rooms the pools can express, ignoring shape.</summary>
-        public const int DesignSpaceSize = 600;
+        public const int DesignSpaceSize = 480;
 
         public static bool Contains(int[] pool, int value)
         {

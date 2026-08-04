@@ -456,15 +456,12 @@ class TestPoolFileIsData(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 pools._load(bad)
 
-    def test_provisional_flag_is_still_true(self):
-        # Fails the day someone flips it. That should be a deliberate act taken only
-        # when Mengkai confirms the values are locked -- scene brief section 4 asks
-        # that nothing be built against specific values before then.
-        self.assertTrue(
-            pools.PROVISIONAL,
-            "pools.json says the values are final -- confirm Mengkai locked them, "
-            "then update README.md and delete this assertion",
-        )
+    def test_values_are_no_longer_provisional(self):
+        # Flipped on 3 Aug 2026, deliberately, once every manipulated pool was
+        # Mengkai's final value: hue and saturation 30 Jul, roughness and material type
+        # 3 Aug, illuminance 3 Aug. The guard existed to make this a considered act
+        # rather than a drift, which is what it was.
+        self.assertFalse(pools.PROVISIONAL)
 
 
 class TestHandoffFile(unittest.TestCase):
@@ -725,11 +722,11 @@ class TestOversightTrials(unittest.TestCase):
     """Phase B trial construction -- study-design-v2.md section 3. Not yet approved."""
 
     CONFIGS = [
-        {"target_emotion": "calm", "hue": 240, "saturation": 0.2, "brightness": 30,
+        {"target_emotion": "calm", "hue": 240, "saturation": 0.2, "brightness": 150,
          "texture": "plaster", "rationale": "Cool blue, soft light."},
-        {"target_emotion": "excited", "hue": 30, "saturation": 0.4, "brightness": 900,
+        {"target_emotion": "excited", "hue": 30, "saturation": 0.4, "brightness": 750,
          "texture": "plaster", "rationale": "Warm orange, bright."},
-        {"target_emotion": "tense", "hue": 0, "saturation": 0.4, "brightness": 700,
+        {"target_emotion": "tense", "hue": 0, "saturation": 0.4, "brightness": 750,
          "texture": "concrete", "rationale": "Hard red, harsh light."},
     ]
 
@@ -759,12 +756,12 @@ class TestOversightTrials(unittest.TestCase):
         from pipeline.oversight import swappable_fields
 
         a = {"target_emotion": "tense", "hue": 240, "saturation": 0.2,
-             "brightness": 30, "texture": "concrete"}
+             "brightness": 150, "texture": "concrete"}
         b = {"target_emotion": "depressed", "hue": 240, "saturation": 0.2,
-             "brightness": 30, "texture": "concrete"}
+             "brightness": 150, "texture": "concrete"}
         self.assertEqual(swappable_fields(a, b), [])
 
-        c = dict(b, brightness=900)
+        c = dict(b, brightness=750)
         self.assertIn("brightness", swappable_fields(a, c))
 
     def test_ground_truth_records_exactly_what_was_broken(self):
@@ -1133,65 +1130,60 @@ class TestAffectGrid(unittest.TestCase):
 
 
 class TestManipulationCheck(unittest.TestCase):
-    def test_bands_come_from_data_not_code(self):
+    """Illuminance is now ONE shared pool across all four emotions (Mengkai, 3 Aug),
+    not a band per emotion. These assert what that means rather than what the earlier
+    per-emotion design meant."""
+
+    def test_no_emotion_has_a_locked_illuminance_band(self):
         from pipeline.affect import illuminance_bands
 
         bands = illuminance_bands()
         self.assertEqual(set(bands), set(pools.EMOTIONS))
+        self.assertTrue(all(b is None for b in bands.values()), bands)
 
-    def test_high_arousal_emotions_get_brighter_bands(self):
-        # Design consistency: arousal maps to light level, valence to hue. If this ever
-        # inverts, the pool and the circumplex have drifted apart.
-        from pipeline.affect import illuminance_bands
+    def test_every_emotion_reports_no_locked_range(self):
+        # Not a pass and not a fail. There is no expectation to compare against.
+        from pipeline.affect import check_illuminance
 
-        bands = illuminance_bands()
-        self.assertGreater(bands["tense"][0], bands["calm"][1])
-        self.assertGreater(bands["excited"][0], bands["depressed"][1])
+        for emotion in pools.EMOTIONS:
+            with self.subTest(emotion):
+                result = check_illuminance(emotion, 500)
+                self.assertEqual(result["status"], "no_locked_range")
+                self.assertIsNone(result["matches"])
 
-    def test_an_emotion_without_a_band_is_never_scored_as_failing(self):
-        # 23 Jul note: "no locked range", not "failed to match". Reporting an emotion
-        # with no evidence behind it as a failure would be the actual error.
+    def test_there_is_effectively_no_illuminance_manipulation_check(self):
+        # The consequence of a shared pool, asserted so it cannot be forgotten at
+        # write-up: whether the model chose a lux level appropriate to its target is a
+        # question this design cannot answer, because no level is designated
+        # appropriate to any emotion. Every cell is unscoreable, and match_rate is None
+        # rather than 1.0, so an absent check can never be mistaken for a passing one.
+        from pipeline.affect import manipulation_check
+
+        rooms = [{"target_emotion": e, "brightness": lux}
+                 for e, lux in zip(pools.EMOTIONS, pools.BRIGHTNESSES)]
+        summary = manipulation_check(rooms)
+        self.assertEqual(summary["no_locked_range"], len(rooms))
+        self.assertEqual(summary["matched"], 0)
+        self.assertEqual(summary["missed"], 0)
+        self.assertIsNone(summary["match_rate"])
+
+    def test_a_band_still_bites_if_one_is_restored(self):
+        # The machinery is kept because per-emotion bands may return. If one does, it
+        # must actually constrain rather than having quietly become a no-op.
         from pipeline import affect
 
         original = affect.illuminance_bands
-        affect.illuminance_bands = lambda: {**original(), "excited": None}
+        affect.illuminance_bands = lambda: {**original(), "calm": (100.0, 200.0)}
         try:
-            result = affect.check_illuminance("excited", 9999)
-            self.assertEqual(result["status"], "no_locked_range")
-            self.assertIsNone(result["matches"])
-
-            summary = affect.manipulation_check([
-                {"target_emotion": "excited", "brightness": 9999},
-                {"target_emotion": "calm", "brightness": 100},
-            ])
-            self.assertEqual(summary["no_locked_range"], 1)
-            self.assertEqual(summary["missed"], 0)
-            self.assertEqual(summary["match_rate"], 1.0)
+            self.assertTrue(affect.check_illuminance("calm", 150)["matches"])
+            self.assertFalse(affect.check_illuminance("calm", 750)["matches"])
         finally:
             affect.illuminance_bands = original
 
-    def test_out_of_band_illuminance_is_flagged(self):
-        from pipeline.affect import check_illuminance
-
-        self.assertFalse(check_illuminance("tense", 100)["matches"])
-        self.assertTrue(check_illuminance("tense", 700)["matches"])
-
     def test_brightness_pool_is_lux_not_normalised(self):
-        # Guards the unit change. Normalised values would silently be read as ~1 lux.
+        # Guards the unit. Normalised values would silently be read as about 1 lux.
         self.assertTrue(all(v >= 1 for v in pools.BRIGHTNESSES), pools.BRIGHTNESSES)
-        self.assertGreater(max(pools.BRIGHTNESSES), 100)
-
-    def test_every_pool_brightness_falls_in_some_emotion_band_or_is_documented(self):
-        from pipeline.affect import illuminance_bands
-
-        bands = [b for b in illuminance_bands().values() if b]
-        unmatched = [
-            lux for lux in pools.BRIGHTNESSES
-            if not any(low <= lux <= high for low, high in bands)
-        ]
-        # 300 lx is deliberately in no band: a legitimate pool value that matches no
-        # emotion, so choosing it is a manipulation-check miss rather than impossible.
-        self.assertEqual(unmatched, [300], f"unexpected unmatched levels: {unmatched}")
+        self.assertEqual(list(pools.BRIGHTNESSES), [150, 300, 500, 750])
 
 
 class TestOversightBlockContract(unittest.TestCase):
@@ -1204,10 +1196,10 @@ class TestOversightBlockContract(unittest.TestCase):
          "roughness": "smooth" if t == "plaster" else "rough",
          "rationale": f"{e} room."}
         for e, h, s, b, t in [
-            ("calm", 240, 0.2, 100, "plaster"),
-            ("excited", 30, 0.4, 900, "plaster"),
-            ("tense", 240, 0.4, 700, "concrete"),
-            ("depressed", 240, 0.2, 30, "textile"),
+            ("calm", 240, 0.2, 150, "plaster"),
+            ("excited", 30, 0.4, 750, "plaster"),
+            ("tense", 240, 0.4, 500, "concrete"),
+            ("depressed", 240, 0.2, 150, "textile"),
         ]
     ]
 
@@ -1385,10 +1377,10 @@ class TestSeparability(unittest.TestCase):
             for e, h, s, b, t in spec
         ]
 
-    WELL_SEPARATED = [("calm", 240, 0.2, 100, "plaster"),
-                      ("tense", 240, 0.4, 700, "concrete"),
-                      ("excited", 30, 0.4, 900, "plaster"),
-                      ("depressed", 240, 0.2, 30, "textile")]
+    WELL_SEPARATED = [("calm", 240, 0.2, 150, "plaster"),
+                      ("tense", 240, 0.4, 500, "concrete"),
+                      ("excited", 30, 0.4, 750, "plaster"),
+                      ("depressed", 240, 0.2, 150, "textile")]
 
     def test_the_distance_fields_cover_this_repos_vocabulary(self):
         # The bug this exists to prevent: aggregate.py's field lists originally held
@@ -1412,10 +1404,10 @@ class TestSeparability(unittest.TestCase):
         # rough, separated by illuminance alone.
         from pipeline.separability import check
 
-        report = check(self._cells([("calm", 240, 0.2, 100, "plaster"),
-                                    ("tense", 240, 0.2, 100, "concrete"),
-                                    ("excited", 30, 0.4, 900, "plaster"),
-                                    ("depressed", 240, 0.2, 30, "concrete")]))
+        report = check(self._cells([("calm", 240, 0.2, 150, "plaster"),
+                                    ("tense", 240, 0.2, 300, "concrete"),
+                                    ("excited", 30, 0.4, 750, "plaster"),
+                                    ("depressed", 240, 0.2, 150, "concrete")]))
         self.assertFalse(report["safe"])
         close = report["close_pairs"][0]
         self.assertEqual({close["a"][0], close["b"][0]}, {"tense", "depressed"})
@@ -1424,10 +1416,12 @@ class TestSeparability(unittest.TestCase):
     def test_identical_cells_are_reported_as_identical_not_merely_close(self):
         from pipeline.separability import check
 
-        report = check(self._cells([("calm", 240, 0.2, 100, "plaster"),
-                                    ("tense", 240, 0.2, 100, "plaster"),
-                                    ("excited", 30, 0.4, 900, "plaster"),
-                                    ("depressed", 240, 0.2, 30, "textile")]))
+        # calm and tense share every manipulated value, which is the case this exists
+        # to catch: two target emotions the design cannot tell apart at all.
+        report = check(self._cells([("calm", 240, 0.2, 150, "plaster"),
+                                    ("tense", 240, 0.2, 150, "plaster"),
+                                    ("excited", 30, 0.4, 750, "concrete"),
+                                    ("depressed", 180, 0.4, 300, "textile")]))
         self.assertTrue(report["identical_pairs"])
         self.assertFalse(report["safe"])
 
@@ -1435,9 +1429,9 @@ class TestSeparability(unittest.TestCase):
         # Manipulated in name only. Worth knowing before, not after, collection.
         from pipeline.separability import check
 
-        report = check(self._cells([("calm", 240, 0.2, 100, "plaster"),
-                                    ("tense", 240, 0.2, 700, "plaster"),
-                                    ("excited", 240, 0.2, 900, "plaster"),
+        report = check(self._cells([("calm", 240, 0.2, 150, "plaster"),
+                                    ("tense", 240, 0.2, 500, "plaster"),
+                                    ("excited", 240, 0.2, 750, "plaster"),
                                     ("depressed", 240, 0.2, 30, "plaster")]))
         self.assertIn("hue", report["inert_variables"])
         self.assertIn("texture", report["inert_variables"])

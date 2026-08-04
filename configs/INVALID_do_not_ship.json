@@ -41,7 +41,7 @@
       "source": "handwritten",
       "hue": 0,
       "saturation": 0.35,
-      "brightness": 100,
+      "brightness": 150,
       "texture": "concrete",
       "rationale": "0.35 sits between two pool values and must not be snapped to either.",
       "roughness": "rough"
@@ -52,7 +52,7 @@
       "source": "handwritten",
       "hue": 60,
       "saturation": 0.4,
-      "brightness": 900,
+      "brightness": 750,
       "texture": "plaster",
       "rationale": "Shape must be a researcher-set pool value.",
       "shape": "spiral",

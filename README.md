@@ -11,14 +11,14 @@ build-decisions.md   engine, headset, lux and scene-structure decisions (mine to
 configs/             pools.json (values as data), demo_batch.json (runnable without
                      an API key) + hand-written configs,
                      including a deliberately broken one
-tests/               157 tests, no API key or network needed
+tests/               156 tests, no API key or network needed
 runs/                generated output (git-ignored)
 ```
 
 ## Quick start
 
 ```bash
-# 1. See the frozen pools and the design space (600 rooms, 1200 with shape)
+# 1. See the frozen pools and the design space (480 rooms, 960 with shape)
 python3 -m pipeline.cli pools
 
 # 2. Prove the gate works before trusting anything to it

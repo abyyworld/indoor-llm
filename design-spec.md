@@ -29,7 +29,7 @@ this freedom").
 
 ## 2. What the LLM controls vs. what is fixed
 
-### LLM-controlled (3 variables)
+### LLM-controlled (5 variables, final 3 Aug 2026)
 
 | Variable | Applies to | Notes |
 |---|---|---|
@@ -60,24 +60,25 @@ tied to the intensity parameter.
 
 ---
 
-## 3. Proposed parameter pools **[PROPOSED]**
+## 3. Parameter pools **[FINAL 3 Aug 2026]**
 
-Numbers are a starting point - tune to taste, but keep every dimension discrete.
+Every value below is Mengkai's. `configs/pools.json` is the source; this is a copy.
 
 ```
 hue          : 10 values, (Munsell-calibrated), (0/30/60/90/120/180/240/270/300/330)
 saturation   : 2 values  {0.20, 0.40}
 value        : fixed 1.00  (HSB "Value" channel of wall colour - distinct from the "brightness" row below,
                which is light-source intensity, and distinct from "texture" below, which is material/roughnes
-brightness   : 5 values  {30, 100, 300, 700, 900} LUX (light intensity). ENGINEERING
-               DEFAULT, not literature-derived. Per-emotion bands in configs/pools.json.
+brightness   : 4 values  {150, 300, 500, 750} LUX (light intensity). FINAL, 3 Aug 2026.
+               ONE pool shared by all four emotions, not a band per emotion, so there is
+               no per-emotion illuminance expectation and no manipulation check on it.
 texture      : 3 values  {plaster, concrete, textile}  (greyscale maps, hue-neutral)
-roughness    : STILL OPEN. Confirmed 1 Aug as a separate variable; levels pending.
+roughness    : 2 values  {rough, smooth}. FINAL, 3 Aug 2026.
 ```
 
-Design space = 10 x 2 x 5 x 3 = **300 distinct rooms**. Finite, enumerable,
+Design space = 10 x 2 x 4 x 3 x 2 = **480 distinct rooms**. Finite, enumerable,
 reproducible - exactly the property the supervisor was after. Shape, if it is
-a factor, doubles this to 600 but you will only ever *run* a tiny subset.
+a factor, doubles this to 960 but you will only ever *run* a tiny subset.
 
 ---
 

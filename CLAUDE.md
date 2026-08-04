@@ -18,7 +18,7 @@ pipeline/   generation, validation, controls, session building   (Python 3, stdl
 unity/      scene loader                                         (C#, drop into Assets/Scripts/EmotionRooms/)
 configs/    pools.json (pool values as data) + hand-written configs
             + INVALID_do_not_ship.json (every room there must fail)
-tests/      157 tests, no API key or network needed
+tests/      156 tests, no API key or network needed
 runs/       generated output, git-ignored
 ```
 
@@ -41,7 +41,8 @@ python3 -m pipeline.cli validate configs/INVALID_do_not_ship.json   # must exit 
    arm and `unity/PoolConstants.cs` all derive from it. Never hardcode a pool value
    anywhere else. Changing which values are permitted is a data edit; changing *which
    variables exist* is not - that is `[OPEN]` question 1 below and needs Mengkai.
-   `configs/pools.json` carries a `provisional` flag that a test asserts is still true.
+   `configs/pools.json` carries `provisional: false` as of 3 Aug 2026: every value is
+   Mengkai's final one. A test asserts the flag is false.
 2. **`unity/PoolConstants.cs` is generated.** After changing pools:
    `python3 -m pipeline.cli emit-unity-pools --out unity/PoolConstants.cs`. A test fails
    if it goes stale.
@@ -52,7 +53,8 @@ python3 -m pipeline.cli validate configs/INVALID_do_not_ship.json   # must exit 
    so id uniqueness is our invariant rather than something we hope for.
 5. **Rejected candidates stay in the run file.** How often the model breaks constraints
    is a result, not noise. Same for the duplicate-combination rate.
-6. **The LLM controls four parameters only**: hue, saturation, brightness, texture.
+6. **The LLM controls five parameters**: hue, saturation, brightness (lux), texture
+   (material type) and roughness.
    Room dimensions, shape, furniture, object positions and the spawn point are
    researcher-set and the loader must never move them.
 
@@ -193,3 +195,22 @@ keeps shape even across session halves so shape is not confounded with fatigue. 
 over 24 participants: 0 adjacent pairs, first emotion balanced 6/6/6/6, first shape 12/12.
 Plain randomisation leaves ~24% of pairs adjacent. A Williams square is *worse* here,
 putting every pair within 2 positions, because it balances carryover rather than distance.
+
+## Answered by Mengkai, 3 Aug 2026 -- the pools are FINAL
+
+`configs/pools.json` now carries `provisional: false`. Every manipulated value is hers:
+
+- **hue** 10 Munsell-calibrated categories, **saturation** {0.20, 0.40} (30 Jul)
+- **material type** {plaster, concrete, textile}, **roughness** {rough, smooth} (3 Aug)
+- **illuminance** {150, 300, 500, 750} lux (3 Aug)
+- **aggregation** medoid, 30 samples per cell, 8 cells, equal weights across the five
+  fields. She adopted the implementation in `pipeline/aggregate.py`.
+
+**Illuminance is ONE pool shared by all four emotions**, not a band per emotion. That is
+a change of kind: there is no longer a per-emotion illuminance expectation, so the
+illuminance manipulation check has nothing to test. `emotion_illuminance_bands` is all
+null, every cell reports "no locked range", and `match_rate` is None rather than 1.0 so
+an absent check cannot read as a passing one. Worth stating plainly in the write-up.
+
+Still outstanding: her eight-cell config file, which is the medoid output over her
+sampling runs. Nothing else.
