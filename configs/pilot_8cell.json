@@ -1,0 +1,120 @@
+{
+  "_README": [
+    "PILOT config. Eight cells, one per emotion x shape.",
+    "",
+    "NOT STUDY DATA. These are hand-chosen values, not the output of Mengkai's sampling",
+    "and medoid aggregation. She is running that herself because her thesis has to",
+    "describe a process she executed. Do not analyse anything collected against this",
+    "file as study results, and do not let it substitute for her config.",
+    "",
+    "What it IS for: building and verifying the Unity scenes, checking the rooms read",
+    "correctly in the headset, timing a full session, and filming demonstrations. All of",
+    "which can happen today rather than waiting.",
+    "",
+    "Every value is inside the final pools, so this exercises the real gate. Separation",
+    "was checked with: python3 -m pipeline.cli check-separability"
+  ],
+  "meta": {
+    "source": "handwritten",
+    "purpose": "pilot, scene verification and demos only",
+    "not_study_data": true
+  },
+  "rooms": [
+    {
+      "id": "calm_pilot_lin",
+      "target_emotion": "calm",
+      "source": "handwritten",
+      "shape": "linear",
+      "hue": 240,
+      "saturation": 0.2,
+      "brightness": 150,
+      "texture": "plaster",
+      "roughness": "smooth",
+      "rationale": "Cool blue at low saturation, soft residential light, smooth plaster."
+    },
+    {
+      "id": "calm_pilot_cur",
+      "target_emotion": "calm",
+      "source": "handwritten",
+      "shape": "curved",
+      "hue": 270,
+      "saturation": 0.2,
+      "brightness": 300,
+      "texture": "plaster",
+      "roughness": "smooth",
+      "rationale": "Cool violet-blue, low saturation, gentle light on smooth plaster."
+    },
+    {
+      "id": "excited_pilot_lin",
+      "target_emotion": "excited",
+      "source": "handwritten",
+      "shape": "linear",
+      "hue": 30,
+      "saturation": 0.4,
+      "brightness": 750,
+      "texture": "plaster",
+      "roughness": "smooth",
+      "rationale": "Warm orange at higher saturation under bright light."
+    },
+    {
+      "id": "excited_pilot_cur",
+      "target_emotion": "excited",
+      "source": "handwritten",
+      "shape": "curved",
+      "hue": 60,
+      "saturation": 0.4,
+      "brightness": 750,
+      "texture": "textile",
+      "roughness": "smooth",
+      "rationale": "Warm yellow, saturated, bright, soft smooth textile."
+    },
+    {
+      "id": "tense_pilot_lin",
+      "target_emotion": "tense",
+      "source": "handwritten",
+      "shape": "linear",
+      "hue": 0,
+      "saturation": 0.4,
+      "brightness": 500,
+      "texture": "concrete",
+      "roughness": "rough",
+      "rationale": "Saturated red on rough concrete at hard mid-high light."
+    },
+    {
+      "id": "tense_pilot_cur",
+      "target_emotion": "tense",
+      "source": "handwritten",
+      "shape": "curved",
+      "hue": 300,
+      "saturation": 0.4,
+      "brightness": 750,
+      "texture": "concrete",
+      "roughness": "rough",
+      "rationale": "Saturated purple-red, rough concrete, harsh bright light."
+    },
+    {
+      "id": "depressed_pilot_lin",
+      "target_emotion": "depressed",
+      "source": "handwritten",
+      "shape": "linear",
+      "hue": 180,
+      "saturation": 0.2,
+      "brightness": 150,
+      "texture": "textile",
+      "roughness": "rough",
+      "rationale": "Desaturated cyan, very dim, rough absorbent textile."
+    },
+    {
+      "id": "depressed_pilot_cur",
+      "target_emotion": "depressed",
+      "source": "handwritten",
+      "shape": "curved",
+      "hue": 120,
+      "saturation": 0.2,
+      "brightness": 300,
+      "texture": "concrete",
+      "roughness": "rough",
+      "rationale": "Desaturated green, low light, rough cold concrete."
+    }
+  ]
+}

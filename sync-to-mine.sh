@@ -40,6 +40,8 @@ INCLUDE=(
   requirements.txt
   .gitignore
   sync-to-mine.sh
+  demo.sh
+  demo-plan.md
 )
 
 echo "Staging export..."
