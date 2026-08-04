@@ -47,6 +47,9 @@ namespace EmotionRooms
         /// <summary>Greyscale wall materials.</summary>
         public static readonly string[] Textures = {{ {_strings(pools.TEXTURES)} }};
 
+        /// <summary>Surface roughness. Empty until Mengkai confirms the levels.</summary>
+        public static readonly string[] Roughnesses = {{ {_strings(pools.ROUGHNESSES)} }};
+
         /// <summary>Researcher-set room geometry. Never an LLM output.</summary>
         public static readonly string[] Shapes = {{ {_strings(pools.SHAPES)} }};
 

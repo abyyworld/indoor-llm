@@ -2,9 +2,10 @@
   "id": "handwritten_calm_001",
   "target_emotion": "calm",
   "source": "handwritten",
-  "hue": 210,
+  "hue": 240,
   "saturation": 0.2,
-  "brightness": 0.6,
+  "brightness": 300,
   "texture": "plaster",
-  "rationale": "Low-saturation cool blue with soft even light reads as restful. Written by hand, straight from design-spec.md section 4 -- this is the config the Unity loader is built against before any LLM is involved."
+  "rationale": "Low-saturation cool blue with soft even light reads as restful. Written by hand, straight from design-spec.md section 4 -- this is the config the Unity loader is built against before any LLM is involved.",
+  "roughness": "smooth"
 }

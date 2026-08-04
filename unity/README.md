@@ -48,6 +48,12 @@ and light intensity - everything else in the scene is yours and it must stay you
    - `Min Intensity` / `Max Intensity` - the real light intensities that normalised
      brightness `0.2` and `1.0` map to. Tune these in the headset, not on a monitor.
      This mapping is a study parameter: record the values you settle on.
+
+     **This contract is changing.** Mengkai's template specifies brightness as an
+     illuminance value in **lux** with a band per emotion (calm ~45-150, tense ~670-780,
+     excited/depressed unlocked), not a normalised 0.2-1.0. So this pair becomes a lux to
+     intensity mapping. Treat lux as an authoring target rather than a measured quantity
+     until that is settled - see [../build-decisions.md](../build-decisions.md) §4.
    - `Linear Room Root` / `Curved Room Root` - only if shape is part of your design.
      Leave both empty otherwise and the loader will not touch the scene's geometry.
 5. **Assign a config.** Drag `configs/handwritten_calm_001.json` into the project and
@@ -126,6 +132,14 @@ The area difference is intentional: width, depth and both sightlines cannot all 
 matched at once with only two free parameters, so area was the one sacrificed. Do
 not "fix" it. Ceiling height is settled at 2.4 m per UK residential practice.
 
+**No windows, in either shell.** Daylight would contaminate the illuminance variable the
+study manipulates (23 Jul meeting note). The curved shell's straight foyer is where a door
+or window could plausibly sit, which is exactly why it must not have one.
+
+Both shells live in **one scene** as two roots the loader toggles, not two scenes, so the
+furniture set is identical across shapes by construction. The inactive shell must be
+genuinely inactive: verify in the headset that it leaks neither light nor geometry.
+
 The curved room keeps a short straight foyer rather than curving throughout, because
 a participant can turn to face any direction and a half-open shape has no standable
 real-world equivalent. The vault is slightly under half the total depth.
@@ -135,13 +149,19 @@ real-world equivalent. The vault is slightly under half the total depth.
 Identical in both shapes and in every emotion scene - never manipulated. Present so
 the room does not read as an empty geometric box.
 
+Final list, confirmed by Mengkai 2 Aug 2026:
+
 - Three-seat sofa against the far wall, centred on width (following the curve in the
   curved condition).
-- Coffee table directly in front of the sofa.
+- Armchair, offset to one side and angled toward the table, so the sofa keeps the
+  symmetric position the brief specifies.
+- Coffee table directly in front of the sofa, with a teacup on it.
 - Rug under the table and the sofa's front portion.
-- One wall decoration above/behind the sofa.
+- Bookshelf against a side wall, deliberately clear of the facing sightline the two
+  shapes are matched on.
+- Two wall art pieces above and behind the sofa, symmetric about centre.
 
-Item selection is explicitly **provisional**. The brief asks that these stay easily
+Item selection is now settled, though the assets are still placeholders. The brief asks that these stay easily
 swappable placeholder assets rather than having this particular furniture geometry
 hard-coded into scene logic. The LLM decoration whitelist that would have added
 cushions, lamps, plants and so on is **dropped** - do not build it.

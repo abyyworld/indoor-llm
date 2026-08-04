@@ -11,16 +11,19 @@ namespace EmotionRooms
     public static class PoolConstants
     {
         /// <summary>HSV hue of the wall colour, in degrees.</summary>
-        public static readonly int[] Hues = { 0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330 };
+        public static readonly int[] Hues = { 0, 30, 60, 90, 120, 180, 240, 270, 300, 330 };
 
         /// <summary>HSV saturation of the wall colour.</summary>
-        public static readonly float[] Saturations = { 0.2f, 0.5f, 0.8f };
+        public static readonly float[] Saturations = { 0.2f, 0.4f };
 
         /// <summary>Normalised intensity of the room's light source.</summary>
-        public static readonly float[] Brightnesses = { 0.2f, 0.4f, 0.6f, 0.8f, 1.0f };
+        public static readonly float[] Brightnesses = { 30f, 100f, 300f, 700f, 900f };
 
         /// <summary>Greyscale wall materials.</summary>
-        public static readonly string[] Textures = { "plaster", "brick", "wood_grain", "fabric_weave" };
+        public static readonly string[] Textures = { "plaster", "concrete", "textile" };
+
+        /// <summary>Surface roughness. Empty until Mengkai confirms the levels.</summary>
+        public static readonly string[] Roughnesses = { "rough", "smooth" };
 
         /// <summary>Researcher-set room geometry. Never an LLM output.</summary>
         public static readonly string[] Shapes = { "linear", "curved" };
@@ -32,13 +35,13 @@ namespace EmotionRooms
         public static readonly string[] Sources = { "llm", "random", "handwritten" };
 
         /// <summary>Fixed HSV value of wall albedo. Brightness lives on the light.</summary>
-        public const float WallValue = 0.85f;
+        public const float WallValue = 1.0f;
 
         /// <summary>Tolerance for float pool membership after narrowing to float32.</summary>
         public const float FloatTolerance = 0.0001f;
 
         /// <summary>Total distinct rooms the pools can express, ignoring shape.</summary>
-        public const int DesignSpaceSize = 720;
+        public const int DesignSpaceSize = 600;
 
         public static bool Contains(int[] pool, int value)
         {

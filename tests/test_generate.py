@@ -82,12 +82,13 @@ class FakeClient:
         self.messages = FakeMessages(responses)
 
 
-def candidate(hue=210, saturation=0.2, brightness=0.6, texture="plaster", **extra) -> dict:
+def candidate(hue=240, saturation=0.2, brightness=300, texture="plaster", roughness="smooth", **extra) -> dict:
     base = {
         "hue": hue,
         "saturation": saturation,
         "brightness": brightness,
         "texture": texture,
+        "roughness": roughness,
         "rationale": "Stub rationale.",
     }
     base.update(extra)
@@ -95,8 +96,9 @@ def candidate(hue=210, saturation=0.2, brightness=0.6, texture="plaster", **extr
 
 
 def n_valid(count: int, start: int = 0) -> list[dict]:
-    hues = [0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330]
-    return [candidate(hue=hues[(start + i) % 12]) for i in range(count)]
+    from pipeline.pools import HUES
+
+    return [candidate(hue=HUES[(start + i) % len(HUES)]) for i in range(count)]
 
 
 class TestGenerationHappyPath(unittest.TestCase):
@@ -256,7 +258,7 @@ class TestSketchMode(unittest.TestCase):
 class TestDuplicateRate(unittest.TestCase):
     def test_collapsed_output_is_visible(self):
         rooms = [
-            {"hue": 210, "saturation": 0.2, "brightness": 0.6, "texture": "plaster"}
+            {"hue": 240, "saturation": 0.2, "brightness": 300, "texture": "plaster"}
             for _ in range(4)
         ]
         self.assertAlmostEqual(duplicate_rate(rooms), 0.75)

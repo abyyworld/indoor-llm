@@ -10,6 +10,7 @@ from __future__ import annotations
 from typing import Sequence
 
 from .pools import (
+    ROUGHNESSES,
     BRIGHTNESSES,
     EMOTIONS,
     HUES,
@@ -18,6 +19,13 @@ from .pools import (
     TEXTURES,
     WALL_VALUE,
 )
+
+
+def _roughness_line() -> str:
+    """Roughness is only mentioned to the model once its levels exist."""
+    if not ROUGHNESSES:
+        return ""
+    return f"\n  roughness   string,  surface roughness                 -- one of: {_values(ROUGHNESSES)}"
 
 
 def _values(values: Sequence[object]) -> str:
@@ -43,7 +51,7 @@ the room is never built.
   hue         integer, wall colour, HSV hue in degrees   -- one of: {_values(HUES)}
   saturation  number,  wall colour, HSV saturation       -- one of: {_values(SATURATIONS)}
   brightness  number,  intensity of the room's light     -- one of: {_values(BRIGHTNESSES)}
-  texture     string,  wall material                     -- one of: {_values(TEXTURES)}
+  texture     string,  wall material                     -- one of: {_values(TEXTURES)}{_roughness_line()}
 
 How these are applied in the engine, so you know what you are actually choosing:
 
@@ -104,7 +112,17 @@ candidates that satisfy the constraints. Do not repeat the rejected combinations
 def build_continuation_prompt(seen: Sequence[tuple], remaining: int) -> str:
     """Ask for more candidates while telling the model what it already produced."""
     already = "\n".join(
-        f"  hue={h} saturation={s} brightness={b} texture={t}" for h, s, b, t in seen
+        # Unpacks whatever _combo produces, so adding a variable does not break the
+        # continuation prompt. The model is shown what it has already produced, and a
+        # combo it cannot read is a combo it will happily repeat.
+        "  " + " ".join(
+            f"{name}={value}"
+            for name, value in zip(
+                ("hue", "saturation", "brightness", "texture", "roughness"), combo
+            )
+            if value is not None
+        )
+        for combo in seen
     )
     return f"""You have already produced these combinations:
 

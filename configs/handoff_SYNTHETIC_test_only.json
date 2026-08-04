@@ -1,0 +1,153 @@
+{
+  "_DO_NOT_SHIP": [
+    "SYNTHETIC TEST DATA. Not Mengkai's values. Must never reach a participant.",
+    "Exists only to exercise the loader, validator and scene switching end to end",
+    "before her real file arrives (due Thursday).",
+    "The depressed/linear cell is deliberately invalid (saturation 25 falls between",
+    "the two bands), so this file MUST fail validate-handoff. If it ever passes, the",
+    "gate has broken."
+  ],
+  "format": "emotion-rooms-handoff/v2",
+  "produced_by": "SYNTHETIC - Akbar, test fixture only",
+  "date": "2026-08-02",
+  "variables": {
+    "hue_category": {
+      "type": "enum",
+      "values": [
+        "warm",
+        "cool",
+        "neutral"
+      ]
+    },
+    "saturation_pct": {
+      "type": "bands",
+      "unit": "%",
+      "bands": [
+        [
+          10,
+          20
+        ],
+        [
+          30,
+          40
+        ]
+      ]
+    },
+    "material": {
+      "type": "enum",
+      "values": [
+        "rough",
+        "smooth"
+      ]
+    },
+    "brightness_lux": {
+      "type": "per_emotion_bands",
+      "unit": "lx",
+      "bands": {
+        "calm": null,
+        "tense": null,
+        "excited": null,
+        "depressed": null
+      },
+      "_comment": "All null: real ranges pending. PLACEHOLDER structure only."
+    }
+  },
+  "cells": [
+    {
+      "target_emotion": "calm",
+      "shape": "curved",
+      "hue_category": "cool",
+      "material": "smooth",
+      "saturation_pct": 20,
+      "brightness_lux": 90,
+      "hue_detail": "synthetic",
+      "n_samples": 12,
+      "aggregation": "medoid",
+      "consistency": 0.75
+    },
+    {
+      "target_emotion": "calm",
+      "shape": "linear",
+      "hue_category": "cool",
+      "material": "smooth",
+      "saturation_pct": 20,
+      "brightness_lux": 95,
+      "hue_detail": "synthetic",
+      "n_samples": 12,
+      "aggregation": "medoid",
+      "consistency": 0.75
+    },
+    {
+      "target_emotion": "tense",
+      "shape": "curved",
+      "hue_category": "warm",
+      "material": "rough",
+      "saturation_pct": 40,
+      "brightness_lux": 700,
+      "hue_detail": "synthetic",
+      "n_samples": 12,
+      "aggregation": "medoid",
+      "consistency": 0.75
+    },
+    {
+      "target_emotion": "tense",
+      "shape": "linear",
+      "hue_category": "warm",
+      "material": "rough",
+      "saturation_pct": 40,
+      "brightness_lux": 720,
+      "hue_detail": "synthetic",
+      "n_samples": 12,
+      "aggregation": "medoid",
+      "consistency": 0.75
+    },
+    {
+      "target_emotion": "excited",
+      "shape": "curved",
+      "hue_category": "warm",
+      "material": "smooth",
+      "saturation_pct": 40,
+      "brightness_lux": 900,
+      "hue_detail": "synthetic",
+      "n_samples": 12,
+      "aggregation": "medoid",
+      "consistency": 0.75
+    },
+    {
+      "target_emotion": "excited",
+      "shape": "linear",
+      "hue_category": "warm",
+      "material": "smooth",
+      "saturation_pct": 40,
+      "brightness_lux": 880,
+      "hue_detail": "synthetic",
+      "n_samples": 12,
+      "aggregation": "medoid",
+      "consistency": 0.75
+    },
+    {
+      "target_emotion": "depressed",
+      "shape": "curved",
+      "hue_category": "cool",
+      "material": "rough",
+      "saturation_pct": 20,
+      "brightness_lux": 40,
+      "hue_detail": "synthetic",
+      "n_samples": 12,
+      "aggregation": "medoid",
+      "consistency": 0.75
+    },
+    {
+      "target_emotion": "depressed",
+      "shape": "linear",
+      "hue_category": "cool",
+      "material": "rough",
+      "saturation_pct": 25,
+      "brightness_lux": 35,
+      "hue_detail": "synthetic",
+      "n_samples": 12,
+      "aggregation": "medoid",
+      "consistency": 0.75
+    }
+  ]
+}

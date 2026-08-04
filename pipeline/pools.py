@@ -128,6 +128,12 @@ BRIGHTNESSES: tuple[float, ...] = tuple(_POOLS["manipulated"]["brightness"])
 # Wall material. The maps themselves are greyscale so the hue tints them.
 TEXTURES: tuple[str, ...] = tuple(_POOLS["manipulated"]["texture"])
 
+# Surface roughness, independent of material type. Mengkai confirmed the split on
+# 1 Aug; the levels are hers and still pending. OPTIONAL until she confirms them, so a
+# config without the field still validates.
+ROUGHNESSES: tuple[str, ...] = tuple(_POOLS["manipulated"].get("roughness", ()))
+ROUGHNESS_IS_REQUIRED: bool = bool(_POOLS.get("roughness_required", False))
+
 # The fields the LLM is allowed to choose, in canonical order.
 LLM_CONTROLLED: tuple[str, ...] = tuple(_POOLS["manipulated"].keys())
 
@@ -200,14 +206,17 @@ def canonical(value: float, pool: tuple[float, ...], tol: float = FLOAT_TOL) -> 
 def design_space_size(include_shape: bool = False) -> int:
     """Total distinct rooms the pools can express (spec section 3: 720, or 1440)."""
     size = len(HUES) * len(SATURATIONS) * len(BRIGHTNESSES) * len(TEXTURES)
+    if ROUGHNESSES:
+        size *= len(ROUGHNESSES)
     return size * len(SHAPES) if include_shape else size
 
 
 def enumerate_rooms(include_shape: bool = False) -> Iterator[dict]:
     """Yield every point in the design space. Finite and enumerable, by design."""
     shapes = SHAPES if include_shape else (None,)
-    for hue, sat, bright, tex, shape in product(
-        HUES, SATURATIONS, BRIGHTNESSES, TEXTURES, shapes
+    roughnesses = ROUGHNESSES or (None,)
+    for hue, sat, bright, tex, rough, shape in product(
+        HUES, SATURATIONS, BRIGHTNESSES, TEXTURES, roughnesses, shapes
     ):
         room = {
             "hue": hue,
@@ -215,6 +224,8 @@ def enumerate_rooms(include_shape: bool = False) -> Iterator[dict]:
             "brightness": bright,
             "texture": tex,
         }
+        if rough is not None:
+            room["roughness"] = rough
         if shape is not None:
             room["shape"] = shape
         yield room

@@ -6,6 +6,8 @@ convey a target emotion; a validator gates the output; a Unity loader builds the
 - **[design-spec.md](design-spec.md) is the authority.** It tags what the supervisor
   actually said `[MEETING]`, defaults to confirm `[PROPOSED]`, and unresolved decisions
   `[OPEN]`. Do not quietly resolve an `[OPEN]` item - the collaborator (Mengkai) has to.
+- **[build-decisions.md](build-decisions.md)** records my own build decisions (engine,
+  render pipeline, headset, lux handling, scene structure) so they are not re-litigated.
 - **[README.md](README.md)** records every assumption taken and what to change if the
   answer differs. Keep it in sync when a decision lands.
 
@@ -16,7 +18,7 @@ pipeline/   generation, validation, controls, session building   (Python 3, stdl
 unity/      scene loader                                         (C#, drop into Assets/Scripts/EmotionRooms/)
 configs/    pools.json (pool values as data) + hand-written configs
             + INVALID_do_not_ship.json (every room there must fail)
-tests/      60 tests, no API key or network needed
+tests/      157 tests, no API key or network needed
 runs/       generated output, git-ignored
 ```
 
@@ -26,7 +28,9 @@ runs/       generated output, git-ignored
 python3 -m unittest discover -s tests        # must stay green
 python3 -m pipeline.cli --help               # pools, validate, generate, generate-all,
                                              # random-control, merge, build-session,
-                                             # export-unity, emit-unity-pools
+                                             # export-unity, emit-unity-pools,
+                                             # validate-handoff, check-separability,
+                                             # oversight-block
 python3 -m pipeline.cli validate configs/INVALID_do_not_ship.json   # must exit 1
 ```
 
@@ -72,25 +76,120 @@ needs a decision on who judges and against what criterion first); the Overleaf r
 ## Answered by Mengkai, 30 Jul 2026
 
 `research/` now holds her scene brief, meeting notes and thesis outline. The four
-former open questions are settled: shape is researcher-fixed and **between-subjects**
-(4 rooms per participant, not 8); light stays neutral white with hue on wall/floor
+former open questions are settled: shape is researcher-fixed and **within-subjects**
+(8 rooms per participant: shape moved to within-subjects on 2 Aug for statistical power); light stays neutral white with hue on wall/floor
 material only; the emotions are **calm/excited/depressed/tense** (`depressed`, not
 `sad`); the neutral baseline is dropped and the random arm is still undecided. Details
 and citations in [README.md](README.md) under "Assumptions - resolved".
 
+## Answered by her research/ folder - read it before asking again
+
+Her formative-testing template and the 23 Jul meeting note answer most of what used to
+be open here. The current contract is **four** variables with these names and levels:
+`hue_category` in {warm, cool, neutral}, `saturation` as a discrete 1-5 scale (reinstated
+23 Jul, overturning 10 Jul), `material` in {rough, smooth}, and `brightness` as a **lux**
+value with an emotion-conditional band. Plus `hue_detail` (free text, logging only) and
+`free_elements_description`. Every one of those differs from what this repo implements.
+The comparison table and citations are in [README.md](README.md).
+
+**Do not refactor to it yet** - see below. The variable set went four to three to four in
+three weeks, and the values are still moving.
+
+## Answered by Mengkai's email, 31 Jul 2026
+
+Email from Mengkai Chen to Akbar. Source: direct message.
+
+1. **Saturation: two levels, 20% and 40%** (Yi and Kang 2020). The current pool
+   `{0.20, 0.50, 0.80}` becomes `{0.20, 0.40}`. Do not build against this yet -- it
+   lands with the hue values below as one coordinated data edit.
+2. **Light colour temperature: 4500K, neutral white.** Settled. Matches what's built.
+3. **Hue: 10 calibrated categories + black + white** (Febbraio et al. 2025 Munsell-to-HSV
+   mapping; Song et al. 2025 warm/cool grouping). Exact HSV values will be pushed to
+   `research/variable-pool` on GitHub -- treat that file as authoritative. Do not
+   build against hue until that file lands.
+4. **Material splits into two variables: material type + roughness.** Type: plaster,
+   concrete, textile. Roughness: rough/smooth, literature values pending. This is a
+   structural schema change (5 LLM-controlled variables instead of 4, or `texture`
+   replaced by `material`+`roughness`). Do not refactor until both pools are complete.
+5. **Trial structure: 8-cell (4 emotions x 2 shapes) confirmed.** Shape was
+   between-subjects here; SUPERSEDED 2 Aug, it is now within-subjects, 8 trials per
+   participant. See the 2 Aug section below.
+
+## Answered by Mengkai's email, 1 Aug 2026
+
+Settled and buildable: **achromatic rule** - when saturation is 0 the scene is
+achromatic, black or white by V, and the stored hue is meaningless (do not read it).
+**Albedo** - V=100% stays the documented colour spec, the renderer applies it at ~0.85,
+preserving her 1.21x / 1.54x ratios. **Materials** - build against plaster, concrete,
+textile; she will flag a swap. **Exposure** - 20 seconds. **Random arm - CANCELLED,
+final.** **Trial count** - she believes 8 stands, but she did not check with Daniele as
+asked, so the 20-32 reading is unresolved rather than refuted.
+
+Pending with dates: illuminance ranges and roughness levels (Monday), furniture list
+(weekend), her config file (Thursday). Pending with **no date**: the aggregation method,
+and the Affect Grid / SAM spec.
+
+### She has retracted research/formative-testing and research/meeting-notes
+
+Her words: "You can disregard both folders, they won't reflect the final design." Also
+the Mostafavi-derived 45-150 / 670-780 lux figures - exploratory, not for the final
+ranges. Anything in this repo citing those sources is therefore citing retracted
+material and must not be treated as current.
+
+Two things follow that need raising rather than absorbing:
+
+  * `CONTRIBUTORS.md` cites `research/formative-testing/` as what "justified selecting
+    the naturalistic-fixed-template + variable-pool mode", and the thesis outline builds
+    §3.1 on that same data. Both cannot hold at once. Worth clarifying whether that work
+    is still in the thesis.
+  * Discarding the archive removes the early warning, not the risk. The tense/depressed
+    overlap was never mainly about mode selection: calm, tense and depressed all sit in
+    the cool half of the circumplex, so with warm/cool as the hue split three of four
+    emotions still compete for the same region. That is a property of the design, not of
+    the exploratory data, and it will resurface when the real values land.
+
 ## Open questions for Mengkai - do not answer these yourself
 
-1. **Three manipulated variables or four?** Brief §4 and outline §3.2 name three (hue
-   category, material roughness, illuminance), which would fix `saturation` as a
-   constant. Brief §7 still says "hue/saturation/roughness". Do not touch `pools.py`
-   until this lands.
-2. **The pool values themselves.** Brief §4 explicitly says do not build against
-   specific numbers or category labels yet - they are pending her literature review.
-   Everything in `pools.py` is a placeholder, including the 12 numeric hues, which the
-   10 Jul note suggests become warm/cool/neutral categories.
-3. **Is `material` a roughness tier or a named material?** `TEXTURES` is categorical;
-   roughness is a scalar. The brief uses both words.
-4. **The JSON contract.** Brief §5: field names and the category→parameter config table
-   are still to be synced. Also whether the pipeline must emit her `hue_detail` field.
-5. **The random-parameter arm**: her email says dropped, her brief the same day says
-   undecided. Left built and defaulted off until she resolves it.
+1. **Exact hue values** -- she will push to `research/variable-pool`. Wait for that
+   file before touching `HUES` in pools.py.
+2. **Roughness values** -- literature review pending, same push.
+3. **Lux ranges** -- illuminance/lux values for each emotion still pending. The
+   loader's current normalised 0.2-1.0 mapping is structurally correct but numerically
+   wrong. Stays as-is until the calibration table lands (brief §5, §7.3).
+4. **How `tense` gets separated from `calm` and `depressed`.** In her ④a data all three
+   are "cool", tense and depressed are both cool/rough/dim. Design question, not code.
+5. **Does the calm/tense lux pairing get forced in the prompt?** ④a lists both bands
+   without mapping them.
+6. **The random-parameter arm** -- email doesn't address it. Left built, default off.
+7. **Furniture list** -- she said she'll send by the weekend.
+
+## For the supervisor, not Mengkai
+
+- **The neutral baseline was a `[MEETING]` item** (design-spec.md §5: non-emotional
+  control rooms as the baseline) and has been dropped, booked as a limitation. Confirm.
+- **Two of four emotions cannot be manipulation-checked**, since excited/depressed have
+  no literature illuminance range.
+
+## Answered by Mengkai's email, 2 Aug 2026
+
+**Shape moves to WITHIN-subjects.** Every participant sees all 8 scenes (4 emotions x 2
+shapes) rather than 4. Her reason is power: between-subjects spends power on
+between-person variance that within-subjects removes, so she puts recruitment at roughly
+20-30 participants instead of 40-60. The interaction (shape x emotion) is the research
+question, and within-subjects is the right place to test an interaction, so this is
+correct rather than merely convenient.
+
+No rework: within-subjects is already the `build_session` default.
+
+**Ordering is where the care goes, and her "fully randomised, no counterbalancing" is
+the one part to push back on.** Each participant now meets every emotion twice, once per
+shape, and her formative data had curved and linear sharing identical appearance
+parameters. So the two trials for an emotion are the same room in a different geometry.
+Land them close together and people rate the comparison rather than their own feeling,
+biasing the shape contrast the study exists to measure.
+
+`counterbalance="separated"` holds every pair 4 trials apart, the maximum available, and
+keeps shape even across session halves so shape is not confounded with fatigue. Measured
+over 24 participants: 0 adjacent pairs, first emotion balanced 6/6/6/6, first shape 12/12.
+Plain randomisation leaves ~24% of pairs adjacent. A Williams square is *worse* here,
+putting every pair within 2 positions, because it balances carryover rather than distance.

@@ -10,7 +10,6 @@
     "and re-validate every run already collected, because rooms valid under the old",
     "pools may not be valid under the new ones."
   ],
-
   "provisional": true,
   "_provisional_why": [
     "TRUE until Mengkai's literature review lands. Scene brief section 4: 'Exactly which",
@@ -24,29 +23,172 @@
     "manipulated set three variables, not four. Neither is settled; do not pre-empt them.",
     "Set this flag to false only when Mengkai confirms the values are locked."
   ],
-
   "manipulated": {
-    "hue": [0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330],
-    "saturation": [0.2, 0.5, 0.8],
-    "brightness": [0.2, 0.4, 0.6, 0.8, 1.0],
-    "texture": ["plaster", "brick", "wood_grain", "fabric_weave"]
+    "hue": [
+      0,
+      30,
+      60,
+      90,
+      120,
+      180,
+      240,
+      270,
+      300,
+      330
+    ],
+    "saturation": [
+      0.2,
+      0.4
+    ],
+    "brightness": [
+      30,
+      100,
+      300,
+      700,
+      900
+    ],
+    "texture": [
+      "plaster",
+      "concrete",
+      "textile"
+    ],
+    "roughness": [
+      "rough",
+      "smooth"
+    ]
   },
   "_manipulated_notes": {
-    "hue": "HSV hue of the wall colour, in degrees. 30 degrees apart, no wraparound duplicate of 0.",
-    "saturation": "HSV saturation of the wall colour.",
-    "brightness": "Normalised intensity of the room's light. NOT a surface property.",
-    "texture": "Wall material. The maps are greyscale so the hue tints them."
+    "hue": [
+      "FINAL, 30 Jul 2026 -- research/variable-pool/color_pool_diagram.png (draft v5).",
+      "10 Munsell-calibrated categories, NOT an even 36 or 30 degree step. Adopted from",
+      "the Munsell-to-HSV mapping in Febbraio et al. (2025). Note the gaps: 150 (between",
+      "G and BG) and 210 (between BG and B) are deliberately absent. Do not 'tidy' them.",
+      "  R 0, YR 30, Y 60, GY 90, G 120, BG 180, B 240, PB 270, P 300, RP 330",
+      "Warm = Y, YR, R, RP, P (60, 30, 0, 330, 300).",
+      "Cool = PB, B, BG, G, GY (270, 240, 180, 120, 90).",
+      "Warm/cool valence split per Song et al. (2025).",
+      "STILL TO MODEL: black and white achromatic anchors. They are in her pool but",
+      "cannot be expressed as a hue degree, so they need a schema decision -- see README."
+    ],
+    "saturation": [
+      "FINAL, 30 Jul 2026 -- same diagram, dimension 2. Two fixed points, 20% and 40%.",
+      "Both sit inside the ecological ceiling: Yi and Kang (2020) found 92% of real",
+      "surfaces below 35% saturation. Levels taken from two of the four tested by Wang",
+      "et al. (2024)."
+    ],
+    "brightness": [
+      "ENGINEERING DEFAULT, 2 Aug 2026 -- NOT literature-derived. Replace when Mengkai's",
+      "ranges land; this is a data edit and nothing downstream moves.",
+      "",
+      "Units are now LUX, not the old normalised 0.2-1.0. Five levels spanning ordinary",
+      "interior practice: ~30 lx is a dim room at night, ~100 lx ordinary residential",
+      "ambient, ~300 lx light task work, ~700 lx a bright commercial interior, ~900 lx",
+      "brighter still. That range is general knowledge about buildings, NOT evidence about",
+      "emotion, and must not be cited as if it were.",
+      "",
+      "Sanity check only, not grounding: her 4a samples had the model choosing ~900-950 lx",
+      "for excited and ~35 lx for depressed unprompted, which these brackets cover.",
+      "See emotion_illuminance_bands below for which level suits which emotion."
+    ],
+    "texture": [
+      "FINAL, 3 Aug 2026 (Mengkai): plaster, concrete, textile.",
+      "Chosen to differ in surface STRUCTURE while staying neutral in hue, so material type",
+      "stays orthogonal to the hue manipulation. Wood, brick and marble were rejected for",
+      "the manipulated dimension because their own strong colour would fight the hue",
+      "variable rather than vary alongside it. Albedo maps must stay greyscale."
+    ],
+    "roughness": [
+      "FINAL, 3 Aug 2026 (Mengkai). Two levels: rough and smooth.",
+      "Now REQUIRED, not optional -- roughness_required is true above. Her config must",
+      "carry the field and a config without it no longer validates.",
+      "Rendering: both levels share metallic 0 and the same specular response, differing",
+      "only in microsurface. Her 10 Jul note flags that gloss must be controlled so it does",
+      "not confound with roughness; letting specular move with smoothness would be exactly",
+      "that confound. Unity smoothness values in roughness_levels below."
+    ]
   },
-
   "researcher_set": {
-    "shapes": ["linear", "curved"],
-    "wall_value": 0.85
+    "shapes": [
+      "linear",
+      "curved"
+    ],
+    "wall_value": 1.0
   },
   "_researcher_set_notes": {
     "shapes": "Between-subjects, one per participant. Never an LLM output, never in the pool.",
-    "wall_value": "Wall HSV *value*, fixed. Confirmed: light is neutral white and carries intensity only, so how bright the room looks is the light's job. 0.85 not 1.0 keeps albedo physically sane so bright rooms do not blow out."
+    "wall_value": [
+      "Wall HSV *value*, fixed at 100% per her diagram, dimension 3. Was 0.85 here.",
+      "Her two reasons are sound and worth not re-litigating: fixing V avoids a",
+      "hue-value confound (she computed the brightest-to-darkest hue luminance ratio as",
+      "1.21x at S=20% and 1.54x at S=40%, set by saturation and not by V), and it",
+      "decouples wall colour from scene lighting so all perceived luminance variation",
+      "comes from the lux variable.",
+      "",
+      "OPEN, and an engineering point rather than a disagreement with any of that:",
+      "HSV V=100% is a colour-space specification. Used directly as a Unity albedo it is",
+      "a reflectance near 1.0, which no real diffuse surface reaches (~0.85 is a white",
+      "painted wall). Two consequences at the top of the lux range, which is where the",
+      "excited and tense rooms live: bounce lighting gains energy it should not have,",
+      "and the wall clips toward white, weakening the hue manipulation exactly in the",
+      "conditions that depend on it.",
+      "",
+      "The fix does not touch her design. Scaling albedo uniformly preserves every",
+      "ratio her argument rests on, because those ratios are scale-invariant. So V=1.0",
+      "can stay the specification while the renderer applies it at ~0.85. Needs one",
+      "in-headset check at the highest illuminance before it is settled either way.",
+      "She has separately flagged a related limitation herself: white scored highest on",
+      "pleasure in Febbraio et al. (2025), so a maximal value may work against the",
+      "negative-valence conditions."
+    ]
   },
-
-  "emotions": ["calm", "excited", "depressed", "tense"],
-  "_emotions_note": "The four diagonal quadrants of Russell's circumplex, named by Mengkai (scene brief section 1). Note 'depressed', not 'sad'."
+  "emotions": [
+    "calm",
+    "excited",
+    "depressed",
+    "tense"
+  ],
+  "_emotions_note": "The four diagonal quadrants of Russell's circumplex, named by Mengkai (scene brief section 1). Note 'depressed', not 'sad'.",
+  "emotion_illuminance_bands": {
+    "_comment": [
+      "ENGINEERING DEFAULT, NOT literature-derived. Used by the manipulation check to ask",
+      "whether a scene's illuminance suits its target emotion. Replace wholesale when the",
+      "real ranges arrive.",
+      "Reasoning, stated so it can be checked: on the circumplex, arousal maps to light",
+      "level and valence maps mainly to hue. So the two high-arousal emotions get bright",
+      "bands and the two low-arousal ones get dim bands, and warm/cool hue carries the",
+      "valence split. This is a design-consistency argument, not evidence."
+    ],
+    "depressed": [
+      20,
+      60
+    ],
+    "calm": [
+      75,
+      175
+    ],
+    "tense": [
+      600,
+      800
+    ],
+    "excited": [
+      800,
+      1000
+    ]
+  },
+  "roughness_levels": {
+    "_comment": [
+      "ENGINEERING DEFAULT, NOT literature-derived. Unity smoothness, 0 fully matte to 1",
+      "mirror. Not yet a manipulated pool variable -- see the texture note.",
+      "Both levels deliberately share metallic 0 and the same specular response, differing",
+      "only in microsurface. Her 10 Jul note flags that gloss must be controlled so it does",
+      "not confound with roughness, and letting specular move with smoothness would be",
+      "exactly that confound.",
+      "Verify in the headset: perceived roughness at 2 m under 30 lx is not what it looks",
+      "like on a monitor at desk brightness."
+    ],
+    "rough": 0.15,
+    "smooth": 0.75,
+    "metallic": 0.0
+  },
+  "roughness_required": true
 }

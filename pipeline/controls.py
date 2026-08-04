@@ -17,6 +17,7 @@ from .pools import (
     BRIGHTNESSES,
     HUES,
     SATURATIONS,
+    ROUGHNESSES,
     TEXTURES,
     UNASSIGNED_LABEL,
 )
@@ -52,12 +53,13 @@ def random_rooms(
             rng.choice(SATURATIONS),
             rng.choice(BRIGHTNESSES),
             rng.choice(TEXTURES),
+            rng.choice(ROUGHNESSES) if ROUGHNESSES else None,
         )
         if unique and combo in combos:
             continue
         combos.add(combo)
 
-        hue, saturation, brightness, texture = combo
+        hue, saturation, brightness, texture, roughness = combo
         room = {
             "id": room_id(prefix, len(rooms) + 1),
             "target_emotion": UNASSIGNED_LABEL,
@@ -66,6 +68,7 @@ def random_rooms(
             "saturation": saturation,
             "brightness": brightness,
             "texture": texture,
+            "roughness": roughness,
             "rationale": (
                 f"Control room: parameters drawn uniformly at random from the pools "
                 f"(seed {seed}). No emotion was targeted."

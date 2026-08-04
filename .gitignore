@@ -2,3 +2,8 @@ __pycache__/
 *.pyc
 runs/
 .venv/
+.DS_Store
+
+# event logs are participant data: keep the example, ignore real ones
+logs/*.csv
+!logs/EXAMPLE_*.csv

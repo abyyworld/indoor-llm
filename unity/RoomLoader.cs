@@ -120,6 +120,19 @@ namespace EmotionRooms
         // ------------------------------------------------------------------ loading
 
         /// <summary>Parse, validate and build a single room config.</summary>
+        /// <summary>
+        /// Deactivate both shells, leaving the participant looking at nothing.
+        ///
+        /// Used between trials: the room must be out of sight before the affect grid
+        /// appears, because someone rating a room they can still see is describing what
+        /// is in front of them rather than how it made them feel.
+        /// </summary>
+        public void HideRooms()
+        {
+            if (linearRoomRoot != null) linearRoomRoot.SetActive(false);
+            if (curvedRoomRoot != null) curvedRoomRoot.SetActive(false);
+        }
+
         public void LoadFromJson(string json)
         {
             Load(RoomConfig.FromJson(json));

@@ -1,0 +1,60 @@
+{
+  "_README": [
+    "DEMO / PILOT batch. One valid room per emotion, so a session can be built and run",
+    "without an API key or any generation step. Use it for filming and for pilots.",
+    "",
+    "These are hand-written illustrative values, NOT LLM output and NOT Mengkai's",
+    "aggregated configs. Every room is inside the current pools and inside its emotion's",
+    "illuminance band, so the manipulation check passes. Do not use for real data."
+  ],
+  "meta": {
+    "source": "handwritten",
+    "purpose": "demo and pilot only"
+  },
+  "rooms": [
+    {
+      "id": "calm_demo_001",
+      "target_emotion": "calm",
+      "source": "handwritten",
+      "hue": 240,
+      "saturation": 0.2,
+      "brightness": 100,
+      "texture": "plaster",
+      "rationale": "Cool blue at low saturation with soft residential-level light reads as restful.",
+      "roughness": "smooth"
+    },
+    {
+      "id": "excited_demo_001",
+      "target_emotion": "excited",
+      "source": "handwritten",
+      "hue": 30,
+      "saturation": 0.4,
+      "brightness": 900,
+      "texture": "plaster",
+      "rationale": "Warm orange at the higher saturation under bright light reads as energising.",
+      "roughness": "smooth"
+    },
+    {
+      "id": "tense_demo_001",
+      "target_emotion": "tense",
+      "source": "handwritten",
+      "hue": 240,
+      "saturation": 0.4,
+      "brightness": 700,
+      "texture": "concrete",
+      "rationale": "Cool hue at higher saturation with hard bright light on rough concrete reads as alert.",
+      "roughness": "rough"
+    },
+    {
+      "id": "depressed_demo_001",
+      "target_emotion": "depressed",
+      "source": "handwritten",
+      "hue": 240,
+      "saturation": 0.2,
+      "brightness": 30,
+      "texture": "textile",
+      "rationale": "Cool hue at low saturation, very dim, soft absorbent surface reads as flat and low.",
+      "roughness": "rough"
+    }
+  ]
+}

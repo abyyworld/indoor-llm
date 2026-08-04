@@ -125,11 +125,17 @@ def _ask(client, model: str, messages: list[dict], count: int, sketch: bool) -> 
 
 
 def _combo(candidate: dict) -> tuple:
+    """Key for the duplicate-combination rate.
+
+    Includes roughness when present: two rooms differing only in roughness are two
+    rooms, and counting them as one would understate the model's spread.
+    """
     return (
         candidate["hue"],
         candidate["saturation"],
         candidate["brightness"],
         candidate["texture"],
+        candidate.get("roughness"),
     )
 
 
@@ -244,6 +250,11 @@ def generate_candidates(
             "texture": candidate["texture"],
             "rationale": candidate["rationale"].strip(),
         }
+        # Carried only when the pool defines it, so this stays correct whether or not
+        # roughness is part of the design. Assembling field by field is why it was
+        # dropped in the first place; the validator caught it, which is the point.
+        if "roughness" in candidate:
+            room["roughness"] = candidate["roughness"]
         if sketch and "sketch" in candidate:
             # Kept for the paper's qualitative record; stripped by export-unity.
             room["_sketch"] = candidate["sketch"]

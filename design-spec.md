@@ -46,9 +46,11 @@ this freedom").
 **[RESOLVED 30 Jul 2026]** The abstract claims **room shape (linear vs. curved)** is a
 manipulated moderator. The meeting said shape is *fixed by you*. Mengkai confirms both
 readings are compatible: shape is a researcher-fixed experimental factor, never an LLM
-output, and does not enter the variable pool. It is **between-subjects** - one condition
-per participant (scene brief §1–2, §8; thesis outline §4). So the abstract's "manipulated
-moderator" is real in the sense that the researchers manipulate it between participants.
+output, and does not enter the variable pool. It is **within-subjects** as of 2 Aug 2026:
+every participant sees all 8 scenes (4 emotions x 2 shapes). Mengkai moved it there for
+power, since within-subjects needs roughly half the N, and an interaction is the right
+thing to test within subjects. So the abstract's "manipulated moderator" is real in the
+sense that the researchers manipulate it, not the LLM.
 
 **[RESOLVED 30 Jul 2026]** Does hue apply to the wall albedo, the light colour, or both?
 The cleanest reading was the right one: **walls carry hue+saturation, lights carry
@@ -63,15 +65,19 @@ tied to the intensity parameter.
 Numbers are a starting point - tune to taste, but keep every dimension discrete.
 
 ```
-hue          : 12 values, 30° apart on the HSV wheel (0, 30, 60, ..., 330)
-saturation   : 3 values  {0.20, 0.50, 0.80}
-brightness   : 5 values  {0.2, 0.4, 0.6, 0.8, 1.0}  (light intensity, normalised)
-texture      : 4 values  {plaster, brick, wood_grain, fabric_weave}  (greyscale maps)
+hue          : 10 values, (Munsell-calibrated), (0/30/60/90/120/180/240/270/300/330)
+saturation   : 2 values  {0.20, 0.40}
+value        : fixed 1.00  (HSB "Value" channel of wall colour - distinct from the "brightness" row below,
+               which is light-source intensity, and distinct from "texture" below, which is material/roughnes
+brightness   : 5 values  {30, 100, 300, 700, 900} LUX (light intensity). ENGINEERING
+               DEFAULT, not literature-derived. Per-emotion bands in configs/pools.json.
+texture      : 3 values  {plaster, concrete, textile}  (greyscale maps, hue-neutral)
+roughness    : STILL OPEN. Confirmed 1 Aug as a separate variable; levels pending.
 ```
 
-Design space = 12 x 3 x 5 x 4 = **720 distinct rooms**. Finite, enumerable,
+Design space = 10 x 2 x 5 x 3 = **300 distinct rooms**. Finite, enumerable,
 reproducible - exactly the property the supervisor was after. Shape, if it is
-a factor, doubles this to 1440 but you will only ever *run* a tiny subset.
+a factor, doubles this to 600 but you will only ever *run* a tiny subset.
 
 ---
 
@@ -83,9 +89,9 @@ JSON. One record per candidate room. Sketch:
 {
   "id": "calm_007",
   "target_emotion": "calm",
-  "hue": 210,
+  "hue": 240,
   "saturation": 0.2,
-  "brightness": 0.6,
+  "brightness": 100,
   "texture": "plaster",
   "rationale": "Low-saturation cool blue with soft even light reads as restful."
 }
@@ -124,17 +130,16 @@ descriptive paper and one with a result.
 
 ## 6. Study protocol **[MEETING]**
 
-- **~30 s** exposure per room. Participant looks around / moves a little, then
+- **20 s** exposure per room (Mengkai, 1 Aug; was 30 s). Participant looks around / moves a little, then
   stops.
 - Questionnaire after each room: **valence–arousal** self-report, plus which
   emotion (with a neutral / none option).
 - **Total session: 30–45 minutes maximum**, including intro, consent, VR
   training, and debrief.
 - **Calibrate the number of rooms to that budget.** Rough arithmetic:
-  30 s exposure + ~45 s questionnaire + ~15 s transition ≈ **1.5 min/room**.
-  With ~25 min of actual trial time that is **~14–16 rooms per participant**.
-  4 emotions x 2 shapes x 2 variants = 16. That fits; anything much larger
-  does not.
+  20 s exposure + ~45 s questionnaire + ~15 s transition = **1.33 min/room**.
+  The design is 4 emotions x 2 shapes = **8 rooms per participant**, about 11 min
+  of trial time, comfortably inside the budget.
 
 ---
 

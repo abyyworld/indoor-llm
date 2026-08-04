@@ -9,28 +9,31 @@
       "source": "handwritten",
       "hue": 217,
       "saturation": 0.2,
-      "brightness": 0.6,
+      "brightness": 300,
       "texture": "plaster",
-      "rationale": "hue 217 is not a pool value."
+      "rationale": "hue 217 is not a pool value.",
+      "roughness": "smooth"
     },
     {
       "id": "invalid_texture_invented",
       "target_emotion": "calm",
       "source": "handwritten",
-      "hue": 210,
+      "hue": 240,
       "saturation": 0.2,
-      "brightness": 0.6,
+      "brightness": 300,
       "texture": "velvet",
-      "rationale": "velvet is not in the texture pool."
+      "rationale": "velvet is not in the texture pool.",
+      "roughness": "rough"
     },
     {
       "id": "invalid_brightness_missing",
       "target_emotion": "depressed",
       "source": "handwritten",
       "hue": 240,
-      "saturation": 0.5,
-      "texture": "brick",
-      "rationale": "brightness is absent -- in C# this would otherwise arrive as 0."
+      "saturation": 0.2,
+      "texture": "concrete",
+      "rationale": "brightness is absent -- in C# this would otherwise arrive as 0.",
+      "roughness": "rough"
     },
     {
       "id": "invalid_saturation_between_pool_values",
@@ -38,20 +41,22 @@
       "source": "handwritten",
       "hue": 0,
       "saturation": 0.35,
-      "brightness": 0.4,
-      "texture": "brick",
-      "rationale": "0.35 sits between two pool values and must not be snapped to either."
+      "brightness": 100,
+      "texture": "concrete",
+      "rationale": "0.35 sits between two pool values and must not be snapped to either.",
+      "roughness": "rough"
     },
     {
       "id": "invalid_shape_not_a_pool_value",
       "target_emotion": "excited",
       "source": "handwritten",
       "hue": 60,
-      "saturation": 0.8,
-      "brightness": 1.0,
+      "saturation": 0.4,
+      "brightness": 900,
       "texture": "plaster",
       "rationale": "Shape must be a researcher-set pool value.",
-      "shape": "spiral"
+      "shape": "spiral",
+      "roughness": "smooth"
     },
     {
       "id": "invalid_hue_off_pool",
@@ -59,9 +64,10 @@
       "source": "handwritten",
       "hue": 0,
       "saturation": 0.2,
-      "brightness": 0.6,
+      "brightness": 300,
       "texture": "plaster",
-      "rationale": "Duplicate id -- valid on its own, but it collides with the first room."
+      "rationale": "Duplicate id -- valid on its own, but it collides with the first room.",
+      "roughness": "smooth"
     }
   ]
 }

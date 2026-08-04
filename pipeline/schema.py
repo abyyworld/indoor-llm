@@ -40,7 +40,10 @@ REQUIRED_KEYS: tuple[str, ...] = (
 )
 
 #: Fields Unity tolerates but does not require.
-OPTIONAL_KEYS: tuple[str, ...] = ("shape",)
+# roughness is optional rather than required while Mengkai's levels are pending, so a
+# config written before the material split still validates and hers validates whether or
+# not it carries the field.
+OPTIONAL_KEYS: tuple[str, ...] = ("shape", "roughness")
 
 ROOM_CONFIG_KEYS: tuple[str, ...] = REQUIRED_KEYS + OPTIONAL_KEYS
 
@@ -73,9 +76,25 @@ def _appearance_properties() -> dict:
     }
 
 
+def _roughness_property() -> dict:
+    """Roughness, kept separate because it is optional until Mengkai confirms levels."""
+    from .pools import ROUGHNESSES
+
+    if not ROUGHNESSES:
+        return {}
+    return {
+        "roughness": {
+            "type": "string",
+            "enum": list(ROUGHNESSES),
+            "description": "Surface roughness, independent of material type.",
+        }
+    }
+
+
 def candidate_schema(include_sketch: bool = False) -> dict:
     """Schema for one LLM-authored candidate."""
     props = _appearance_properties()
+    props.update(_roughness_property())
     props["rationale"] = {
         "type": "string",
         "description": (

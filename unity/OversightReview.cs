@@ -1,0 +1,475 @@
+// The oversight block, run at the end of the session, in the same app.
+//
+// Sits AFTER all eight VR trials are finished. That ordering is the whole reason this
+// works: asking "which variable is not consistent with the target emotion?" between trials would tell the participant
+// the study is about whether rooms are consistent, and every affect rating after that would
+// stop being a naive affective response and become an evaluation. By the time this
+// screen appears the primary data is already collected and safe.
+//
+// Sequence per review trial:
+//
+//     show room (live, not a still) -> consistent with the target? -> which variable -> what would fit better
+//
+// Rooms are shown live through RoomLoader rather than as pre-rendered images, because
+// the participant has just stood in these rooms and a still would be a different
+// stimulus. It also means no rendering step is needed before a session can run.
+//
+// Ground truth comes from the block file built by:
+//     python3 -m pipeline.cli oversight-block
+
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+using System.Text;
+using UnityEngine;
+
+namespace EmotionRooms
+{
+    [Serializable]
+    public class OversightTrialData
+    {
+        public string trial_id;
+        public string condition;
+        public string target_emotion_shown;
+        public string rationale_shown;
+        public RoomConfig stimulus;
+        public OversightGroundTruth ground_truth;
+    }
+
+    [Serializable]
+    public class OversightGroundTruth
+    {
+        public string swapped_field;
+        public string donor_emotion;
+        public bool rationale_is_wrong;
+    }
+
+    [Serializable]
+    public class OversightBlockData
+    {
+        public string participant;
+        public List<OversightTrialData> trials = new List<OversightTrialData>();
+
+        public static OversightBlockData FromJson(string json)
+        {
+            return JsonUtility.FromJson<OversightBlockData>(json);
+        }
+    }
+
+    [Serializable]
+    public class OversightRecord
+    {
+        public string participant;
+        public int trialIndex;
+        public string trialId;
+        public string condition;
+        public string targetEmotionShown;
+
+        public bool detected;
+        public float detectionConfidence;
+        public string attributedField;
+        public float attributionConfidence;
+        public string correctedValue;
+
+        public long durationMs;
+        public string swappedField;      // ground truth, written alongside for convenience
+        public string startedUtc;
+
+        // The correction loop. -1 means not collected, which is different from a rating
+        // of 0 and must not be averaged in as one.
+        public int valenceBefore = -1;
+        public int arousalBefore = -1;
+        public int valenceAfter = -1;
+        public int arousalAfter = -1;
+        public bool correctionApplied;
+
+        public string ToCsvRow()
+        {
+            var fields = new[]
+            {
+                participant, trialIndex.ToString(CultureInfo.InvariantCulture), trialId,
+                condition, targetEmotionShown,
+                detected ? "1" : "0",
+                detectionConfidence.ToString("0.###", CultureInfo.InvariantCulture),
+                attributedField ?? "",
+                attributionConfidence.ToString("0.###", CultureInfo.InvariantCulture),
+                correctedValue ?? "",
+                durationMs.ToString(CultureInfo.InvariantCulture),
+                swappedField ?? "",
+                startedUtc,
+                valenceBefore.ToString(CultureInfo.InvariantCulture),
+                arousalBefore.ToString(CultureInfo.InvariantCulture),
+                valenceAfter.ToString(CultureInfo.InvariantCulture),
+                arousalAfter.ToString(CultureInfo.InvariantCulture),
+                correctionApplied ? "1" : "0",
+            };
+            var row = new StringBuilder();
+            for (int i = 0; i < fields.Length; i++)
+            {
+                if (i > 0) row.Append(',');
+                string value = fields[i] ?? "";
+                row.Append(value.IndexOf(',') >= 0 ? "\"" + value.Replace("\"", "\"\"") + "\"" : value);
+            }
+            return row.ToString();
+        }
+
+        public static string CsvHeader()
+        {
+            return "participant,trial_index,trial_id,condition,target_emotion_shown," +
+                   "detected,detection_confidence,attributed_field,attribution_confidence," +
+                   "corrected_value,duration_ms,swapped_field,started_utc," +
+                   "valence_before,arousal_before,valence_after,arousal_after," +
+                   "correction_applied";
+        }
+    }
+
+    public class OversightReview : MonoBehaviour
+    {
+        [Header("Wiring")]
+        public RoomLoader loader;
+        public EventLog events;
+
+        [Tooltip("The same affect grid used in Phase A. Needed for the re-rating step: " +
+                 "after a participant corrects a room they see their corrected version " +
+                 "and rate it, which is what closes the delegation loop.")]
+        public AffectGrid grid;
+
+        [Tooltip("Screen asking whether the room looks consistent with the stated target emotion.")]
+        public GameObject detectionPanel;
+
+        [Tooltip("Screen asking which variable is not consistent with the target emotion. One option per attributable " +
+                 "variable, plus an explicit 'nothing looks swapped'.")]
+        public GameObject attributionPanel;
+
+        [Tooltip("Screen asking what value would fit the target emotion better.")]
+        public GameObject correctionPanel;
+
+        [Header("Session")]
+        public string participantId = "p00";
+
+        [Tooltip("Block file from: python3 -m pipeline.cli oversight-block")]
+        public TextAsset blockAsset;
+
+        public string blockFileName = "";
+
+        [Tooltip("Seconds the room is shown before the questions appear. Shorter than " +
+                 "the main trial exposure: they have already stood in these rooms and " +
+                 "this is a review, not a fresh affective response.")]
+        public float reviewExposureSeconds = 8f;
+
+        [Header("Correction loop")]
+        [Tooltip("After a correction, rebuild the room with it and let the participant " +
+                 "experience and re-rate it.\n\n" +
+                 "This is what makes the correction question answerable without needing " +
+                 "an external reference. Rather than asking whether a correction moved " +
+                 "toward some value we would have to define first, it asks whether the " +
+                 "participant's own correction improved their own affective response. " +
+                 "The reference is their first rating of the same room, so no distance " +
+                 "metric across the pool is required.\n\n" +
+                 "It is also what makes the participant a principal rather than a rater: " +
+                 "they act, and then live with the result.")]
+        public bool reRateCorrections = true;
+
+        [Header("Output")]
+        public string responsesFileName = "oversight_responses.csv";
+
+        public event Action<OversightRecord> TrialCompleted;
+        public event Action BlockFinished;
+
+        public bool IsRunning { get; private set; }
+
+        // Set by the UI before Commit* is called.
+        [NonSerialized] public bool pendingDetected;
+        [NonSerialized] public float pendingDetectionConfidence = 0.5f;
+        [NonSerialized] public string pendingAttributedField;
+        [NonSerialized] public float pendingAttributionConfidence = 0.5f;
+        [NonSerialized] public string pendingCorrectedValue;
+
+        bool detectionAnswered, attributionAnswered, correctionAnswered;
+        AffectResponse lastRating;
+        bool hasRating;
+        OversightBlockData block;
+        readonly List<OversightRecord> completed = new List<OversightRecord>();
+
+        string ResponsePath
+        {
+            get { return Path.Combine(Application.persistentDataPath, responsesFileName); }
+        }
+
+        void Awake()
+        {
+            if (grid != null) grid.Responded += OnRated;
+        }
+
+        void OnDestroy()
+        {
+            if (grid != null) grid.Responded -= OnRated;
+        }
+
+        void OnRated(AffectResponse response)
+        {
+            lastRating = response;
+            hasRating = true;
+        }
+
+        /// <summary>Call these from the UI buttons.</summary>
+        public void CommitDetection(bool noticedSwap)
+        {
+            pendingDetected = noticedSwap;
+            detectionAnswered = true;
+        }
+
+        public void CommitAttribution(string field)
+        {
+            pendingAttributedField = field;
+            attributionAnswered = true;
+        }
+
+        public void CommitCorrection(string value)
+        {
+            pendingCorrectedValue = value;
+            correctionAnswered = true;
+        }
+
+        public void BeginBlock()
+        {
+            if (IsRunning) return;
+
+            string json = ReadBlockJson();
+            if (string.IsNullOrEmpty(json))
+            {
+                Debug.LogError("OversightReview: no block file. Run 'oversight-block' and " +
+                               "assign blockAsset or blockFileName.");
+                return;
+            }
+
+            block = OversightBlockData.FromJson(json);
+            if (block == null || block.trials == null || block.trials.Count == 0)
+            {
+                Debug.LogError("OversightReview: block parsed but holds no trials.");
+                return;
+            }
+
+            if (!File.Exists(ResponsePath))
+                File.WriteAllText(ResponsePath, OversightRecord.CsvHeader() + "\n", Encoding.UTF8);
+
+            StartCoroutine(RunBlock());
+        }
+
+        IEnumerator RunBlock()
+        {
+            IsRunning = true;
+            completed.Clear();
+
+            for (int i = 0; i < block.trials.Count; i++)
+            {
+                yield return RunTrial(block.trials[i], i + 1);
+            }
+
+            IsRunning = false;
+            loader.HideRooms();
+            HideAll();
+
+            Debug.Log(string.Format("OversightReview: {0} trials written to {1}",
+                completed.Count, ResponsePath));
+
+            var handler = BlockFinished;
+            if (handler != null) handler();
+        }
+
+        IEnumerator RunTrial(OversightTrialData trial, int index)
+        {
+            HideAll();
+            string startedUtc = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture);
+            float began = Time.time;
+
+            // Same gate as everywhere else: nothing unvalidated becomes a stimulus.
+            var errors = trial.stimulus != null ? trial.stimulus.Validate() : new List<string> { "missing stimulus" };
+            if (errors.Count > 0)
+            {
+                Debug.LogError("OversightReview: skipping invalid stimulus on " +
+                               trial.trial_id + ": " + string.Join("; ", errors.ToArray()));
+                yield break;
+            }
+
+            if (events != null)
+            {
+                events.Phase = "B";
+                events.TrialIndex = index;
+                events.TrialId = trial.trial_id;
+                events.WriteValues("review_trial_start", trial.condition,
+                    trial.ground_truth != null ? trial.ground_truth.swapped_field : null,
+                    "shown_as=" + trial.target_emotion_shown);
+            }
+
+            loader.Load(trial.stimulus);
+            if (events != null) events.WriteRoom("review_room_shown", trial.stimulus, trial.condition);
+            yield return new WaitForSeconds(reviewExposureSeconds);
+
+            // Rate the room as presented, BEFORE any of the diagnostic questions. This is
+            // the baseline the corrected version is compared against, and it has to be
+            // collected first: once someone has been asked which variable is off, they
+            // are evaluating rather than reporting.
+            int valenceBefore = -1, arousalBefore = -1;
+            if (reRateCorrections && grid != null)
+            {
+                loader.HideRooms();
+                hasRating = false;
+                grid.Show();
+                if (events != null) events.Write("review_rating_before_shown", null);
+                while (!hasRating) yield return null;
+                grid.Hide();
+                valenceBefore = lastRating.valence;
+                arousalBefore = lastRating.arousal;
+                if (events != null)
+                    events.WriteGrid("review_rating_before", valenceBefore, arousalBefore, 0f, 0f, null);
+                loader.Load(trial.stimulus);
+            }
+
+            detectionAnswered = false;
+            if (detectionPanel != null) detectionPanel.SetActive(true);
+            if (events != null) events.Write("detection_shown", null);
+            while (!detectionAnswered) yield return null;
+            if (detectionPanel != null) detectionPanel.SetActive(false);
+            if (events != null)
+                events.WriteValues("detection_answered", pendingDetected ? "noticed_swap" : "looks_consistent",
+                    pendingDetectionConfidence.ToString("0.##"), null);
+
+            // Attribution and correction are only asked when they said something is
+            // wrong. Forcing an attribution out of someone who noticed nothing would
+            // manufacture data and wreck the false-alarm measure.
+            pendingAttributedField = null;
+            pendingCorrectedValue = null;
+
+            if (pendingDetected)
+            {
+                attributionAnswered = false;
+                if (attributionPanel != null) attributionPanel.SetActive(true);
+                if (events != null) events.Write("attribution_shown", null);
+                while (!attributionAnswered) yield return null;
+                if (attributionPanel != null) attributionPanel.SetActive(false);
+                if (events != null)
+                    events.WriteValues("attribution_answered", pendingAttributedField,
+                        pendingAttributionConfidence.ToString("0.##"), null);
+
+                correctionAnswered = false;
+                if (correctionPanel != null) correctionPanel.SetActive(true);
+                if (events != null) events.Write("correction_shown", null);
+                while (!correctionAnswered) yield return null;
+                if (correctionPanel != null) correctionPanel.SetActive(false);
+                if (events != null)
+                    events.WriteValues("correction_answered", pendingCorrectedValue, null, null);
+            }
+
+            // The correction loop. Apply what they chose, show it, and let them rate the
+            // room they themselves produced.
+            int valenceAfter = -1, arousalAfter = -1;
+            bool applied = false;
+
+            if (reRateCorrections && grid != null && pendingDetected &&
+                !string.IsNullOrEmpty(pendingAttributedField) &&
+                !string.IsNullOrEmpty(pendingCorrectedValue))
+            {
+                var corrected = trial.stimulus.With(pendingAttributedField, pendingCorrectedValue);
+                var problems = corrected != null ? corrected.Validate() : new List<string> { "unparseable correction" };
+
+                if (corrected != null && problems.Count == 0)
+                {
+                    applied = true;
+                    loader.HideRooms();
+                    loader.Load(corrected);
+                    if (events != null)
+                        events.WriteRoom("correction_room_shown", corrected,
+                            pendingAttributedField + "=" + pendingCorrectedValue);
+                    yield return new WaitForSeconds(reviewExposureSeconds);
+
+                    loader.HideRooms();
+                    hasRating = false;
+                    grid.Show();
+                    if (events != null) events.Write("review_rating_after_shown", null);
+                    while (!hasRating) yield return null;
+                    grid.Hide();
+                    valenceAfter = lastRating.valence;
+                    arousalAfter = lastRating.arousal;
+                    if (events != null)
+                        events.WriteGrid("review_rating_after", valenceAfter, arousalAfter, 0f, 0f, null);
+                }
+                else
+                {
+                    // Never show an out-of-pool room. A correction that cannot be applied
+                    // is logged as not applied rather than silently skipped, so the
+                    // analysis can tell "did not help" apart from "never happened".
+                    Debug.LogWarning("OversightReview: correction not applicable on " +
+                                     trial.trial_id + ": " +
+                                     string.Join("; ", problems.ToArray()));
+                    if (events != null)
+                        events.WriteValues("correction_not_applied", pendingAttributedField,
+                            pendingCorrectedValue, string.Join("; ", problems.ToArray()));
+                }
+            }
+
+            loader.HideRooms();
+
+            var record = new OversightRecord
+            {
+                participant = participantId,
+                trialIndex = index,
+                trialId = trial.trial_id,
+                condition = trial.condition,
+                targetEmotionShown = trial.target_emotion_shown,
+                detected = pendingDetected,
+                detectionConfidence = pendingDetectionConfidence,
+                attributedField = pendingAttributedField,
+                attributionConfidence = pendingAttributionConfidence,
+                correctedValue = pendingCorrectedValue,
+                durationMs = (long)((Time.time - began) * 1000f),
+                swappedField = trial.ground_truth != null ? trial.ground_truth.swapped_field : null,
+                startedUtc = startedUtc,
+                valenceBefore = valenceBefore,
+                arousalBefore = arousalBefore,
+                valenceAfter = valenceAfter,
+                arousalAfter = arousalAfter,
+                correctionApplied = applied,
+            };
+
+            completed.Add(record);
+            AppendRecord(record);
+            if (events != null) events.Write("review_trial_end", null);
+
+            var handler = TrialCompleted;
+            if (handler != null) handler(record);
+        }
+
+        void HideAll()
+        {
+            if (detectionPanel != null) detectionPanel.SetActive(false);
+            if (attributionPanel != null) attributionPanel.SetActive(false);
+            if (correctionPanel != null) correctionPanel.SetActive(false);
+        }
+
+        string ReadBlockJson()
+        {
+            if (!string.IsNullOrEmpty(blockFileName))
+            {
+                string path = Path.Combine(Application.persistentDataPath, blockFileName);
+                if (File.Exists(path)) return File.ReadAllText(path);
+                Debug.LogWarning("OversightReview: no block at " + path);
+            }
+            return blockAsset != null ? blockAsset.text : null;
+        }
+
+        void AppendRecord(OversightRecord record)
+        {
+            try
+            {
+                File.AppendAllText(ResponsePath, record.ToCsvRow() + "\n", Encoding.UTF8);
+            }
+            catch (Exception error)
+            {
+                Debug.LogError("OversightReview: could not append: " + error.Message);
+            }
+        }
+    }
+}

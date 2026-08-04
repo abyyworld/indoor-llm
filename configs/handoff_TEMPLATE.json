@@ -1,0 +1,120 @@
+{
+  "_README": [
+    "HANDOVER TEMPLATE -- fill in and send back.",
+    "",
+    "One file, 8 cells: 4 emotions x 2 shapes, holding the aggregated final values",
+    "rather than individual samples. Check it before sending with:",
+    "",
+    "    python3 -m pipeline.cli validate-handoff <thisfile>.json",
+    "",
+    "Exit code 0 means it is safe to build against. Non-zero prints exactly what is",
+    "wrong and where. No API key, no network, nothing leaves your machine.",
+    "",
+    "The 'variables' block below is the contract, and cells are checked against it.",
+    "Change the contract and the cells together and the file stays self-consistent, so",
+    "nothing here has to wait on the repo being updated first.",
+    "",
+    "Updated for: saturation as a percentage from two bands, and warm-white lighting."
+  ],
+
+  "format": "emotion-rooms-handoff/v2",
+  "produced_by": "Mengkai Chen",
+  "date": "2026-08-__",
+  "notes": "Aggregated from the consistency batch. Method and N per cell below.",
+
+  "variables": {
+    "_comment": [
+      "Three kinds are understood:",
+      "  enum              -- value must be one of 'values'",
+      "  bands             -- value must fall inside one of 'bands'",
+      "  per_emotion_bands -- range depends on the cell's emotion; null declares that",
+      "                       emotion exploratory, so any positive value passes and is",
+      "                       reported as 'no locked range' rather than as a failure.",
+      "Mark a variable \"optional\": true while it is still being decided and it may be",
+      "left out of cells. Adding a variable here is all that is needed to add one."
+    ],
+
+    "hue_category": {
+      "type": "enum",
+      "values": ["warm", "cool", "neutral"]
+    },
+
+    "saturation_pct": {
+      "type": "bands",
+      "unit": "%",
+      "bands": [[10, 20], [30, 40]],
+      "_comment": "Per your note: a specific percentage per cell, from one of two bands. Maps directly onto HSV saturation, so 15% becomes 0.15 in the material system."
+    },
+
+    "material": {
+      "type": "enum",
+      "values": ["rough", "smooth"],
+      "_comment": "Roughness. Keep as-is if material stays one variable."
+    },
+
+    "material_type": {
+      "type": "enum",
+      "values": ["plaster", "concrete", "textile"],
+      "optional": true,
+      "_comment": "Only if you split material into roughness plus a type. Marked optional so the file validates either way. Placeholder values -- see my note on which ones stay orthogonal to the hue manipulation. Delete this whole entry if material stays one variable."
+    },
+
+    "brightness_lux": {
+      "type": "per_emotion_bands",
+      "unit": "lx",
+      "bands": {
+        "calm": null,
+        "tense": null,
+        "excited": null,
+        "depressed": null
+      },
+      "_comment": [
+        "All four null pending your finalised illuminance ranges. The earlier",
+        "45-150 / 670-780 figures have been REMOVED at your request (1 Aug: those were",
+        "exploratory, from the generation tests Daniele and Eyal suggested, not the",
+        "literature intended for the final ranges).",
+        "While a band is null any positive lux passes and is reported as exploratory, so",
+        "the file validates but nothing is actually being checked on illuminance.",
+        "Fill in [low, high] per emotion as the ranges land, and leave null only for any",
+        "emotion you genuinely intend to keep unbounded."
+      ]
+    }
+  },
+
+  "lighting": {
+    "colour": "warm_white",
+    "correlated_colour_temperature_K": null,
+    "_comment": "Confirmed warm white. I need a number in kelvin to build against: 2700K and 3000K look materially different against a cool wall. See my note about warm light interacting with the cool-hue conditions at low illuminance."
+  },
+
+  "cells": [
+    {
+      "_example": "Worked example from your 4a batch-2 calm/curved sample, with a saturation figure filled in for illustration. Replace with the aggregated value.",
+      "target_emotion": "calm",
+      "shape": "curved",
+      "hue_category": "cool",
+      "hue_detail": "muted cool blue-gray tones",
+      "saturation_pct": 15,
+      "material": "smooth",
+      "brightness_lux": 95,
+      "n_samples": null,
+      "aggregation": "mode",
+      "consistency": null
+    },
+    { "target_emotion": "calm",      "shape": "linear", "hue_category": null, "hue_detail": "", "saturation_pct": null, "material": null, "brightness_lux": null, "n_samples": null, "aggregation": null, "consistency": null },
+    { "target_emotion": "tense",     "shape": "curved", "hue_category": null, "hue_detail": "", "saturation_pct": null, "material": null, "brightness_lux": null, "n_samples": null, "aggregation": null, "consistency": null },
+    { "target_emotion": "tense",     "shape": "linear", "hue_category": null, "hue_detail": "", "saturation_pct": null, "material": null, "brightness_lux": null, "n_samples": null, "aggregation": null, "consistency": null },
+    { "target_emotion": "excited",   "shape": "curved", "hue_category": null, "hue_detail": "", "saturation_pct": null, "material": null, "brightness_lux": null, "n_samples": null, "aggregation": null, "consistency": null },
+    { "target_emotion": "excited",   "shape": "linear", "hue_category": null, "hue_detail": "", "saturation_pct": null, "material": null, "brightness_lux": null, "n_samples": null, "aggregation": null, "consistency": null },
+    { "target_emotion": "depressed", "shape": "curved", "hue_category": null, "hue_detail": "", "saturation_pct": null, "material": null, "brightness_lux": null, "n_samples": null, "aggregation": null, "consistency": null },
+    { "target_emotion": "depressed", "shape": "linear", "hue_category": null, "hue_detail": "", "saturation_pct": null, "material": null, "brightness_lux": null, "n_samples": null, "aggregation": null, "consistency": null }
+  ],
+
+  "_field_notes": {
+    "hue_detail": "Free text, logged only, excluded from analysis, matching your template. Optional.",
+    "n_samples": "How many samples this cell aggregates. Optional, but it goes straight into thesis section 3.3.",
+    "aggregation": "How samples were collapsed: mode, mean, median, or a note. Optional.",
+    "consistency": "Mode share for the discrete variables, or variance for the continuous ones. Optional.",
+    "brightness_lux": "A single number in lux. calm and tense must sit inside the declared band; excited and depressed accept any positive value and are reported as exploratory."
+  }
+}

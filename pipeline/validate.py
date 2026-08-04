@@ -93,6 +93,16 @@ def _check_appearance(obj: dict, out: list[Violation]) -> None:
     _check_float_pool(obj, "brightness", BRIGHTNESSES, out)
     _check_str_pool(obj, "texture", TEXTURES, out)
 
+    # Roughness is optional until Mengkai confirms the levels, so absence is fine but a
+    # value off the pool is not. Silently accepting an unknown roughness would let a
+    # surface the material system cannot render reach a participant.
+    from .pools import ROUGHNESSES, ROUGHNESS_IS_REQUIRED
+
+    if "roughness" in obj:
+        _check_str_pool(obj, "roughness", ROUGHNESSES, out)
+    elif ROUGHNESS_IS_REQUIRED:
+        out.append(Violation("roughness", None, "required field is missing"))
+
 
 def _check_rationale(obj: dict, out: list[Violation]) -> None:
     rationale = obj.get("rationale")
@@ -101,7 +111,7 @@ def _check_rationale(obj: dict, out: list[Violation]) -> None:
 
 
 def validate_candidate(obj: Any, allow_sketch: bool = False) -> list[Violation]:
-    """Validate a raw LLM candidate: the four pool fields plus a rationale."""
+    """Validate a raw LLM candidate: the pool fields plus a rationale."""
     if not isinstance(obj, dict):
         return [Violation("<root>", obj, "must be a JSON object")]
 
@@ -109,7 +119,15 @@ def validate_candidate(obj: Any, allow_sketch: bool = False) -> list[Violation]:
     _check_appearance(obj, violations)
     _check_rationale(obj, violations)
 
+    # Derived from the pools rather than written out, so adding a variable does not
+    # silently leave the candidate check rejecting the very field the model was just
+    # told to produce. That is what happened when roughness was added: the schema asked
+    # for it and this set refused it, so every candidate was rejected and re-asked.
+    from .pools import ROUGHNESSES
+
     allowed = {"hue", "saturation", "brightness", "texture", "rationale"}
+    if ROUGHNESSES:
+        allowed.add("roughness")
     if allow_sketch:
         allowed.add("sketch")
     for key in sorted(set(obj) - allowed):

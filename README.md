@@ -4,33 +4,21 @@ Implementation of [design-spec.md](design-spec.md): the LLM selects VR room appe
 parameters from frozen discrete pools to hit a target emotion, a validator gates
 everything before it reaches a participant, and a Unity loader builds the room.
 
-## Scope of this repository
-
-This is the software half of a two-person MSc study. The pipeline, the Unity loader and
-the tests here are my own work. The experimental design, the literature grounding for
-each manipulated variable and the formative LLM testing are my collaborator's, and her
-research documents are not redistributed here.
-
-That means some notes below cite documents you will not find in this repo, by design:
-the scene brief and its sections, the supervision meeting notes, and the thesis outline.
-Where a design decision came from one of those, the citation is kept so the reasoning is
-traceable for anyone who has access to them. Nothing in this repo depends on those files
-at runtime, and the pool values are placeholders pending her literature review, so treat
-the numbers in `configs/pools.json` as provisional rather than as the study's parameters.
-
 ```
 pipeline/            generation, validation, controls, session building  (Python)
 unity/               the scene loader                                    (C#)
-configs/             pools.json (the pool VALUES as data) + hand-written configs,
+build-decisions.md   engine, headset, lux and scene-structure decisions (mine to make)
+configs/             pools.json (values as data), demo_batch.json (runnable without
+                     an API key) + hand-written configs,
                      including a deliberately broken one
-tests/               60 tests, no API key or network needed
+tests/               157 tests, no API key or network needed
 runs/                generated output (git-ignored)
 ```
 
 ## Quick start
 
 ```bash
-# 1. See the frozen pools and the design space (720 rooms, 1440 with shape)
+# 1. See the frozen pools and the design space (600 rooms, 1200 with shape)
 python3 -m pipeline.cli pools
 
 # 2. Prove the gate works before trusting anything to it
@@ -105,7 +93,8 @@ arm is a seeded uniform draw from the same pools, which is what makes "the LLM s
 emotion" falsifiable rather than indistinguishable from "any blue dim room feels calm".
 
 **The session budget is enforced, not documented.** `build-session` prints trial minutes
-at the spec's 1.5 min/room and warns past 25 minutes. With shape between-subjects that is 4 rooms = 6 min, so it no longer binds.
+at the spec's 1.5 min/room and warns past 25 minutes. Shape is within-subjects, so that
+is 8 rooms = 12 min, still inside the budget.
 
 ## Assumptions - resolved 30 Jul 2026
 
@@ -113,18 +102,38 @@ All four are now answered by `research/scene-brief-for-akbar-260720.md` and
 `research/paper-outline-260727-to-be-determined.html`. Kept here as a record of what
 changed rather than deleted.
 
-1. **Room shape is researcher-fixed, and BETWEEN-subjects.** Confirmed: shape is never
-   an LLM output and does not enter the variable pool - the pool is applied within each
-   shape condition independently (brief §8). Each participant is assigned one shape
-   (brief §1–2; outline §4: "4 emotions within-subjects × 2 shapes between-subjects").
-   So a participant sees **four** rooms, and the brief's "8 configurations" is the count
-   of scenes to *build* across both arms, not one participant's trial list. Call
-   `build_session(..., shapes=("curved",), variants_per_emotion=1)`. The old
-   within-subjects crossing is still the function default so existing calls work, but it
-   is not the design.
+1. **Room shape is researcher-fixed, and WITHIN-subjects.** Shape is never an LLM
+   output and does not enter the variable pool: the pool is applied within each shape
+   condition independently (brief §8). Shape moved to within-subjects on 2 Aug 2026,
+   reversing the earlier reading. The reason is power, not a change of mind: between
+   subjects spends power on between-person variance that within-subjects removes, so
+   Mengkai puts it at roughly 20-30 participants rather than 40-60, which is the whole
+   recruitment budget. Each participant sees **8 trials**, 4 emotions x 2 shapes. This
+   is the `build_session` default, so the change needed no rework; the between-subjects
+   path still works by passing a single-entry `shapes`.
+
+   **Ordering is not a detail here.** Each participant meets every emotion twice, once
+   per shape, and those two rooms may share a general character since they target the
+   same emotion from the same pool. If they land near each other, people may rate the
+   comparison instead of their own feeling, which biases exactly the shape contrast the
+   study exists to measure.
+
+   Note the two shapes are sampled *independently*, so the same emotion can land on
+   different values across linear and curved. An earlier version of this note said they
+   were identical, citing the formative batches; Mengkai corrected that on 2 Aug, and it
+   was a property of that unfinalised pool rather than of the design. The adjacency risk
+   survives the correction but is weaker than identity.
+
+   Default is `counterbalance="constrained"`: reshuffle until no same-emotion pair is
+   closer than `min_separation` (2). Measured over 200 participants: zero adjacent pairs
+   and 199 distinct orders. `"separated"` guarantees a gap of 4, the maximum, but yields
+   only **8 distinct orders at any sample size** and always puts each emotion once in the
+   first half, which is a detectable session structure of its own. Plain randomisation
+   leaves about a quarter of pairs adjacent. Neither option removes both risks, and the
+   write-up should describe it as a tradeoff rather than a solved problem.
 
 2. **Light is neutral white; hue is wall/floor material only.** Confirmed exactly as
-   built (brief §4, §8). `WALL_VALUE = 0.85` stands, `ApplyLight` needs no change, and
+   built (brief §4, §8). `ApplyLight` needs no change, and
    the fixtures must stay unmovable with colour temperature untied from intensity.
 
 3. **The four emotions are `calm, excited, depressed, tense`.** Confirmed (brief §1) -
@@ -141,25 +150,74 @@ changed rather than deleted.
    neither costs anything and either can be turned on with a flag. Do not delete them.
    With four trials per participant the 25-minute budget no longer binds.
 
-### Still blocking a study-ready build
+### The contract her formative testing actually used
 
-- **The variable pool's actual values are not settled.** Brief §4: "please do not build
-  against specific numbers or category labels". `pools.py` values are therefore
-  placeholders - see the warning in that module's docstring.
-- **Three variables or four.** Brief §4 and outline §3.2 both name three: hue category,
-  material roughness, illuminance. That drops `saturation` to a fixed constant, which
-  the 10 Jul meeting note supports ("fix saturation low as a constant rather than
-  manipulating it - four papers converge on this"). But brief §7 step 2 still says
-  "hue/saturation/roughness", and the outline flags "adjustments pending merge from the
-  260723 meeting (saturation levels, etc.)". Unresolved; ask before changing `pools.py`.
-- **Hue is heading for categories, not degrees.** The 10 Jul note simplifies hue to
-  warm/cool/neutral. The current 12 numeric hues are a placeholder for that.
-- **`material` vs `texture`.** Roughness is a scalar tier; `TEXTURES` is a categorical
-  map. They are not interchangeable and the brief uses both words.
-- **The JSON contract is not final.** Brief §5: field names and format still to be
-  synced, along with the category→parameter config table Unity reads.
-- **`hue_detail`.** Mengkai's formative testing logs this field and `CONTRIBUTORS.md`
-  lists it; it does not exist in `schema.py`. Confirm whether the pipeline must emit it.
+Read out of `research/formative-testing/prompt-template/five-llm-freedom-modes-prompt-template-260714.md`
+(v2, `hue_detail` added 21 Jul) and the 44 logged samples. This is the real target, and it
+differs from what this repo currently implements on every axis. Mode ④a is the selected
+one (brief §2).
+
+| | This repo now | Her ④a template |
+|---|---|---|
+| hue | `hue` 12 ints, degrees | `hue_category` in {warm, cool, neutral} |
+| saturation | `saturation` 3 floats | reinstated 23 Jul as a discrete 1-5 scale |
+| material | `texture` 4 named maps | `material` in {rough, smooth} |
+| brightness | `brightness` 5 normalised floats | `brightness` in **lux**, band per emotion |
+| secondary hue | absent | `hue_detail`, free text, not analysed |
+| rationale | `rationale` | `free_elements_description` |
+
+**Four variables, not three.** The 23 Jul note settles it and reverses the 10 Jul
+position: "Saturation as a discrete 1-5 slider ... This overturns the earlier decision to
+lock saturation to a low constant", on Wilms & Oberfeld (2018), where saturation's arousal
+effect is no weaker than hue's and hue effects vanish at low saturation. Brief §4's
+"three" is stale, not ambiguous: the outline itself says the 260723 saturation adjustment
+is "pending merge". Do not treat §4 as current on this point.
+
+**Brightness is not a pool.** It is a continuous lux value with an emotion-conditional
+constraint, which nothing here anticipates:
+
+- calm ~45-150 lx, tense ~670-780 lx (Mostafavi et al.)
+- excited / depressed: **no literature range**, free field, LLM decides and justifies
+
+So `brightness` cannot be enum-bounded, and the validator needs per-emotion range checks
+plus an explicit "unlocked / exploratory" state for two of the four emotions. Per the
+23 Jul note those two must be marked "no locked range", never "failed to match".
+
+### Still genuinely open
+
+- **The concrete values.** Colour blocks are to be literature-driven (Jonauskaite 2020:
+  black, red, yellow-orange, gray, blue, white are low-variance; purple/pink are not),
+  but the block list is not fixed. What saturation 1-5 maps to numerically is unstated.
+  Excited/depressed illuminance has no range at all.
+- **Illuminance needs a lux to Unity-intensity calibration**, measured in the headset.
+  This is the "category maps to parameter value" table of brief §5 and §7.3, and it is on
+  the critical path for the build. `unity/README.md` currently maps a normalised 0.2-1.0,
+  which is the wrong contract.
+- **Lighting colour**: brief §4 says neutral white, the 23 Jul note says "neutral/warm-white".
+  For a study manipulating wall hue, that difference matters.
+- **No windows** (23 Jul: they would contaminate the illuminance manipulation). Not yet
+  recorded as a build constraint.
+
+### Validity problems in her own data, not code problems
+
+These are hers to decide, but they are the reason a study-ready build is not just a
+refactor. All are visible in her batch-2 logs and analysis.
+
+- **`tense` collapses onto its neighbours.** Observed ④a: calm = cool/smooth/low,
+  tense = cool/rough/low, depressed = cool/rough/~35 lx. Tense and depressed are
+  identical on hue and material and both dim. Calm and tense differ only in material.
+- **The LLM's `tense` contradicts the literature.** Across two batches it chose low
+  illuminance and, when unlocked, smooth material, against the literature's high
+  illuminance plus rough. She flags this as "highest priority" for the supervisor.
+- **The ④a prompt does not force the calm/tense lux mapping**; it lists both bands side
+  by side, which is why tense took calm's band. A prompt fix, once she confirms the
+  pairing.
+- **`neutral` hue was never selected once** in the locked-pool samples, so hue is
+  effectively binary in practice.
+- **The dropped neutral baseline was a `[MEETING]` item.** design-spec.md §5 records the
+  supervisor asking for non-emotional control rooms as the baseline. The outline drops it
+  and books it as a limitation. Worth re-confirming with the supervisor, not just with
+  Mengkai.
 
 ## Not built
 

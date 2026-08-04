@@ -117,6 +117,92 @@ def cmd_validate(args: argparse.Namespace) -> int:
     return exit_code
 
 
+def cmd_validate_handoff(args: argparse.Namespace) -> int:
+    from .handoff import exploratory_cells, validate_handoff
+
+    exit_code = 0
+    for path in args.files:
+        doc = _load(path)
+        errors = validate_handoff(doc)
+
+        if errors:
+            print(f"{path}: NOT safe to build against, {len(errors)} problem(s)")
+            for error in errors:
+                print(f"  - {error}")
+            exit_code = 1
+            continue
+
+        cells = doc.get("cells") or []
+        print(f"{path}: OK, {len(cells)} cells, safe to build against")
+
+        exploratory = exploratory_cells(doc)
+        if exploratory:
+            print(
+                f"  {len(exploratory)} value(s) have no locked band for their emotion and "
+                f"are exploratory by design, not failures:"
+            )
+            for emotion, shape, name, value in exploratory:
+                print(f"    {emotion}/{shape}: {name}={value}")
+    return exit_code
+
+
+def cmd_oversight_block(args: argparse.Namespace) -> int:
+    """Phase B: one participant's detection / attribution / correction block."""
+    from .controls import random_rooms
+    from .oversight import build_oversight_block
+
+    payload = _load(args.batch)
+    configs = _rooms_of(payload)
+    if len(configs) < 2:
+        print("error: need at least two configs so there is a donor to swap from",
+              file=sys.stderr)
+        return 1
+
+    def pool_sampler(rng):
+        room = random_rooms(1, seed=rng.randrange(1 << 30))[0]
+        return {k: room[k] for k in ("hue", "saturation", "brightness", "texture") if k in room}
+
+    block = build_oversight_block(
+        configs,
+        seed=args.seed,
+        participant=args.participant,
+        per_condition=args.per_condition,
+        pool_sampler=None if args.no_random_arm else pool_sampler,
+    )
+
+    counts: dict[str, int] = {}
+    for trial in block["trials"]:
+        counts[trial["condition"]] = counts.get(trial["condition"], 0) + 1
+    print(f"{len(block['trials'])} trials: " +
+          ", ".join(f"{k}={v}" for k, v in sorted(counts.items())))
+    swapped = [t for t in block["trials"] if t["ground_truth"]["swapped_field"]]
+    if swapped:
+        broken: dict[str, int] = {}
+        for trial in swapped:
+            field = trial["ground_truth"]["swapped_field"]
+            broken[field] = broken.get(field, 0) + 1
+        print("  injected faults by variable: " +
+              ", ".join(f"{k}={v}" for k, v in sorted(broken.items())))
+
+    _write(args.out, block)
+    return 0
+
+
+def cmd_check_separability(args: argparse.Namespace) -> int:
+    """Are the cells actually distinguishable? Run this the moment a config arrives."""
+    from .separability import check, format_report
+
+    exit_code = 0
+    for path in args.files:
+        configs = _rooms_of(_load(path))
+        report = check(configs, too_close=args.too_close)
+        print(f"{path}:")
+        print(format_report(report, too_close=args.too_close))
+        if not report["safe"]:
+            exit_code = 1
+    return exit_code
+
+
 def cmd_emit_unity_pools(args: argparse.Namespace) -> int:
     from .emit_unity import render
 
@@ -256,6 +342,9 @@ def cmd_build_session(args: argparse.Namespace) -> int:
             variants_per_emotion=args.variants,
             neutral_trials=args.neutral,
             random_trials=args.random,
+            counterbalance=args.counterbalance,
+            participant_index=args.participant_index,
+            min_separation=args.min_separation,
         )
     except ValueError as exc:
         print(f"error: {exc}", file=sys.stderr)
@@ -326,6 +415,35 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("files", nargs="+")
     p.set_defaults(func=cmd_validate)
 
+    p = sub.add_parser(
+        "validate-handoff",
+        help="check Mengkai's finalised 8-cell config file before building against it",
+    )
+    p.add_argument("files", nargs="+")
+    p.set_defaults(func=cmd_validate_handoff)
+
+    p = sub.add_parser(
+        "oversight-block",
+        help="Phase B: build one participant's detection/attribution/correction trials",
+    )
+    p.add_argument("--batch", required=True, help="configs to draw stimuli and donors from")
+    p.add_argument("--participant", required=True)
+    p.add_argument("--seed", type=int, required=True)
+    p.add_argument("--per-condition", type=int, default=4)
+    p.add_argument("--no-random-arm", action="store_true",
+                   help="omit the uniform-random condition")
+    p.add_argument("--out", default="runs/oversight_block.json")
+    p.set_defaults(func=cmd_oversight_block)
+
+    p = sub.add_parser(
+        "check-separability",
+        help="can the cells be told apart? exits 1 if any two emotions collide",
+    )
+    p.add_argument("files", nargs="+")
+    p.add_argument("--too-close", type=float, default=0.25,
+                   help="Gower distance below which two cells count as the same room")
+    p.set_defaults(func=cmd_check_separability)
+
     p = sub.add_parser("emit-unity-pools", help="regenerate unity/PoolConstants.cs")
     p.add_argument("--out", default="unity/PoolConstants.cs")
     p.set_defaults(func=cmd_emit_unity_pools)
@@ -368,7 +486,29 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--batch", required=True)
     p.add_argument("--participant", required=True)
     p.add_argument("--seed", type=int, required=True)
-    p.add_argument("--variants", type=int, default=2, help="rooms per emotion")
+    p.add_argument("--variants", type=int, default=1, help="rooms per emotion")
+    p.add_argument(
+        "--counterbalance",
+        choices=("constrained", "separated", "williams", "random"),
+        default="constrained",
+        help="trial ordering. 'constrained' (default) reshuffles until no two trials "
+             "sharing an emotion are closer than --min-separation, giving a different "
+             "order to every participant. 'separated' instead holds the two trials sharing an "
+             "emotion as far apart as possible, which matters because shape is "
+             "within-subjects and those two trials are the same room in a different "
+             "geometry. 'random' shuffles by seed and leaves ~24%% of pairs adjacent.",
+    )
+    p.add_argument("--min-separation", type=int, default=2,
+                   help="constrained ordering only: minimum gap between the two trials "
+                        "sharing an emotion")
+    p.add_argument(
+        "--participant-index",
+        type=int,
+        default=None,
+        help="0-based position in the recruitment order. Required by 'separated' and "
+             "'williams': it selects which counterbalancing row this participant gets, "
+             "so the balance holds across the sample rather than per person.",
+    )
     p.add_argument("--neutral", type=int, default=0, help="neutral control trials")
     p.add_argument("--random", type=int, default=0, help="random control trials")
     p.add_argument("--out", default="-")

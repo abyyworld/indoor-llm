@@ -9,6 +9,7 @@
 // that a malformed config must not reach a participant.
 
 using System;
+using System.Globalization;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -28,6 +29,15 @@ namespace EmotionRooms
         public float saturation = -1f;
         public float brightness = -1f;
         public string texture = null;
+
+        /// <summary>
+        /// Surface roughness, independent of material type. Mengkai confirmed the split
+        /// on 1 Aug; the levels are pending, so this is OPTIONAL: null means absent and
+        /// validates, a value off the pool does not. Accepting an unknown roughness
+        /// would let a surface the material system cannot render reach a participant.
+        /// </summary>
+        public string roughness = null;
+
         public string rationale = null;
 
         /// <summary>Researcher-set experimental factor. Optional; never an LLM output.</summary>
@@ -40,6 +50,8 @@ namespace EmotionRooms
         public float Saturation { get { return saturation; } }
         public float Brightness { get { return brightness; } }
         public string Texture { get { return texture; } }
+        public string Roughness { get { return roughness; } }
+        public bool HasRoughness { get { return !string.IsNullOrEmpty(roughness); } }
         public string Rationale { get { return rationale; } }
         public string Shape { get { return shape; } }
         public bool HasShape { get { return !string.IsNullOrEmpty(shape); } }
@@ -108,6 +120,11 @@ namespace EmotionRooms
                 errors.Add("texture=" + Describe(texture) + " is not in pool: " +
                            PoolConstants.Join(PoolConstants.Textures));
             }
+            if (HasRoughness && !PoolConstants.Contains(PoolConstants.Roughnesses, roughness))
+            {
+                errors.Add("roughness=" + Describe(roughness) + " is not in pool: " +
+                           PoolConstants.Join(PoolConstants.Roughnesses));
+            }
             if (HasShape && !PoolConstants.Contains(PoolConstants.Shapes, shape))
             {
                 errors.Add("shape=" + Describe(shape) + " is not in pool: " +
@@ -131,18 +148,135 @@ namespace EmotionRooms
         }
 
         /// <summary>
-        /// Wall albedo. Hue and saturation come from the config; HSV value is the fixed
-        /// researcher constant, because how bright the room looks is the light's job.
+        /// True when the scene is achromatic. Mengkai, 1 Aug 2026: "whenever saturation
+        /// = 0%, treat the scene as achromatic (black or white, based on V) regardless of
+        /// whatever hue value is stored, don't read hue as meaningful when saturation is 0."
+        /// </summary>
+        public bool IsAchromatic { get { return Mathf.Approximately(saturation, 0f); } }
+
+        /// <summary>
+        /// Wall albedo.
+        ///
+        /// Two rules from her, both deliberate:
+        ///
+        /// 1. Achromatic. At saturation 0 the stored hue is meaningless and must not be
+        ///    read. The scene is black or white, chosen by HSV value.
+        /// 2. Albedo. V=100% stays the documented colour specification, but a reflectance
+        ///    of 1.0 is not physically reachable and would clip toward white at the top of
+        ///    the illuminance range, weakening the hue manipulation in exactly the rooms
+        ///    that depend on it. So the renderer applies V scaled by AlbedoCeiling. She
+        ///    agreed to this on 1 Aug: "that's fine to do at the rendering layer, just
+        ///    preserve the ratios". Uniform scaling is what preserves them -- her 1.21x
+        ///    and 1.54x hue-luminance ratios are scale-invariant.
         /// </summary>
         public Color WallColor()
         {
-            return Color.HSVToRGB(hue / 360f, saturation, PoolConstants.WallValue);
+            float value = PoolConstants.WallValue * AlbedoCeiling;
+
+            if (IsAchromatic)
+            {
+                // Black or white by V, hue ignored entirely.
+                float level = PoolConstants.WallValue >= AchromaticSplit ? value : 0f;
+                return new Color(level, level, level);
+            }
+
+            return Color.HSVToRGB(hue / 360f, saturation, value);
         }
 
-        /// <summary>Maps normalised brightness onto a real light intensity.</summary>
+        /// <summary>
+        /// Physical ceiling on diffuse reflectance. A white painted wall is about 0.85;
+        /// nothing real reaches 1.0. Rendering-layer only -- it does not change the
+        /// documented colour spec, and scaling uniformly leaves every ratio intact.
+        /// </summary>
+        public const float AlbedoCeiling = 0.85f;
+
+        /// <summary>V at or above this reads as white, below it as black.</summary>
+        public const float AchromaticSplit = 0.5f;
+
+        /// <summary>
+        /// Maps the config's illuminance onto a Unity light intensity.
+        ///
+        /// `brightness` is now a value in LUX, not the old normalised 0..1. A Unity light
+        /// intensity is not a photometric quantity, so this is a NOMINAL mapping: the
+        /// light is configured so the rendered scene corresponds to that band, not so an
+        /// instrument would read that many lux off the display. See build-decisions.md
+        /// section 4 -- the mapping actually used has to be recorded per study, and the
+        /// write-up can claim the intended band was applied, not that a physical
+        /// illuminance was achieved.
+        ///
+        /// Interpolation is in LOG space, because perceived brightness is roughly
+        /// logarithmic in illuminance. Linear interpolation across 30..900 lx would put
+        /// almost the entire perceptual range into the bottom tenth of the scale, making
+        /// the dim conditions nearly indistinguishable from each other and the bright
+        /// ones nearly identical.
+        /// </summary>
         public float LightIntensity(float minIntensity, float maxIntensity)
         {
-            return Mathf.Lerp(minIntensity, maxIntensity, brightness);
+            float lux = Mathf.Max(brightness, MinimumLux);
+            float lowLux = Mathf.Max(PoolConstants.Brightnesses[0], MinimumLux);
+            float highLux = Mathf.Max(
+                PoolConstants.Brightnesses[PoolConstants.Brightnesses.Length - 1], lowLux + 1f);
+
+            float t = Mathf.InverseLerp(Mathf.Log(lowLux), Mathf.Log(highLux), Mathf.Log(lux));
+            return Mathf.Lerp(minIntensity, maxIntensity, Mathf.Clamp01(t));
+        }
+
+        /// <summary>Floor so the log mapping cannot be handed a zero or negative lux.</summary>
+        public const float MinimumLux = 1f;
+
+        /// <summary>
+        /// A copy with one variable replaced, used to apply a participant's correction.
+        ///
+        /// Returns null if the field is unknown or the value will not parse, rather than
+        /// silently applying nothing. A correction that quietly failed to take effect
+        /// would produce a "corrected" room identical to the original, and the re-rating
+        /// would then look like the correction did not help when in fact it never
+        /// happened.
+        /// </summary>
+        public RoomConfig With(string field, string value)
+        {
+            if (string.IsNullOrEmpty(field) || value == null) return null;
+
+            var copy = new RoomConfig
+            {
+                id = id, target_emotion = target_emotion, source = source,
+                hue = hue, saturation = saturation, brightness = brightness,
+                texture = texture, roughness = roughness, rationale = rationale,
+                shape = shape,
+            };
+
+            switch (field)
+            {
+                case "hue":
+                    int h;
+                    if (!int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out h))
+                        return null;
+                    copy.hue = h;
+                    break;
+                case "saturation":
+                    float sat;
+                    if (!float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out sat))
+                        return null;
+                    copy.saturation = sat;
+                    break;
+                case "brightness":
+                    float lux;
+                    if (!float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out lux))
+                        return null;
+                    copy.brightness = lux;
+                    break;
+                case "texture":
+                case "material":
+                    copy.texture = value;
+                    break;
+                case "roughness":
+                    copy.roughness = value;
+                    break;
+                default:
+                    return null;
+            }
+
+            return copy;
         }
 
         public override string ToString()
