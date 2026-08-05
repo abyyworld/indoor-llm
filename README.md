@@ -66,7 +66,7 @@ lost a constraint would widen the gate. Everything else derives from the module:
   so `"hue": 217` is mechanically hard to produce in the first place
 - the validator (`validate.py`)
 - the random control arm (`controls.py`)
-- `unity/PoolConstants.cs`, which is **generated** - a test fails if it goes stale
+- `unity/Assets/Scripts/EmotionRooms/PoolConstants.cs`, which is **generated** - a test fails if it goes stale
 
 The model never sets `id`, `target_emotion` or `source`; the pipeline assigns those, so
 id uniqueness is our invariant rather than something we hope for. Enum-constrained

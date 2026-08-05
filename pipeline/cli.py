@@ -445,7 +445,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.set_defaults(func=cmd_check_separability)
 
     p = sub.add_parser("emit-unity-pools", help="regenerate unity/PoolConstants.cs")
-    p.add_argument("--out", default="unity/PoolConstants.cs")
+    p.add_argument("--out", default="unity/Assets/Scripts/EmotionRooms/PoolConstants.cs")
     p.set_defaults(func=cmd_emit_unity_pools)
 
     def add_generation_args(sp: argparse.ArgumentParser) -> None:

@@ -38,13 +38,13 @@ python3 -m pipeline.cli validate configs/INVALID_do_not_ship.json   # must exit 
 
 1. **`pipeline/pools.py` is the single source of truth, and its values live in
    `configs/pools.json`.** The prompt text, the JSON schema, the validator, the random
-   arm and `unity/PoolConstants.cs` all derive from it. Never hardcode a pool value
+   arm and `unity/Assets/Scripts/EmotionRooms/PoolConstants.cs` all derive from it. Never hardcode a pool value
    anywhere else. Changing which values are permitted is a data edit; changing *which
    variables exist* is not - that is `[OPEN]` question 1 below and needs Mengkai.
    `configs/pools.json` carries `provisional: false` as of 3 Aug 2026: every value is
    Mengkai's final one. A test asserts the flag is false.
-2. **`unity/PoolConstants.cs` is generated.** After changing pools:
-   `python3 -m pipeline.cli emit-unity-pools --out unity/PoolConstants.cs`. A test fails
+2. **`unity/Assets/Scripts/EmotionRooms/PoolConstants.cs` is generated.** After changing pools:
+   `python3 -m pipeline.cli emit-unity-pools --out unity/Assets/Scripts/EmotionRooms/PoolConstants.cs`. A test fails
    if it goes stale.
 3. **No unvalidated config reaches a participant** (spec §4). Validation runs on the raw
    candidate, on the assembled config, and again in C# at load time. The third one is not

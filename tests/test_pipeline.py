@@ -370,7 +370,8 @@ class TestGeneratedUnityConstants(unittest.TestCase):
         #   python3 -m pipeline.cli emit-unity-pools
         from pipeline.emit_unity import render
 
-        path = os.path.join(ROOT, "unity", "PoolConstants.cs")
+        path = os.path.join(ROOT, "unity", "Assets", "Scripts", "EmotionRooms",
+                            "PoolConstants.cs")
         with open(path, encoding="utf-8") as handle:
             self.assertEqual(handle.read(), render(), "unity/PoolConstants.cs is stale")
 
