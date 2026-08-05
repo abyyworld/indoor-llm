@@ -949,6 +949,90 @@ class TestCounterbalancing(unittest.TestCase):
                           variants_per_emotion=1, counterbalance="latin")
 
 
+class TestParticipantBundle(unittest.TestCase):
+    """One participant, one file. The bundle replaces five files, so anything it drops
+    is information that no longer exists anywhere an analyst will look."""
+
+    def _write(self, directory, name, header, rows):
+        path = directory / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        lines = [",".join(header)] + [",".join(str(v) for v in r) for r in rows]
+        path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+    def _fixture(self, tmp):
+        self._write(tmp, "responses.csv",
+                    ["participant", "trial_index", "valence", "utc_ms"],
+                    [["p01", 1, 7, 1000], ["p01", 2, 3, 3000], ["p99", 1, 5, 2000]])
+        self._write(tmp, "consent_log.csv",
+                    ["participant", "event", "utc"],
+                    [["p01", "consent_taken", "2026-08-05T10:00:00Z"]])
+        self._write(tmp / "logs", "telemetry_p01_x.csv",
+                    ["participant", "t_session", "lux", "utc_ms"],
+                    [["p01", 0.1, 300, 2000]])
+
+    def test_every_row_survives_and_is_tagged_by_source(self):
+        import tempfile
+        from pathlib import Path
+
+        from pipeline.bundle import collect
+
+        with tempfile.TemporaryDirectory() as name:
+            tmp = Path(name)
+            self._fixture(tmp)
+            rows = collect(tmp, "p01")
+
+        self.assertEqual(len(rows), 4)   # 2 trials + 1 consent + 1 telemetry
+        self.assertEqual({r["source"] for r in rows},
+                         {"trial", "consent", "telemetry"})
+
+    def test_another_participants_rows_are_never_pulled_in(self):
+        # Sharing one responses.csv across participants makes this the easy mistake,
+        # and it would silently attribute p99's ratings to p01.
+        import tempfile
+        from pathlib import Path
+
+        from pipeline.bundle import collect
+
+        with tempfile.TemporaryDirectory() as name:
+            tmp = Path(name)
+            self._fixture(tmp)
+            rows = collect(tmp, "p01")
+
+        self.assertTrue(all(r.get("participant") == "p01" for r in rows))
+
+    def test_columns_are_the_union_of_every_source(self):
+        import tempfile
+        from pathlib import Path
+
+        from pipeline.bundle import collect, to_csv
+
+        with tempfile.TemporaryDirectory() as name:
+            tmp = Path(name)
+            self._fixture(tmp)
+            header = to_csv(collect(tmp, "p01")).splitlines()[0]
+
+        for column in ("source", "trial_index", "valence", "event", "lux", "t_session"):
+            self.assertIn(column, header)
+
+    def test_a_withdrawn_session_is_flagged_not_silently_partial(self):
+        import tempfile
+        from pathlib import Path
+
+        from pipeline.bundle import collect, summarise
+
+        with tempfile.TemporaryDirectory() as name:
+            tmp = Path(name)
+            self._fixture(tmp)
+            self._write(tmp, "consent_log.csv",
+                        ["participant", "event", "utc"],
+                        [["p01", "consent_taken", "2026-08-05T10:00:00Z"],
+                         ["p01", "withdrawn", "2026-08-05T10:20:00Z"]])
+            report = summarise(collect(tmp, "p01"), "p01")
+
+        self.assertTrue(report["withdrew"])
+        self.assertFalse(report["complete"])
+
+
 class TestUnityCorrectionValues(unittest.TestCase):
     """The correction panel narrows to the attributed field, so the generated C# has to
     know the values of every field a participant can attribute to. A field missing from

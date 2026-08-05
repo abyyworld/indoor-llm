@@ -6,6 +6,7 @@ Commands, in the order design-spec.md section 8 says to use them:
 
     pools              show the frozen pools and the design space size
     validate           gate a config, batch or session file
+    bundle-participant join one participant's files into a single record
     emit-unity-pools   regenerate unity/PoolConstants.cs from pools.py
     generate           ask Claude for candidates for one target label
     generate-all       every emotion plus the neutral control arm
@@ -201,6 +202,29 @@ def cmd_check_separability(args: argparse.Namespace) -> int:
         if not report["safe"]:
             exit_code = 1
     return exit_code
+
+
+def cmd_bundle_participant(args: argparse.Namespace) -> int:
+    from pathlib import Path
+
+    from .bundle import BundleError, bundle
+
+    try:
+        report = bundle(Path(args.data), args.participant, Path(args.out))
+    except BundleError as exc:
+        print(f"error: {exc}")
+        return 1
+
+    print(f"wrote {report['file']}")
+    print(f"  {report['rows']} rows: " + ", ".join(
+        f"{name} {count}" for name, count in sorted(report["by_source"].items())
+    ))
+    print(f"  consent recorded: {report['consent_recorded']}")
+    if report["withdrew"]:
+        print("  WITHDREW -- partial session, decide whether to keep it")
+    if not report["complete"]:
+        print("  INCOMPLETE -- fewer than 8 trials, no consent row, or withdrawn")
+    return 0
 
 
 def cmd_emit_unity_pools(args: argparse.Namespace) -> int:
@@ -443,6 +467,19 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--too-close", type=float, default=0.25,
                    help="Gower distance below which two cells count as the same room")
     p.set_defaults(func=cmd_check_separability)
+
+    p = sub.add_parser(
+        "bundle-participant",
+        help="join one participant's files into a single long-format record",
+    )
+    p.add_argument("--participant", required=True)
+    p.add_argument(
+        "--data",
+        required=True,
+        help="the app's data folder (Emotion Rooms > Reveal Data Folder)",
+    )
+    p.add_argument("--out", default="runs/bundles")
+    p.set_defaults(func=cmd_bundle_participant)
 
     p = sub.add_parser("emit-unity-pools", help="regenerate unity/PoolConstants.cs")
     p.add_argument("--out", default="unity/Assets/Scripts/EmotionRooms/PoolConstants.cs")

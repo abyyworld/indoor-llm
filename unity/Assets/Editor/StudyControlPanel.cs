@@ -1,0 +1,398 @@
+// The researcher-facing window. Everything needed to run one participant, in the order
+// it is needed, with the state of each step visible.
+//
+// This exists because the study was previously driven from three menu items, a component
+// context menu and four separately-typed participant ids. That is fine for the person who
+// wrote it and hostile to everyone else, including the same person in six weeks. A study
+// that is fiddly to run gets run inconsistently, and inconsistency between participants
+// is measurement error you cannot subtract later.
+
+using System;
+using System.Diagnostics;
+using System.IO;
+using System.Text.RegularExpressions;
+using UnityEditor;
+using UnityEngine;
+using Debug = UnityEngine.Debug;
+
+namespace EmotionRooms.EditorTools
+{
+    public class StudyControlPanel : EditorWindow
+    {
+        const string ConsentUrlKey = "EmotionRooms.ConsentUrl";
+        const string QuestionnaireUrlKey = "EmotionRooms.QuestionnaireUrl";
+        const string RepoKey = "EmotionRooms.RepoPath";
+
+        string participant = "";
+        string consentUrl = "";
+        string questionnaireUrl = "";
+        string repoPath = "";
+        Vector2 scroll;
+        string lastCommandOutput = "";
+
+        [MenuItem("Emotion Rooms/Study Control Panel _%#e", priority = -100)]
+        public static void Open()
+        {
+            var window = GetWindow<StudyControlPanel>(false, "Study Control");
+            window.minSize = new Vector2(380f, 560f);
+            window.Show();
+        }
+
+        void OnEnable()
+        {
+            consentUrl = EditorPrefs.GetString(ConsentUrlKey, "");
+            questionnaireUrl = EditorPrefs.GetString(QuestionnaireUrlKey, "");
+            repoPath = EditorPrefs.GetString(RepoKey, GuessRepoPath());
+            participant = NextParticipantId();
+        }
+
+        void OnGUI()
+        {
+            scroll = EditorGUILayout.BeginScrollView(scroll);
+
+            Title("Emotion Rooms study");
+            EditorGUILayout.LabelField(
+                "Run the steps top to bottom. Each one turns green when it is done.",
+                EditorStyles.wordWrappedMiniLabel);
+            Space();
+
+            var bootstrap = UnityEngine.Object.FindFirstObjectByType<StudyBootstrap>();
+
+            DrawSceneStep(bootstrap);
+            DrawParticipantStep(bootstrap);
+            DrawConsentStep(bootstrap);
+            DrawRunStep(bootstrap);
+            DrawAfterStep();
+
+            if (!string.IsNullOrEmpty(lastCommandOutput))
+            {
+                Space();
+                EditorGUILayout.LabelField("Last command", EditorStyles.boldLabel);
+                EditorGUILayout.SelectableLabel(lastCommandOutput,
+                    EditorStyles.textArea, GUILayout.Height(110f));
+            }
+
+            EditorGUILayout.EndScrollView();
+        }
+
+        // ------------------------------------------------------------------ steps
+
+        void DrawSceneStep(StudyBootstrap bootstrap)
+        {
+            bool ready = bootstrap != null;
+            Step(1, "Scene", ready, ready ? "Built." : "Not built yet.");
+
+            using (new EditorGUI.DisabledScope(Application.isPlaying))
+            {
+                if (GUILayout.Button(ready ? "Rebuild study scene" : "Build study scene",
+                                     GUILayout.Height(24f)))
+                {
+                    StudySceneSetup.SetUp();
+                    participant = NextParticipantId();
+                }
+            }
+            if (ready && GUILayout.Button("Check scene")) StudySceneSetup.CheckScene();
+            EndStep();
+        }
+
+        void DrawParticipantStep(StudyBootstrap bootstrap)
+        {
+            string dest = Application.persistentDataPath;
+            bool haveSession = File.Exists(Path.Combine(dest, "session.json"));
+            bool haveBlock = File.Exists(Path.Combine(dest, "oversight.json"));
+            bool ready = haveSession && haveBlock;
+
+            Step(2, "Participant and stimuli", ready,
+                ready ? "session.json and oversight.json are in place."
+                      : "Missing " + (haveSession ? "" : "session.json ") +
+                        (haveBlock ? "" : "oversight.json"));
+
+            EditorGUILayout.BeginHorizontal();
+            participant = EditorGUILayout.TextField("Participant", participant);
+            if (GUILayout.Button("Next", GUILayout.Width(50f)))
+            {
+                participant = NextParticipantId();
+                GUI.FocusControl(null);
+            }
+            EditorGUILayout.EndHorizontal();
+            EditorGUILayout.LabelField(
+                " ", "Auto-suggested from the data folder. Never reuse an id.",
+                EditorStyles.miniLabel);
+
+            using (new EditorGUI.DisabledScope(Application.isPlaying))
+            {
+                if (GUILayout.Button("Prepare " + participant + "  (build session + review block)",
+                                     GUILayout.Height(26f)))
+                {
+                    PrepareParticipant(bootstrap);
+                }
+            }
+            EndStep();
+        }
+
+        void DrawConsentStep(StudyBootstrap bootstrap)
+        {
+            bool ready = bootstrap != null && bootstrap.ConsentConfirmed;
+            Step(3, "Consent  (before the headset goes on)", ready,
+                ready ? "Recorded for this session."
+                      : "Take consent on the web form, then confirm here.");
+
+            EditorGUI.BeginChangeCheck();
+            consentUrl = EditorGUILayout.TextField("Consent form URL", consentUrl);
+            if (EditorGUI.EndChangeCheck()) EditorPrefs.SetString(ConsentUrlKey, consentUrl);
+
+            using (new EditorGUI.DisabledScope(string.IsNullOrEmpty(consentUrl)))
+            {
+                if (GUILayout.Button("Open consent form for " + participant, GUILayout.Height(24f)))
+                    Application.OpenURL(WithParticipant(consentUrl, participant));
+            }
+
+            using (new EditorGUI.DisabledScope(bootstrap == null || ready))
+            {
+                if (GUILayout.Button("Consent was taken — record it", GUILayout.Height(24f)))
+                {
+                    bootstrap.participantId = participant;
+                    bootstrap.ApplyParticipantId();
+                    bootstrap.ConfirmConsentTaken();
+                }
+            }
+            if (!Application.isPlaying)
+                EditorGUILayout.HelpBox(
+                    "Recording consent writes consent_log.csv. Do it in play mode so it " +
+                    "lands in the same session as the data.", MessageType.None);
+            EndStep();
+        }
+
+        void DrawRunStep(StudyBootstrap bootstrap)
+        {
+            bool running = Application.isPlaying &&
+                           bootstrap != null && bootstrap.trialRunner != null &&
+                           bootstrap.trialRunner.IsRunning;
+            Step(4, "Run", running, running
+                ? "Trial " + bootstrap.trialRunner.CompletedTrials + " of 8 complete."
+                : Application.isPlaying ? "Ready to begin." : "Press Play first.");
+
+            if (!Application.isPlaying)
+            {
+                if (GUILayout.Button("Enter play mode", GUILayout.Height(26f)))
+                    EditorApplication.isPlaying = true;
+            }
+            else
+            {
+                using (new EditorGUI.DisabledScope(bootstrap == null || running))
+                {
+                    if (GUILayout.Button("Begin study", GUILayout.Height(30f)))
+                        bootstrap.BeginStudy();
+                }
+                using (new EditorGUI.DisabledScope(bootstrap == null))
+                {
+                    var previous = GUI.backgroundColor;
+                    GUI.backgroundColor = new Color(1f, 0.75f, 0.75f);
+                    if (GUILayout.Button("Participant withdrew — stop now"))
+                    {
+                        if (EditorUtility.DisplayDialog("Withdraw",
+                            "End " + participant + "'s session now?\n\nEverything recorded " +
+                            "so far is kept and marked withdrawn.", "Withdraw", "Cancel"))
+                            bootstrap.WithdrawParticipant();
+                    }
+                    GUI.backgroundColor = previous;
+                }
+                EditorGUILayout.LabelField(" ", "Or hold F12 for 1.5 s in the headset.",
+                    EditorStyles.miniLabel);
+            }
+            EndStep();
+        }
+
+        void DrawAfterStep()
+        {
+            Step(5, "After", false, "Questionnaire, then bundle the logs.");
+
+            EditorGUI.BeginChangeCheck();
+            questionnaireUrl = EditorGUILayout.TextField("Questionnaire URL", questionnaireUrl);
+            if (EditorGUI.EndChangeCheck())
+                EditorPrefs.SetString(QuestionnaireUrlKey, questionnaireUrl);
+
+            using (new EditorGUI.DisabledScope(string.IsNullOrEmpty(questionnaireUrl)))
+            {
+                if (GUILayout.Button("Open questionnaire for " + participant, GUILayout.Height(24f)))
+                    Application.OpenURL(WithParticipant(questionnaireUrl, participant));
+            }
+
+            if (GUILayout.Button("Bundle " + participant + "'s logs into one file",
+                                 GUILayout.Height(24f)))
+                BundleLogs();
+
+            if (GUILayout.Button("Reveal data folder"))
+                EditorUtility.RevealInFinder(Application.persistentDataPath);
+            EndStep();
+
+            Space();
+            EditorGUI.BeginChangeCheck();
+            repoPath = EditorGUILayout.TextField("Repo path", repoPath);
+            if (EditorGUI.EndChangeCheck()) EditorPrefs.SetString(RepoKey, repoPath);
+        }
+
+        // ------------------------------------------------------------------ actions
+
+        void PrepareParticipant(StudyBootstrap bootstrap)
+        {
+            if (!Directory.Exists(repoPath))
+            {
+                EditorUtility.DisplayDialog("Emotion Rooms",
+                    "Set the repo path at the bottom of this window first.\n\nIt should be " +
+                    "the folder holding pipeline/ and configs/.", "OK");
+                return;
+            }
+
+            int index = IndexOf(participant);
+            string args = string.Format("./test-participant.sh {0} {1} {2}",
+                participant, 40 + index, index);
+            bool ok = Run("/bin/bash", "-c \"" + args + "\"", repoPath);
+
+            if (ok && bootstrap != null)
+            {
+                bootstrap.participantId = participant;
+                bootstrap.ApplyParticipantId();
+                EditorUtility.SetDirty(bootstrap);
+            }
+            AssetDatabase.Refresh();
+        }
+
+        void BundleLogs()
+        {
+            if (!Directory.Exists(repoPath))
+            {
+                EditorUtility.DisplayDialog("Emotion Rooms", "Set the repo path first.", "OK");
+                return;
+            }
+            string args = string.Format(
+                "python3 -m pipeline.cli bundle-participant --participant {0} --data '{1}'",
+                participant, Application.persistentDataPath);
+            Run("/bin/bash", "-c \"" + args + "\"", repoPath);
+        }
+
+        bool Run(string file, string arguments, string workingDirectory)
+        {
+            try
+            {
+                var info = new ProcessStartInfo(file, arguments)
+                {
+                    WorkingDirectory = workingDirectory,
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true,
+                };
+                using (var process = Process.Start(info))
+                {
+                    string output = process.StandardOutput.ReadToEnd();
+                    string error = process.StandardError.ReadToEnd();
+                    process.WaitForExit();
+                    lastCommandOutput = (output + "\n" + error).Trim();
+                    Repaint();
+
+                    if (process.ExitCode != 0)
+                    {
+                        Debug.LogError("Study Control: command failed\n" + lastCommandOutput);
+                        return false;
+                    }
+                    Debug.Log("Study Control:\n" + lastCommandOutput);
+                    return true;
+                }
+            }
+            catch (Exception e)
+            {
+                lastCommandOutput = e.Message;
+                Debug.LogError("Study Control: could not run the command. " + e.Message);
+                return false;
+            }
+        }
+
+        // ------------------------------------------------------------------ helpers
+
+        /// <summary>
+        /// One past the highest id already in the data folder. Reused ids are the classic
+        /// way to lose a participant: the second session appends to the first one's files
+        /// and neither is recoverable afterwards.
+        /// </summary>
+        static string NextParticipantId()
+        {
+            int highest = 0;
+            string dir = Application.persistentDataPath;
+            if (Directory.Exists(dir))
+            {
+                foreach (var path in Directory.GetFiles(dir, "*.csv", SearchOption.AllDirectories))
+                {
+                    foreach (Match m in Regex.Matches(Path.GetFileName(path), @"p(\d+)"))
+                    {
+                        int value;
+                        if (int.TryParse(m.Groups[1].Value, out value) && value > highest)
+                            highest = value;
+                    }
+                }
+
+                string consent = Path.Combine(dir, "consent_log.csv");
+                if (File.Exists(consent))
+                {
+                    foreach (Match m in Regex.Matches(File.ReadAllText(consent), @"\bp(\d+)\b"))
+                    {
+                        int value;
+                        if (int.TryParse(m.Groups[1].Value, out value) && value > highest)
+                            highest = value;
+                    }
+                }
+            }
+            return "p" + (highest + 1).ToString("00");
+        }
+
+        static int IndexOf(string id)
+        {
+            var m = Regex.Match(id ?? "", @"(\d+)");
+            int value;
+            if (m.Success && int.TryParse(m.Groups[1].Value, out value)) return Mathf.Max(0, value - 1);
+            return 0;
+        }
+
+        static string WithParticipant(string url, string id)
+        {
+            if (string.IsNullOrEmpty(url)) return url;
+            return url + (url.Contains("?") ? "&" : "?") + "participant=" + Uri.EscapeDataString(id);
+        }
+
+        static string GuessRepoPath()
+        {
+            // Assets/.. is the Unity project; the repo is its parent.
+            var project = Directory.GetParent(Application.dataPath);
+            return project != null && project.Parent != null ? project.Parent.FullName : "";
+        }
+
+        // ------------------------------------------------------------------ chrome
+
+        static void Title(string text)
+        {
+            var style = new GUIStyle(EditorStyles.boldLabel) { fontSize = 15 };
+            EditorGUILayout.LabelField(text, style);
+        }
+
+        static void Space() { EditorGUILayout.Space(6f); }
+
+        void Step(int number, string name, bool done, string detail)
+        {
+            EditorGUILayout.Space(8f);
+            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+
+            EditorGUILayout.BeginHorizontal();
+            var tick = new GUIStyle(EditorStyles.boldLabel)
+            {
+                normal = { textColor = done ? new Color(0.2f, 0.7f, 0.3f) : Color.gray },
+            };
+            EditorGUILayout.LabelField(done ? "●" : "○", tick, GUILayout.Width(16f));
+            EditorGUILayout.LabelField(number + ". " + name, EditorStyles.boldLabel);
+            EditorGUILayout.EndHorizontal();
+
+            EditorGUILayout.LabelField(detail, EditorStyles.wordWrappedMiniLabel);
+        }
+
+        static void EndStep() { EditorGUILayout.EndVertical(); }
+    }
+}

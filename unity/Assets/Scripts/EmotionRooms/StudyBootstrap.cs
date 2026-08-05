@@ -88,6 +88,12 @@ namespace EmotionRooms
         float withdrawHeldSince = -1f;
 
         [Header("Session")]
+        [Tooltip("The one place the participant id is set. Pushed into TrialRunner, " +
+                 "OversightReview, EventLog and StudyTelemetry on wake, so four " +
+                 "components cannot disagree about who is in the headset -- which would " +
+                 "scatter one person's data across four different ids.")]
+        public string participantId = "p01";
+
         [Tooltip("Start the trial runner automatically. Turn off if a researcher-facing " +
                  "screen starts it, which is usually what you want with a participant present.")]
         public bool autoStart = false;
@@ -99,6 +105,23 @@ namespace EmotionRooms
         [Tooltip("Run the oversight review automatically once the eight trials finish. " +
                  "The review must never begin before the main session is complete.")]
         public bool chainOversightBlock = true;
+
+        void Awake()
+        {
+            ApplyParticipantId();
+        }
+
+        /// <summary>Push the id into everything that writes a file.</summary>
+        public void ApplyParticipantId()
+        {
+            if (string.IsNullOrEmpty(participantId)) return;
+            if (trialRunner != null) trialRunner.participantId = participantId;
+            if (oversightReview != null) oversightReview.participantId = participantId;
+            if (trialRunner != null && trialRunner.events != null)
+                trialRunner.events.participantId = participantId;
+            if (trialRunner != null && trialRunner.telemetry != null)
+                trialRunner.telemetry.participantId = participantId;
+        }
 
         void Start()
         {

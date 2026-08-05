@@ -270,58 +270,210 @@ namespace EmotionRooms
 
             float halfWidth = RoomDimensions.EntranceWidth / 2f;
 
-            // Three-seat sofa against the far wall, centred on width.
-            AddProp(furniture, "Sofa (placeholder)",
-                new Vector3(0f, 0.4f, depth - 0.45f), new Vector3(2.1f, 0.8f, 0.85f),
-                shade: 0.34f);
+            // Anchors. Real models and placeholders both land here, so swapping models
+            // can never move furniture between conditions.
+            var sofaAt      = new Vector3(0f, 0f, depth - 0.45f);
+            var armchairAt  = new Vector3(-1.35f, 0f, depth - 1.45f);
+            var tableAt     = new Vector3(0f, 0f, depth - 1.5f);
+            var teacupAt    = new Vector3(0.18f, 0.4f, depth - 1.5f);
+            var rugAt       = new Vector3(0f, 0.005f, depth - 1.2f);
+            var shelfAt     = new Vector3(halfWidth - 0.22f, 0f, depth - 2.2f);
+            var artAAt      = new Vector3(-0.55f, 1.6f, depth - 0.1f);
+            var artBAt      = new Vector3(0.55f, 1.6f, depth - 0.1f);
 
-            // Armchair, offset to one side, angled in toward the coffee table.
-            AddProp(furniture, "Armchair (placeholder)",
-                new Vector3(-1.35f, 0.4f, depth - 1.45f), new Vector3(0.8f, 0.8f, 0.8f),
-                yaw: 55f, shade: 0.40f);
+            if (!TryModel(furniture, "sofa", "Sofa", sofaAt, new Vector3(2.1f, 0.8f, 0.85f), 0f))
+                BuildSofa(furniture, sofaAt);
 
-            // Coffee table in front of the sofa.
-            AddProp(furniture, "Coffee Table (placeholder)",
-                new Vector3(0f, 0.2f, depth - 1.5f), new Vector3(1.1f, 0.4f, 0.6f),
-                shade: 0.47f);
+            if (!TryModel(furniture, "armchair", "Armchair", armchairAt, new Vector3(0.85f, 0.8f, 0.85f), 55f))
+                BuildArmchair(furniture, armchairAt, 55f);
 
-            // Teacup on the table. Small, but it is in the list and it is the kind of
-            // detail that makes a greybox read as a room rather than a diagram.
-            AddProp(furniture, "Teacup (placeholder)",
-                new Vector3(0.18f, 0.44f, depth - 1.5f), new Vector3(0.08f, 0.08f, 0.08f),
-                shade: 0.88f);
+            if (!TryModel(furniture, "coffeeTable", "Coffee Table", tableAt, new Vector3(1.1f, 0.4f, 0.6f), 0f))
+                BuildCoffeeTable(furniture, tableAt);
 
-            // Rug under the table and the sofa's front portion.
-            AddProp(furniture, "Rug (placeholder)",
-                new Vector3(0f, 0.01f, depth - 1.2f), new Vector3(2.4f, 0.02f, 1.6f),
-                shade: 0.60f);
+            if (!TryModel(furniture, "teacup", "Teacup", teacupAt, new Vector3(0.1f, 0.09f, 0.1f), 0f))
+                BuildTeacup(furniture, teacupAt);
 
-            // Bookshelf against a side wall, clear of the matched facing sightline.
-            AddProp(furniture, "Bookshelf (placeholder)",
-                new Vector3(halfWidth - 0.2f, 0.9f, depth - 2.2f),
-                new Vector3(0.35f, 1.8f, 0.9f), shade: 0.43f);
+            if (!TryModel(furniture, "rug", "Rug", rugAt, new Vector3(2.4f, 0.02f, 1.6f), 0f))
+                AddBox(furniture, "Rug", rugAt + new Vector3(0f, 0.01f, 0f),
+                    new Vector3(2.4f, 0.02f, 1.6f), 0f, 0.60f);
 
-            // Two wall art pieces above and behind the sofa, symmetric about centre.
-            AddProp(furniture, "Wall Art A (placeholder)",
-                new Vector3(-0.55f, 1.6f, depth - 0.12f), new Vector3(0.7f, 0.5f, 0.04f),
-                shade: 0.72f);
-            AddProp(furniture, "Wall Art B (placeholder)",
-                new Vector3(0.55f, 1.6f, depth - 0.12f), new Vector3(0.7f, 0.5f, 0.04f),
-                shade: 0.72f);
+            if (!TryModel(furniture, "bookshelf", "Bookshelf", shelfAt, new Vector3(0.35f, 1.8f, 0.9f), 0f))
+                BuildBookshelf(furniture, shelfAt);
+
+            if (!TryModel(furniture, "wallArt", "Wall Art A", artAAt, new Vector3(0.7f, 0.5f, 0.05f), 0f))
+                BuildWallArt(furniture, "Wall Art A", artAAt);
+            if (!TryModel(furniture, "wallArt", "Wall Art B", artBAt, new Vector3(0.7f, 0.5f, 0.05f), 0f))
+                BuildWallArt(furniture, "Wall Art B", artBAt);
         }
 
-        /// <param name="shade">
-        /// Neutral greyscale value, 0 = near black, 1 = white.
-        ///
-        /// Achromatic on purpose. Every prop sharing one white material made the room
-        /// unreadable -- white furniture against white walls, which is why the greybox
-        /// looks nothing like the plan even though every piece is present and correctly
-        /// placed. Distinct greys make the layout legible without introducing a second
-        /// colour signal: hue and saturation are the manipulation, and furniture that
-        /// carried any hue of its own would compete with it. These are identical across
-        /// every emotion and both shells, and none of these renderers carries
-        /// TintableSurface, so the manipulation still cannot reach them.
-        /// </param>
+        /// <summary>The furniture models to use, or null for procedural placeholders.</summary>
+        public static FurnitureSet Models { get; set; }
+
+        static bool TryModel(GameObject parent, string slot, string name, Vector3 at,
+                             Vector3 footprint, float yaw)
+        {
+            if (Models == null) return false;
+            var prefab = Models.For(slot);
+            if (prefab == null) return false;
+
+            var go = Object.Instantiate(prefab, parent.transform);
+            go.name = name;
+            go.transform.localPosition = at;
+            go.transform.localRotation = Quaternion.Euler(0f, yaw, 0f);
+
+            if (Models.normaliseToFootprint) FitTo(go, footprint);
+            return true;
+        }
+
+        /// <summary>
+        /// Uniformly scale a model so its widest horizontal axis matches the placeholder
+        /// footprint, then sit it on the floor. Uniform rather than per-axis so a model is
+        /// never stretched, and driven by renderer bounds so it works whatever units the
+        /// source was authored in.
+        /// </summary>
+        static void FitTo(GameObject go, Vector3 footprint)
+        {
+            var renderers = go.GetComponentsInChildren<Renderer>();
+            if (renderers.Length == 0) return;
+
+            var bounds = renderers[0].bounds;
+            for (int i = 1; i < renderers.Length; i++) bounds.Encapsulate(renderers[i].bounds);
+            if (bounds.size.x <= 0f || bounds.size.z <= 0f) return;
+
+            float scale = Mathf.Min(footprint.x / bounds.size.x, footprint.z / bounds.size.z);
+            if (footprint.y > 0f && bounds.size.y > 0f)
+                scale = Mathf.Min(scale, footprint.y / bounds.size.y);
+            go.transform.localScale *= scale;
+
+            // Re-measure after scaling: sit the model on the floor rather than trusting
+            // that its pivot is at the base, which is a coin flip across asset packs.
+            bounds = renderers[0].bounds;
+            for (int i = 1; i < renderers.Length; i++) bounds.Encapsulate(renderers[i].bounds);
+            float lift = go.transform.position.y - bounds.min.y;
+            go.transform.localPosition += new Vector3(0f, lift, 0f);
+        }
+
+        // ------------------------------------------------------ procedural placeholders
+
+        // Assembled from boxes rather than being one box each. Still placeholders, but a
+        // sofa with arms and a back reads as a sofa, and a participant asked whether a
+        // room feels calm should not first have to work out what they are looking at.
+
+        static void BuildSofa(GameObject parent, Vector3 at)
+        {
+            var g = Group(parent, "Sofa", at, 0f);
+            AddBox(g, "Seat",     new Vector3(0f, 0.32f, 0f),      new Vector3(2.1f, 0.22f, 0.85f), 0f, 0.34f);
+            AddBox(g, "Back",     new Vector3(0f, 0.55f, -0.32f),  new Vector3(2.1f, 0.68f, 0.2f),  0f, 0.31f);
+            AddBox(g, "Arm L",    new Vector3(-0.98f, 0.42f, 0f),  new Vector3(0.16f, 0.42f, 0.85f), 0f, 0.31f);
+            AddBox(g, "Arm R",    new Vector3(0.98f, 0.42f, 0f),   new Vector3(0.16f, 0.42f, 0.85f), 0f, 0.31f);
+            AddBox(g, "Cushion L", new Vector3(-0.63f, 0.46f, 0.03f), new Vector3(0.6f, 0.12f, 0.7f), 0f, 0.38f);
+            AddBox(g, "Cushion M", new Vector3(0f, 0.46f, 0.03f),  new Vector3(0.6f, 0.12f, 0.7f),  0f, 0.38f);
+            AddBox(g, "Cushion R", new Vector3(0.63f, 0.46f, 0.03f), new Vector3(0.6f, 0.12f, 0.7f), 0f, 0.38f);
+            for (int i = 0; i < 4; i++)
+            {
+                float x = (i % 2 == 0 ? -1f : 1f) * 0.92f;
+                float z = (i < 2 ? -1f : 1f) * 0.33f;
+                AddBox(g, "Foot " + i, new Vector3(x, 0.1f, z), new Vector3(0.07f, 0.2f, 0.07f), 0f, 0.2f);
+            }
+        }
+
+        static void BuildArmchair(GameObject parent, Vector3 at, float yaw)
+        {
+            var g = Group(parent, "Armchair", at, yaw);
+            AddBox(g, "Seat",  new Vector3(0f, 0.32f, 0f),     new Vector3(0.8f, 0.22f, 0.8f), 0f, 0.40f);
+            AddBox(g, "Back",  new Vector3(0f, 0.58f, -0.3f),  new Vector3(0.8f, 0.72f, 0.18f), 0f, 0.37f);
+            AddBox(g, "Arm L", new Vector3(-0.35f, 0.44f, 0f), new Vector3(0.14f, 0.42f, 0.8f), 0f, 0.37f);
+            AddBox(g, "Arm R", new Vector3(0.35f, 0.44f, 0f),  new Vector3(0.14f, 0.42f, 0.8f), 0f, 0.37f);
+            AddBox(g, "Cushion", new Vector3(0f, 0.46f, 0.02f), new Vector3(0.62f, 0.12f, 0.66f), 0f, 0.44f);
+            for (int i = 0; i < 4; i++)
+            {
+                float x = (i % 2 == 0 ? -1f : 1f) * 0.32f;
+                float z = (i < 2 ? -1f : 1f) * 0.32f;
+                AddBox(g, "Foot " + i, new Vector3(x, 0.1f, z), new Vector3(0.07f, 0.2f, 0.07f), 0f, 0.2f);
+            }
+        }
+
+        static void BuildCoffeeTable(GameObject parent, Vector3 at)
+        {
+            var g = Group(parent, "Coffee Table", at, 0f);
+            AddBox(g, "Top",   new Vector3(0f, 0.38f, 0f), new Vector3(1.1f, 0.05f, 0.6f), 0f, 0.47f);
+            AddBox(g, "Shelf", new Vector3(0f, 0.12f, 0f), new Vector3(0.95f, 0.03f, 0.5f), 0f, 0.44f);
+            for (int i = 0; i < 4; i++)
+            {
+                float x = (i % 2 == 0 ? -1f : 1f) * 0.5f;
+                float z = (i < 2 ? -1f : 1f) * 0.25f;
+                AddBox(g, "Leg " + i, new Vector3(x, 0.19f, z), new Vector3(0.06f, 0.38f, 0.06f), 0f, 0.4f);
+            }
+        }
+
+        static void BuildTeacup(GameObject parent, Vector3 at)
+        {
+            var g = Group(parent, "Teacup", at, 0f);
+            AddCylinder(g, "Saucer", new Vector3(0f, 0.006f, 0f), new Vector3(0.14f, 0.006f, 0.14f), 0.9f);
+            AddCylinder(g, "Cup",    new Vector3(0f, 0.045f, 0f), new Vector3(0.08f, 0.04f, 0.08f), 0.92f);
+            AddBox(g, "Handle", new Vector3(0.055f, 0.05f, 0f), new Vector3(0.025f, 0.03f, 0.012f), 0f, 0.92f);
+        }
+
+        static void BuildBookshelf(GameObject parent, Vector3 at)
+        {
+            var g = Group(parent, "Bookshelf", at, 0f);
+            AddBox(g, "Side L", new Vector3(0f, 0.9f, -0.44f), new Vector3(0.35f, 1.8f, 0.03f), 0f, 0.36f);
+            AddBox(g, "Side R", new Vector3(0f, 0.9f, 0.44f),  new Vector3(0.35f, 1.8f, 0.03f), 0f, 0.36f);
+            AddBox(g, "Back",   new Vector3(0.16f, 0.9f, 0f),  new Vector3(0.03f, 1.8f, 0.9f),  0f, 0.33f);
+
+            var rng = new System.Random(7);   // fixed seed: identical in every room
+            for (int shelf = 0; shelf < 5; shelf++)
+            {
+                float y = 0.12f + shelf * 0.4f;
+                AddBox(g, "Shelf " + shelf, new Vector3(0f, y, 0f), new Vector3(0.35f, 0.03f, 0.88f), 0f, 0.43f);
+
+                float z = -0.4f;
+                while (z < 0.36f)
+                {
+                    float w = 0.03f + (float)rng.NextDouble() * 0.03f;
+                    float h = 0.2f + (float)rng.NextDouble() * 0.1f;
+                    AddBox(g, "Book", new Vector3(0f, y + 0.015f + h / 2f, z + w / 2f),
+                        new Vector3(0.26f, h, w), 0f, 0.3f + (float)rng.NextDouble() * 0.4f);
+                    z += w + 0.004f;
+                }
+            }
+        }
+
+        static void BuildWallArt(GameObject parent, string name, Vector3 at)
+        {
+            var g = Group(parent, name, at, 0f);
+            AddBox(g, "Frame",  new Vector3(0f, 0f, -0.01f), new Vector3(0.7f, 0.5f, 0.04f), 0f, 0.25f);
+            AddBox(g, "Canvas", new Vector3(0f, 0f, -0.035f), new Vector3(0.62f, 0.42f, 0.01f), 0f, 0.78f);
+        }
+
+        static GameObject Group(GameObject parent, string name, Vector3 at, float yaw)
+        {
+            var go = new GameObject(name);
+            go.transform.SetParent(parent.transform, false);
+            go.transform.localPosition = at;
+            go.transform.localRotation = Quaternion.Euler(0f, yaw, 0f);
+            return go;
+        }
+
+        static void AddBox(GameObject parent, string name, Vector3 centre, Vector3 size,
+                           float yaw, float shade)
+        {
+            AddProp(parent, name, centre, size, yaw, shade);
+        }
+
+        static void AddCylinder(GameObject parent, string name, Vector3 centre, Vector3 size,
+                                float shade)
+        {
+            var go = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            go.name = name;
+            go.transform.SetParent(parent.transform, false);
+            go.transform.localPosition = centre;
+            // Unity's cylinder is 2 units tall, so halve the Y scale to get the real height.
+            go.transform.localScale = new Vector3(size.x, size.y / 2f, size.z);
+            go.GetComponent<Renderer>().sharedMaterial = PropSurface(shade);
+            Object.DestroyImmediate(go.GetComponent<Collider>());
+        }
+
         static void AddProp(GameObject parent, string name, Vector3 centre, Vector3 size,
                             float yaw = 0f, float shade = 0.5f)
         {

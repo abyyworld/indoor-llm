@@ -42,6 +42,7 @@ INCLUDE=(
   sync-to-mine.sh
   demo.sh
   test-participant.sh
+  forms
   demo-plan.md
 )
 
