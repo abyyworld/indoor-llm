@@ -145,6 +145,12 @@ namespace EmotionRooms.EditorTools
 
             EditorGUI.BeginChangeCheck();
             consentUrl = EditorGUILayout.TextField("Consent form URL", consentUrl);
+            if (!string.IsNullOrEmpty(consentUrl) && !consentUrl.Contains("PARTICIPANT_ID"))
+                EditorGUILayout.HelpBox(
+                    "This link has no PARTICIPANT_ID placeholder, so the id will not be " +
+                    "prefilled and the participant has to type it. Use the prefill link " +
+                    "that build-forms.gs prints, not the form's plain share URL.",
+                    MessageType.Warning);
             if (EditorGUI.EndChangeCheck()) EditorPrefs.SetString(ConsentUrlKey, consentUrl);
 
             using (new EditorGUI.DisabledScope(string.IsNullOrEmpty(consentUrl)))
@@ -364,9 +370,20 @@ namespace EmotionRooms.EditorTools
             return 0;
         }
 
+        /// <summary>
+        /// Put the participant id into the form link.
+        ///
+        /// Google Forms prefill links carry the field's own generated entry id, which
+        /// build-forms.gs emits with PARTICIPANT_ID as a placeholder. Substituting it is
+        /// the only thing that actually prefills; appending ?participant=p01 to a form
+        /// URL does nothing, because Google ignores parameters it does not recognise.
+        /// The fallback query string is kept for any other form host.
+        /// </summary>
         static string WithParticipant(string url, string id)
         {
             if (string.IsNullOrEmpty(url)) return url;
+            if (url.Contains("PARTICIPANT_ID"))
+                return url.Replace("PARTICIPANT_ID", Uri.EscapeDataString(id));
             return url + (url.Contains("?") ? "&" : "?") + "participant=" + Uri.EscapeDataString(id);
         }
 

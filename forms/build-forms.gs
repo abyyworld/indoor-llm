@@ -30,10 +30,26 @@ function buildAll() {
   var consent = buildConsentForm();
   var post = buildPostSessionForm();
 
-  Logger.log('\n=== Paste these into the Unity Study Control Panel ===\n');
-  Logger.log('Consent form URL:       ' + consent);
-  Logger.log('Questionnaire URL:      ' + post);
+  Logger.log('\n=== Paste these two lines into the Unity Study Control Panel ===\n');
+  Logger.log('Consent form URL:   ' + consent);
+  Logger.log('Questionnaire URL:  ' + post);
+  Logger.log('\nThese are prefill links: the panel swaps PARTICIPANT_ID for the real id,');
+  Logger.log('so the participant never types it and it can never be mistyped.');
   Logger.log('\nResponses appear in the linked Sheet for each form.');
+}
+
+/**
+ * A link with the participant field already filled in.
+ *
+ * Google ignores unknown query parameters, so appending ?participant=p01 to a form URL
+ * does nothing. Prefilling needs the field's own generated entry id, which only exists
+ * once the form is built -- so it is produced here and handed to Unity as a template
+ * with a placeholder to substitute.
+ */
+function prefillUrl(form, participantItem) {
+  var response = form.createResponse();
+  response.withItemResponse(participantItem.createResponse('PARTICIPANT_ID'));
+  return response.toPrefilledUrl();
 }
 
 // --------------------------------------------------------------------- consent
@@ -43,10 +59,10 @@ function buildConsentForm() {
   form.setDescription(
     'Please read this before deciding whether to take part. Ask the researcher ' +
     'anything you want at any point, including after you have started.');
-  form.setCollectEmail(false);
+  safeNoEmail(form);
   form.setProgressBar(true);
 
-  form.addTextItem()
+  var participantItem = form.addTextItem()
     .setTitle(PARTICIPANT_QUESTION)
     .setRequired(true);
 
@@ -148,7 +164,7 @@ function buildConsentForm() {
     .setRequired(true);
 
   linkSheet(form, 'Emotion Rooms — consent responses');
-  return form.getPublishedUrl();
+  return prefillUrl(form, participantItem);
 }
 
 // ----------------------------------------------------------------- post-session
@@ -156,10 +172,10 @@ function buildConsentForm() {
 function buildPostSessionForm() {
   var form = FormApp.create('Emotion Rooms — After the session');
   form.setDescription('Thank you. A few last questions, then we are done.');
-  form.setCollectEmail(false);
+  safeNoEmail(form);
   form.setProgressBar(true);
 
-  form.addTextItem()
+  var participantItem = form.addTextItem()
     .setTitle(PARTICIPANT_QUESTION)
     .setRequired(true);
 
@@ -249,10 +265,26 @@ function buildPostSessionForm() {
     .setRequired(true);
 
   linkSheet(form, 'Emotion Rooms — post-session responses');
-  return form.getPublishedUrl();
+  return prefillUrl(form, participantItem);
 }
 
 // --------------------------------------------------------------------- helpers
+
+/**
+ * Turn off email collection where the account allows it.
+ *
+ * Wrapped because setCollectEmail throws on some account types, and the whole build
+ * failing over an option that is already off by default would be absurd. Off matters:
+ * an email address in the responses would undo the point of a participant code.
+ */
+function safeNoEmail(form) {
+  try {
+    form.setCollectEmail(false);
+  } catch (e) {
+    Logger.log('Note: could not set email collection off (' + e.message + '). ' +
+               'Check the form settings say "Do not collect" before you use it.');
+  }
+}
 
 function linkSheet(form, name) {
   var sheet = SpreadsheetApp.create(name);
