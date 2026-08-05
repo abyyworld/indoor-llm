@@ -223,7 +223,35 @@ def cmd_build_practice(args: argparse.Namespace) -> int:
 
     from . import pools
 
-    rooms = [
+    rooms = _practice_rooms()
+
+    for room in rooms:
+        for field, pool in (
+            ("hue", pools.HUES),
+            ("saturation", pools.SATURATIONS),
+            ("brightness", pools.BRIGHTNESSES),
+            ("texture", pools.TEXTURES),
+            ("roughness", pools.ROUGHNESSES),
+        ):
+            if room[field] not in pool:
+                print(f"error: practice {field}={room[field]!r} is not in the pool")
+                return 1
+
+    out = Path(args.out)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps({"rooms": rooms}, indent=2) + "\n", encoding="utf-8")
+    print(f"wrote {out} ({len(rooms)} practice rooms, one per shape)")
+    return 0
+
+
+def _practice_rooms() -> list[dict]:
+    """The warm-up rooms. Separate from the command so a test can validate them.
+
+    Both carry target_emotion and source of "practice", which are legal pool labels
+    precisely so these pass the same validator as a real stimulus -- they are shown to
+    a participant, so nothing about them should be exempt from that check.
+    """
+    return [
         {
             "id": "practice_linear",
             "target_emotion": "practice",
@@ -249,24 +277,6 @@ def cmd_build_practice(args: argparse.Namespace) -> int:
             "rationale": "Practice room. Not a study stimulus.",
         },
     ]
-
-    for room in rooms:
-        for field, pool in (
-            ("hue", pools.HUES),
-            ("saturation", pools.SATURATIONS),
-            ("brightness", pools.BRIGHTNESSES),
-            ("texture", pools.TEXTURES),
-            ("roughness", pools.ROUGHNESSES),
-        ):
-            if room[field] not in pool:
-                print(f"error: practice {field}={room[field]!r} is not in the pool")
-                return 1
-
-    out = Path(args.out)
-    out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps({"rooms": rooms}, indent=2) + "\n", encoding="utf-8")
-    print(f"wrote {out} ({len(rooms)} practice rooms, one per shape)")
-    return 0
 
 
 def cmd_bundle_participant(args: argparse.Namespace) -> int:

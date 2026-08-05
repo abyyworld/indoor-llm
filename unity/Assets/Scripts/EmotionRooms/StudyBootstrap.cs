@@ -109,6 +109,17 @@ namespace EmotionRooms
                  "the headset has finished tracking-init before the first room appears.")]
         public float startDelaySeconds = 3f;
 
+        [Tooltip("Show two unscored warm-up rooms before the first real trial, so the " +
+                 "first scored room is not also the first time someone has used the " +
+                 "affect grid. Without it the practice effect lands entirely on " +
+                 "whichever emotion the counterbalancing put first.")]
+        public bool practiceRooms = true;
+
+        [Tooltip("Practice only: run the two warm-up rooms and stop. For piloting the " +
+                 "kit and for training a new researcher, without burning a participant " +
+                 "id or writing a session that looks real.")]
+        public bool practiceOnly = false;
+
         [Tooltip("Run the oversight review automatically once the eight trials finish. " +
                  "The review must never begin before the main session is complete.")]
         public bool chainOversightBlock = true;
@@ -123,7 +134,12 @@ namespace EmotionRooms
         {
             if (string.IsNullOrEmpty(participantId)) return;
 
-            if (trialRunner != null) trialRunner.participantId = participantId;
+            if (trialRunner != null)
+            {
+                trialRunner.participantId = participantId;
+                trialRunner.practiceOnly = practiceOnly;
+                trialRunner.practiceFileName = practiceRooms ? "practice.json" : "";
+            }
             if (oversightReview != null) oversightReview.participantId = participantId;
 
             // Found in the scene rather than through TrialRunner, so a log still gets the
@@ -191,6 +207,8 @@ namespace EmotionRooms
                                  "scene with a new participant id rather than resuming.");
                 return;
             }
+            ApplyParticipantId();
+
             // The 'before' forms, then the rooms. If there are none, or the file is
             // missing, the session starts immediately rather than waiting on a screen
             // that will never appear.
@@ -326,6 +344,14 @@ namespace EmotionRooms
 
         void OnSessionFinished()
         {
+            if (practiceOnly)
+            {
+                Debug.Log("StudyBootstrap: practice run finished. Nothing was scored and " +
+                          "the review block was skipped.");
+                if (questionnaires != null) questionnaires.ShowSummary();
+                return;
+            }
+
             // Phase A is complete and its data is written before anything asks the
             // participant to evaluate a room. That ordering is the whole reason the
             // review block does not contaminate the affect ratings.

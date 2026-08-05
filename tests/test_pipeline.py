@@ -949,6 +949,36 @@ class TestCounterbalancing(unittest.TestCase):
                           variants_per_emotion=1, counterbalance="latin")
 
 
+class TestPracticeRooms(unittest.TestCase):
+    """The warm-up rooms have to pass the same validator as everything else.
+
+    Regression: build-practice emitted target_emotion='practice' and source='practice'
+    while neither was a legal pool value, so every practice room failed validation in
+    Python and again in C#. The warm-up could never load, and nothing said so until a
+    session was started and the runner refused it.
+    """
+
+    def test_practice_is_a_legal_label_in_both_pools(self):
+        from pipeline import pools
+
+        self.assertIn("practice", pools.TARGET_LABELS)
+        self.assertIn("practice", pools.SOURCES)
+
+    def test_generated_practice_rooms_validate(self):
+        from pipeline.cli import _practice_rooms
+        from pipeline.validate import format_violations, validate_room_config
+
+        for room in _practice_rooms():
+            violations = validate_room_config(room)
+            self.assertEqual(violations, [], format_violations(violations))
+
+    def test_practice_is_not_one_of_the_studied_emotions(self):
+        # It must never be counted as a condition or reach the analysis as one.
+        from pipeline import pools
+
+        self.assertNotIn("practice", pools.EMOTIONS)
+
+
 class TestInstruments(unittest.TestCase):
     """The published scales, at their published scoring. A transcription slip here makes
     every score incomparable to the literature the instrument was chosen for."""

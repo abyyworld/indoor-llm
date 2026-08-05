@@ -174,10 +174,25 @@ NEUTRAL_LABEL = "neutral"
 # says dropped while the brief of the same date says undecided.
 UNASSIGNED_LABEL = "unassigned"
 
-TARGET_LABELS: tuple[str, ...] = EMOTIONS + (NEUTRAL_LABEL, UNASSIGNED_LABEL)
+# Warm-up rooms shown before the first scored trial, so the first real room is not
+# also the first time someone has used the affect grid. Not an emotion and not a
+# condition: practice rooms carry this label precisely so analysis can drop them
+# without having to know their ids.
+#
+# It has to be a legal label in BOTH pools. `build-practice` emitted rooms with
+# target_emotion='practice' and source='practice' while neither value existed here, so
+# every practice room failed validation in Python and again in C# -- the warm-up could
+# never load at all, and the failure surfaced only when a session was started.
+PRACTICE_LABEL = "practice"
+
+TARGET_LABELS: tuple[str, ...] = EMOTIONS + (
+    NEUTRAL_LABEL,
+    UNASSIGNED_LABEL,
+    PRACTICE_LABEL,
+)
 
 # How a room's parameters were chosen. This is the experimental arm.
-SOURCES: tuple[str, ...] = ("llm", "random", "handwritten")
+SOURCES: tuple[str, ...] = ("llm", "random", "handwritten", PRACTICE_LABEL)
 
 # --------------------------------------------------------------------------
 # Numeric tolerance

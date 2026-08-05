@@ -29,10 +29,10 @@ namespace EmotionRooms
         public static readonly string[] Shapes = { "linear", "curved" };
 
         /// <summary>Legal values of target_emotion, including the control labels.</summary>
-        public static readonly string[] TargetLabels = { "calm", "excited", "depressed", "tense", "neutral", "unassigned" };
+        public static readonly string[] TargetLabels = { "calm", "excited", "depressed", "tense", "neutral", "unassigned", "practice" };
 
         /// <summary>How a room's parameters were chosen -- the experimental arm.</summary>
-        public static readonly string[] Sources = { "llm", "random", "handwritten" };
+        public static readonly string[] Sources = { "llm", "random", "handwritten", "practice" };
 
         /// <summary>Fixed HSV value of wall albedo. Brightness lives on the light.</summary>
         public const float WallValue = 1.0f;

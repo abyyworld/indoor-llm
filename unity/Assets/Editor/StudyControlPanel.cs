@@ -23,6 +23,15 @@ namespace EmotionRooms.EditorTools
         const string QuestionnaireUrlKey = "EmotionRooms.QuestionnaireUrl";
         const string RepoKey = "EmotionRooms.RepoPath";
 
+        // Buttons queue their work instead of doing it inline.
+        //
+        // An exception thrown from inside OnGUI unwinds between a BeginVertical and its
+        // EndVertical, and IMGUI then reports "Invalid GUILayout state" on every repaint
+        // afterwards -- so one bad session file turned into a permanently broken panel,
+        // and the error you actually needed to read was buried under GUI noise. Running
+        // the action after layout has finished keeps a failure to one clear message.
+        Action pending;
+
         string participant = "";
         string consentUrl = "";
         string questionnaireUrl = "";
@@ -59,6 +68,7 @@ namespace EmotionRooms.EditorTools
             var bootstrap = UnityEngine.Object.FindFirstObjectByType<StudyBootstrap>();
 
             DrawSceneStep(bootstrap);
+            DrawModeStep(bootstrap);
             DrawParticipantStep(bootstrap);
             DrawConsentStep(bootstrap);
             DrawRunStep(bootstrap);
@@ -73,6 +83,22 @@ namespace EmotionRooms.EditorTools
             }
 
             EditorGUILayout.EndScrollView();
+
+            if (pending != null && Event.current.type == EventType.Repaint)
+            {
+                var action = pending;
+                pending = null;
+                try
+                {
+                    action();
+                }
+                catch (Exception e)
+                {
+                    lastCommandOutput = e.Message;
+                    Debug.LogError("Study Control: " + e.Message + "\n" + e.StackTrace);
+                }
+                Repaint();
+            }
         }
 
         // ------------------------------------------------------------------ steps
@@ -92,13 +118,52 @@ namespace EmotionRooms.EditorTools
             {
                 if (GUILayout.Button(ready ? "Rebuild study scene" : "Build study scene",
                                      GUILayout.Height(24f)))
-                {
-                    StudySceneSetup.SetUp();
-                    participant = NextParticipantId();
-                }
+                    pending = () => { StudySceneSetup.SetUp(); participant = NextParticipantId(); };
             }
-            if (ready && GUILayout.Button("Check scene")) StudySceneSetup.CheckScene();
+            if (ready && GUILayout.Button("Check scene")) pending = StudySceneSetup.CheckScene;
             EndStep();
+        }
+
+        void DrawModeStep(StudyBootstrap bootstrap)
+        {
+            EditorGUILayout.Space(8f);
+            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+            EditorGUILayout.LabelField("Mode", EditorStyles.boldLabel);
+
+            if (bootstrap == null)
+            {
+                EditorGUILayout.LabelField("Build the scene first.", EditorStyles.miniLabel);
+                EditorGUILayout.EndVertical();
+                return;
+            }
+
+            int mode = bootstrap.practiceOnly ? 1 : 0;
+            int picked = GUILayout.Toolbar(mode, new[] { "Real session", "Practice only" });
+            if (picked != mode)
+            {
+                bootstrap.practiceOnly = picked == 1;
+                EditorUtility.SetDirty(bootstrap);
+            }
+
+            EditorGUILayout.LabelField(
+                bootstrap.practiceOnly
+                    ? "Two warm-up rooms, then stop. Nothing scored, no review block. " +
+                      "Use this to pilot the kit or train a researcher without burning a " +
+                      "participant id."
+                    : "Warm-up rooms, eight scored trials, the review block, then the " +
+                      "after forms.",
+                EditorStyles.wordWrappedMiniLabel);
+
+            EditorGUI.BeginChangeCheck();
+            bool warmUp = EditorGUILayout.ToggleLeft(
+                "Show warm-up rooms before the first scored trial", bootstrap.practiceRooms);
+            if (EditorGUI.EndChangeCheck())
+            {
+                bootstrap.practiceRooms = warmUp;
+                EditorUtility.SetDirty(bootstrap);
+            }
+
+            EditorGUILayout.EndVertical();
         }
 
         void DrawParticipantStep(StudyBootstrap bootstrap)
@@ -129,9 +194,7 @@ namespace EmotionRooms.EditorTools
             {
                 if (GUILayout.Button("Prepare " + participant + "  (build session + review block)",
                                      GUILayout.Height(26f)))
-                {
-                    PrepareParticipant(bootstrap);
-                }
+                    pending = () => PrepareParticipant(bootstrap);
             }
             EndStep();
         }
@@ -162,11 +225,12 @@ namespace EmotionRooms.EditorTools
             using (new EditorGUI.DisabledScope(bootstrap == null || ready))
             {
                 if (GUILayout.Button("Consent was taken — record it", GUILayout.Height(24f)))
-                {
-                    bootstrap.participantId = participant;
-                    bootstrap.ApplyParticipantId();
-                    bootstrap.ConfirmConsentTaken();
-                }
+                    pending = () =>
+                    {
+                        bootstrap.participantId = participant;
+                        bootstrap.ApplyParticipantId();
+                        bootstrap.ConfirmConsentTaken();
+                    };
             }
             if (!Application.isPlaying)
                 EditorGUILayout.HelpBox(
@@ -194,7 +258,7 @@ namespace EmotionRooms.EditorTools
                 using (new EditorGUI.DisabledScope(bootstrap == null || running))
                 {
                     if (GUILayout.Button("Begin study", GUILayout.Height(30f)))
-                        bootstrap.BeginStudy();
+                        pending = bootstrap.BeginStudy;
                 }
                 using (new EditorGUI.DisabledScope(bootstrap == null))
                 {
@@ -205,7 +269,7 @@ namespace EmotionRooms.EditorTools
                         if (EditorUtility.DisplayDialog("Withdraw",
                             "End " + participant + "'s session now?\n\nEverything recorded " +
                             "so far is kept and marked withdrawn.", "Withdraw", "Cancel"))
-                            bootstrap.WithdrawParticipant();
+                            pending = bootstrap.WithdrawParticipant;
                     }
                     GUI.backgroundColor = previous;
                 }
@@ -222,22 +286,11 @@ namespace EmotionRooms.EditorTools
             bool ready = !string.IsNullOrEmpty(repoPath) && File.Exists(bundled);
             Step(5, "After", ready,
                 ready ? "Bundled to runs/bundles/" + participant + "_all.csv"
-                      : "Questionnaire, then bundle the logs.");
-
-            EditorGUI.BeginChangeCheck();
-            questionnaireUrl = EditorGUILayout.TextField("Questionnaire URL", questionnaireUrl);
-            if (EditorGUI.EndChangeCheck())
-                EditorPrefs.SetString(QuestionnaireUrlKey, questionnaireUrl);
-
-            using (new EditorGUI.DisabledScope(string.IsNullOrEmpty(questionnaireUrl)))
-            {
-                if (GUILayout.Button("Open questionnaire for " + participant, GUILayout.Height(24f)))
-                    Application.OpenURL(WithParticipant(questionnaireUrl, participant));
-            }
+                      : "The after-forms run in the app. Then bundle the logs.");
 
             if (GUILayout.Button("Bundle " + participant + "'s logs into one file",
                                  GUILayout.Height(24f)))
-                BundleLogs();
+                pending = BundleLogs;
 
             if (GUILayout.Button("Reveal data folder"))
                 EditorUtility.RevealInFinder(Application.persistentDataPath);

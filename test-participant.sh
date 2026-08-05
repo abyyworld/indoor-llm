@@ -28,7 +28,10 @@ python3 -m pipeline.cli oversight-block \
 python3 -m pipeline.cli build-practice --out runs/practice.json
 
 cp "runs/practice.json"               "$DEST/practice.json"
+python3 -m pipeline.cli build-practice --out "runs/practice.json"
+
 cp "runs/unity_$PARTICIPANT.json"     "$DEST/session.json"
+cp "runs/practice.json"               "$DEST/practice.json"
 cp "runs/oversight_$PARTICIPANT.json" "$DEST/oversight.json"
 
 echo

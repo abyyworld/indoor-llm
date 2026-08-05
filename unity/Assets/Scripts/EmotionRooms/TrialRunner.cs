@@ -106,6 +106,11 @@ namespace EmotionRooms
                  "swap rather than a rebuild.")]
         public string sessionFileName = "";
 
+        [Tooltip("Run only the warm-up rooms and stop. Piloting mode: nothing is scored " +
+                 "and no review block runs, so the kit can be exercised without burning " +
+                 "a participant id. Set from the control panel.")]
+        public bool practiceOnly = false;
+
         [Tooltip("Practice rooms shown before the real trials, from this file in the " +
                  "data folder. Leave empty to skip practice.\n\n" +
                  "The first rating anyone gives is not a rating of the room, it is them " +
@@ -294,6 +299,20 @@ namespace EmotionRooms
                 }
                 isPractice = false;
                 if (events != null) events.Write("practice_end", null);
+            }
+
+            // Piloting stops here: warm-up rooms only, nothing scored, no review block.
+            if (practiceOnly)
+            {
+                IsRunning = false;
+                if (grid != null) grid.Hide();
+                if (restScreen != null) restScreen.SetActive(true);
+                if (events != null) events.Write("practice_only_end", null);
+                Debug.Log("TrialRunner: practice-only run finished. No trials were scored.");
+
+                var practiceHandler = SessionFinished;
+                if (practiceHandler != null) practiceHandler();
+                yield break;
             }
 
             for (int i = 0; i < session.rooms.Length; i++)
