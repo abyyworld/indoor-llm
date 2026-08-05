@@ -6,6 +6,7 @@ Commands, in the order design-spec.md section 8 says to use them:
 
     pools              show the frozen pools and the design space size
     validate           gate a config, batch or session file
+    build-practice     practice rooms shown before the real trials
     bundle-participant join one participant's files into a single record
     emit-unity-pools   regenerate unity/PoolConstants.cs from pools.py
     generate           ask Claude for candidates for one target label
@@ -202,6 +203,69 @@ def cmd_check_separability(args: argparse.Namespace) -> int:
         if not report["safe"]:
             exit_code = 1
     return exit_code
+
+
+def cmd_build_practice(args: argparse.Namespace) -> int:
+    """Practice rooms, deliberately outside the eight study cells.
+
+    The first rating anyone gives measures the interface, not the room: where the pointer
+    is, what the grid means, how hard to press. Somewhere that noise has to land, and
+    without practice it lands on whichever emotion came first. Counterbalancing then
+    spreads it evenly across conditions instead of removing it.
+
+    These use mid-pool values and no target emotion, so a participant never rates a study
+    stimulus twice and nothing here can be confused for data. One of each shape, so the
+    curved shell is not a surprise on the first real trial.
+    """
+    import json
+    from pathlib import Path
+
+    from . import pools
+
+    rooms = [
+        {
+            "id": "practice_linear",
+            "target_emotion": "practice",
+            "source": "practice",
+            "hue": 60,
+            "saturation": 0.2,
+            "brightness": 300.0,
+            "texture": "plaster",
+            "roughness": "smooth",
+            "shape": "linear",
+            "rationale": "Practice room. Not a study stimulus.",
+        },
+        {
+            "id": "practice_curved",
+            "target_emotion": "practice",
+            "source": "practice",
+            "hue": 90,
+            "saturation": 0.2,
+            "brightness": 500.0,
+            "texture": "textile",
+            "roughness": "rough",
+            "shape": "curved",
+            "rationale": "Practice room. Not a study stimulus.",
+        },
+    ]
+
+    for room in rooms:
+        for field, pool in (
+            ("hue", pools.HUES),
+            ("saturation", pools.SATURATIONS),
+            ("brightness", pools.BRIGHTNESSES),
+            ("texture", pools.TEXTURES),
+            ("roughness", pools.ROUGHNESSES),
+        ):
+            if room[field] not in pool:
+                print(f"error: practice {field}={room[field]!r} is not in the pool")
+                return 1
+
+    out = Path(args.out)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps({"rooms": rooms}, indent=2) + "\n", encoding="utf-8")
+    print(f"wrote {out} ({len(rooms)} practice rooms, one per shape)")
+    return 0
 
 
 def cmd_bundle_participant(args: argparse.Namespace) -> int:
@@ -467,6 +531,13 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--too-close", type=float, default=0.25,
                    help="Gower distance below which two cells count as the same room")
     p.set_defaults(func=cmd_check_separability)
+
+    p = sub.add_parser(
+        "build-practice",
+        help="practice rooms shown before the real trials",
+    )
+    p.add_argument("--out", default="runs/practice.json")
+    p.set_defaults(func=cmd_build_practice)
 
     p = sub.add_parser(
         "bundle-participant",

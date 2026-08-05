@@ -106,6 +106,17 @@ namespace EmotionRooms
                  "swap rather than a rebuild.")]
         public string sessionFileName = "";
 
+        [Tooltip("Practice rooms shown before the real trials, from this file in the " +
+                 "data folder. Leave empty to skip practice.\n\n" +
+                 "The first rating anyone gives is not a rating of the room, it is them " +
+                 "working out what the grid is, where the pointer is, and how hard to " +
+                 "squeeze the trigger. Without practice that noise lands on whichever " +
+                 "emotion happened to be first, and counterbalancing spreads it across " +
+                 "conditions rather than removing it. Practice rooms use parameter " +
+                 "combinations that are not in the eight cells, so nobody rates a study " +
+                 "stimulus twice.")]
+        public string practiceFileName = "practice.json";
+
         [Header("Output")]
         [Tooltip("CSV written to Application.persistentDataPath. Appended per trial.")]
         public string responsesFileName = "responses.csv";
@@ -114,6 +125,12 @@ namespace EmotionRooms
         public event Action SessionFinished;
 
         public bool IsRunning { get; private set; }
+
+        /// <summary>True while the practice rooms are running.</summary>
+        public bool IsPractice { get { return isPractice; } }
+
+        bool isPractice;
+        RoomBatch practice;
         public int CompletedTrials { get { return completed.Count; } }
 
         readonly List<TrialRecord> completed = new List<TrialRecord>();
@@ -202,6 +219,32 @@ namespace EmotionRooms
                 return;
             }
 
+            // Practice is optional: a missing file is not an error, it just means no
+            // practice. A malformed one is, since an invalid config must never be shown.
+            practice = null;
+            if (!string.IsNullOrEmpty(practiceFileName))
+            {
+                string practicePath = Path.Combine(Application.persistentDataPath, practiceFileName);
+                if (File.Exists(practicePath))
+                {
+                    practice = RoomBatch.FromJson(File.ReadAllText(practicePath));
+                    if (practice != null && practice.rooms != null)
+                    {
+                        foreach (var room in practice.rooms)
+                        {
+                            var practiceErrors = room.Validate();
+                            if (practiceErrors.Count > 0)
+                            {
+                                Debug.LogError("TrialRunner: practice config " + room.Id +
+                                    " is invalid, refusing to run: " +
+                                    string.Join("; ", practiceErrors.ToArray()));
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
+
             // Validate every trial before showing the participant anything, rather than
             // discovering a bad config partway through and having to abandon the session.
             var problems = new List<string>();
@@ -221,12 +264,12 @@ namespace EmotionRooms
             WriteHeaderIfNeeded();
             if (telemetry != null)
             {
-                telemetry.SetPhase("A");
+                telemetry.SetPhase(isPractice ? "practice" : "A");
                 telemetry.latinSeed = 0;
             }
             if (events != null)
             {
-                events.Phase = "A";
+                events.Phase = isPractice ? "practice" : "A";
                 events.WriteValues("session_begin", participantId,
                     session.rooms.Length.ToString(), "trial runner starting");
             }
@@ -237,6 +280,21 @@ namespace EmotionRooms
         {
             IsRunning = true;
             completed.Clear();
+
+            // Practice first. These rooms are rated exactly like real ones so the
+            // rehearsal is genuine, but they are written with phase "practice" and never
+            // enter `completed`, so they cannot reach the analysis by accident.
+            if (practice != null && practice.rooms != null && practice.rooms.Length > 0)
+            {
+                isPractice = true;
+                if (events != null) events.Write("practice_begin", null);
+                for (int i = 0; i < practice.rooms.Length; i++)
+                {
+                    yield return RunTrial(practice.rooms[i], -(i + 1));
+                }
+                isPractice = false;
+                if (events != null) events.Write("practice_end", null);
+            }
 
             for (int i = 0; i < session.rooms.Length; i++)
             {
@@ -319,15 +377,20 @@ namespace EmotionRooms
                 startedUtc = startedUtc,
             };
 
-            completed.Add(record);
-            AppendRecord(record);
+            // Practice rooms are rated for real but never counted. Keeping them out of
+            // `completed` is what stops them reaching responses.csv and the trial count.
+            if (!isPractice)
+            {
+                completed.Add(record);
+                AppendRecord(record);
+            }
 
             var handler = TrialCompleted;
             if (handler != null) handler(record);
 
             if (restScreen != null) restScreen.SetActive(true);
             if (events != null) events.Write("trial_end", null);
-            if (index < session.rooms.Length)
+            if (isPractice || index < session.rooms.Length)
             {
                 if (telemetry != null)
                 {

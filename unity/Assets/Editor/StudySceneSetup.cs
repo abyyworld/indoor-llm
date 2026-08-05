@@ -335,10 +335,13 @@ namespace EmotionRooms.EditorTools
 
         static WallTexture[] BuildTextureTable()
         {
-            // One entry per pool value, names matching exactly. The maps are left empty:
-            // a null map tints cleanly, so the study runs on flat colour until real
-            // greyscale textures are dropped in. Any map added later MUST be greyscale,
-            // or it fights the hue and the manipulation stops being clean.
+            // One entry per pool value, names matching exactly, each with a baked
+            // greyscale map. The maps used to be left null, which RoomLoader rejects
+            // outright -- and simply allowing null would have been worse: three
+            // identical flat walls, with `texture` manipulated in the data and invisible
+            // in the headset. The maps are greyscale so the config's hue tints them
+            // rather than fighting them.
+            TextureBaker.BakeAll();
             var table = new WallTexture[PoolConstants.Textures.Length];
             for (int i = 0; i < table.Length; i++)
             {
@@ -346,7 +349,7 @@ namespace EmotionRooms.EditorTools
                 table[i] = new WallTexture
                 {
                     name = name,
-                    greyscaleMap = null,
+                    greyscaleMap = TextureBaker.Load(name),
                     smoothness = name == "plaster" ? 0.35f : name == "textile" ? 0.1f : 0.2f,
                     tiling = 2f,
                 };
