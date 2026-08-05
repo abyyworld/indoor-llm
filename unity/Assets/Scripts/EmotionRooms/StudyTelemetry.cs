@@ -113,7 +113,13 @@ namespace EmotionRooms
             "DeltaMs", "FPS",
         };
 
-        void Awake()
+        // Start, not Awake. Unity runs every Awake before any Start, and StudyBootstrap
+        // assigns the participant id in its Awake. Opening here was a guaranteed
+        // mismatch rather than a race: StudyBootstrap is added to the Study object last,
+        // so its Awake runs last, and this file had already been created under the
+        // previous participant's id. The responses would say p07 and the log filename
+        // p06, which is only noticeable long after the session.
+        void Start()
         {
             Open();
         }

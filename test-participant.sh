@@ -43,4 +43,5 @@ print("    swapped:   ", dict(collections.Counter(
     t["ground_truth"].get("swapped_field") or "-" for t in b["trials"])))
 PY
 echo
-echo "In Unity: set participantId to $PARTICIPANT on TrialRunner, OversightReview and EventLog."
+echo "In Unity: Emotion Rooms > Study Control Panel (Cmd-Shift-E) sets the id and runs"
+echo "the session. Nothing to type into the inspector."

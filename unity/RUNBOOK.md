@@ -1,6 +1,20 @@
 # Running the study
 
-Two parts: a one-time project setup, then a short routine per participant.
+**Everything is in one window: `Emotion Rooms > Study Control Panel`, or Cmd-Shift-E.**
+
+Five numbered steps, each turning green as it completes. Work down the list and you have
+run the study correctly; you do not need the rest of this file for a normal session. The
+sections below explain what each step does and what to do when one of them complains.
+
+```
+● 1. Scene                    build it, check it, see whether real furniture is loaded
+● 2. Participant and stimuli  auto-suggests the next id, builds their session + block
+○ 3. Consent                  opens the web form, then records that consent was taken
+○ 4. Run                      Begin Study, and the withdraw button
+○ 5. After                    questionnaire, then bundle every log into one file
+```
+
+Two parts below: a one-time project setup, then the per-participant routine.
 
 ---
 
@@ -30,14 +44,22 @@ That builds both room shells, the light, the affect grid with its markers, and w
 other. Doing it by hand is about forty inspector fields and a mis-wired reference does
 not fail loudly: it fails as a grid that never responds, mid-session.
 
-Then:
+Both are step 1 in the control panel. `Check Scene` confirms the wiring and that a
+session file exists; `Report Dimensions` prints the matched sightlines and both floor
+areas. If either reports a problem, stop and fix it before going further.
 
-```
-Emotion Rooms > Check Scene        confirms the wiring and that a session file exists
-Emotion Rooms > Report Dimensions  prints the matched sightlines and both floor areas
-```
+### Furniture
 
-If either reports a problem, stop and fix it before going further.
+The fixed furnishing ships as procedural placeholders, so the study runs on a clean
+checkout. To use real models, import a CC0 set -- [Kenney's Furniture
+Kit](https://kenney.nl/assets/furniture-kit) covers every slot and needs no attribution
+-- then `Assets > Create > Emotion Rooms > Furniture Set` and drop a prefab into each
+slot. Rebuild the scene and the panel's step 1 will say how many slots are still on
+placeholders.
+
+Models land on the same anchors as the placeholders and are scaled to the same
+footprint, so swapping them cannot move furniture between conditions. Keep exactly one
+FurnitureSet asset in the project, or participants could see different furnishing.
 
 ---
 
@@ -177,7 +199,14 @@ adb push runs/unity_p01.json /sdcard/Android/data/<bundle-id>/files/session.json
 adb push runs/oversight_p01.json /sdcard/Android/data/<bundle-id>/files/oversight.json
 ```
 
-Set `participantId` on `TrialRunner`, `OversightReview` and `EventLog` to `p01`.
+The control panel does all of the above: it suggests the next unused id, runs the three
+commands, and sets the id everywhere it is needed. `StudyBootstrap` owns the id and
+pushes it into `TrialRunner`, `OversightReview`, `EventLog` and `StudyTelemetry`, so
+there is no longer a field to type it into four times.
+
+**Never reuse an id.** A second session under the same id appends to the first one's
+files and neither is recoverable afterwards. The panel suggests one past the highest it
+finds, which is why you should let it.
 
 ### During
 

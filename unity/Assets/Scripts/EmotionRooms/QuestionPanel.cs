@@ -136,12 +136,27 @@ namespace EmotionRooms
 
         Transform Resolve(Ray ray)
         {
-            RaycastHit hit;
+            // RaycastAll, not Raycast. A single Raycast returns the nearest collider in
+            // the scene, so a room surface or a piece of furniture between the pointer
+            // and the panel would swallow the hit and the panel would read it as a miss.
+            // The participant then clicks a button that visibly highlights and nothing
+            // happens, forever, because the review block is blocked waiting on an answer.
+            // Considering only this panel's own colliders removes that whole class.
+            //
             // QueryTriggerInteraction.Collide because the option colliders are triggers,
             // so they cannot shove the participant's rig around if it ever moves.
-            if (!Physics.Raycast(ray, out hit, 100f, ~0, QueryTriggerInteraction.Collide))
-                return null;
-            return hit.transform.IsChildOf(transform) ? hit.transform : null;
+            var hits = Physics.RaycastAll(ray, 100f, ~0, QueryTriggerInteraction.Collide);
+
+            Transform nearest = null;
+            float nearestDistance = float.MaxValue;
+            for (int i = 0; i < hits.Length; i++)
+            {
+                if (!hits[i].transform.IsChildOf(transform)) continue;
+                if (hits[i].distance >= nearestDistance) continue;
+                nearest = hits[i].transform;
+                nearestDistance = hits[i].distance;
+            }
+            return nearest;
         }
 
         static void SetTint(Transform t, bool on)

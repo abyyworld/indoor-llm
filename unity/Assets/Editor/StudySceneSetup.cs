@@ -40,6 +40,11 @@ namespace EmotionRooms.EditorTools
 
             var rooms = GameObject.Find("EmotionRooms");
             if (rooms != null) Object.DestroyImmediate(rooms);
+
+            // Real models if a FurnitureSet exists in the project, procedural otherwise.
+            // Found by search rather than by an inspector field: the rooms are rebuilt
+            // from a static method, so there is no component alive to hold the reference.
+            RoomBuilder.Models = FindFurnitureSet();
             rooms = RoomBuilder.BuildAll();
 
             var root = new GameObject(RootName);
@@ -188,6 +193,19 @@ namespace EmotionRooms.EditorTools
 
             quad.SetActive(false);   // shown only when a response is wanted
             return grid;
+        }
+
+        /// <summary>The project's FurnitureSet, or null to use the placeholders.</summary>
+        public static FurnitureSet FindFurnitureSet()
+        {
+            var guids = AssetDatabase.FindAssets("t:FurnitureSet");
+            if (guids.Length == 0) return null;
+            if (guids.Length > 1)
+                Debug.LogWarning("Emotion Rooms: " + guids.Length + " FurnitureSet assets " +
+                                 "found; using the first. Keep exactly one so every " +
+                                 "participant sees the same furnishing.");
+            return AssetDatabase.LoadAssetAtPath<FurnitureSet>(
+                AssetDatabase.GUIDToAssetPath(guids[0]));
         }
 
         static string[] AttributionLabels()

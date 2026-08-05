@@ -18,7 +18,8 @@ pipeline/   generation, validation, controls, session building   (Python 3, stdl
 unity/      scene loader                                         (C#, drop into Assets/Scripts/EmotionRooms/)
 configs/    pools.json (pool values as data) + hand-written configs
             + INVALID_do_not_ship.json (every room there must fail)
-tests/      156 tests, no API key or network needed
+tests/      164 tests, no API key or network needed
+forms/      Apps Script that generates the consent and post-session Google Forms
 runs/       generated output, git-ignored
 ```
 
@@ -30,7 +31,9 @@ python3 -m pipeline.cli --help               # pools, validate, generate, genera
                                              # random-control, merge, build-session,
                                              # export-unity, emit-unity-pools,
                                              # validate-handoff, check-separability,
-                                             # oversight-block
+                                             # oversight-block, bundle-participant
+./test-participant.sh p01 42 0               # build one participant and stage the files
+                                             # where the Unity editor reads them
 python3 -m pipeline.cli validate configs/INVALID_do_not_ship.json   # must exit 1
 ```
 
@@ -67,13 +70,33 @@ never written to disk.
 
 ## Status
 
-Built and tested: pools, schemas, validator, generation with reject-and-re-ask, the
-neutral and random control arms, session building with the spec's time budget, the Unity
-loader, hand-written fixtures.
+**The study runs end to end.** `Emotion Rooms > Study Control Panel` (Cmd-Shift-E) is
+the whole researcher interface: five steps from building the scene to bundling the logs.
+[unity/RUNBOOK.md](unity/RUNBOOK.md) is the procedure.
 
-Not built, deliberately: the trial runner / questionnaire / response logging (the loader
-fires `RoomLoaded` as the hook, spec §6); the ranking-and-filtering pass (spec §5 -
-needs a decision on who judges and against what criterion first); the Overleaf rewrite.
+Built and tested: pools, schemas, validator, generation with reject-and-re-ask, the
+control arms, session building with the spec's time budget, the Unity loader, the trial
+runner, the affect grid, the oversight review block with its questionnaire panels, event
+and 20 Hz telemetry logging, the consent gate and withdrawal path, per-participant log
+bundling, hand-written fixtures.
+
+Not built, deliberately: the ranking-and-filtering pass (spec §5 - needs a decision on
+who judges and against what criterion first); the Overleaf rewrite.
+
+Conventions worth not re-deriving:
+
+- **`StudyBootstrap` owns `participantId`** and pushes it into the runners and both
+  writers in `Awake`. `EventLog` and `StudyTelemetry` therefore open their files in
+  `Start`, never `Awake` - Unity runs every `Awake` before any `Start`, and opening
+  earlier named the log after the previous participant.
+- **`QuestionPanel` resolves clicks with `RaycastAll` filtered to its own colliders.**
+  A plain `Raycast` lets room geometry nearer than the panel eat the hit, and the review
+  block blocks on an answer, so a swallowed click is a hang.
+- **Furniture is never tinted.** `CollectTintables` selects on the `TintableSurface`
+  component, which walls, floors and ceilings carry and furnishing does not.
+- **`FurnitureSet`** optionally replaces the procedural furnishing with real models,
+  placed at the same anchors and scaled to the same footprint so a cosmetic swap cannot
+  become a confound. Keep exactly one such asset in the project.
 
 ## Answered by Mengkai, 30 Jul 2026
 

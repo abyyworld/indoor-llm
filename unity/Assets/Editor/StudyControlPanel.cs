@@ -80,7 +80,13 @@ namespace EmotionRooms.EditorTools
         void DrawSceneStep(StudyBootstrap bootstrap)
         {
             bool ready = bootstrap != null;
-            Step(1, "Scene", ready, ready ? "Built." : "Not built yet.");
+            var models = StudySceneSetup.FindFurnitureSet();
+            string furniture = models == null
+                ? "Placeholder furniture (no FurnitureSet in the project)."
+                : models.MissingCount() == 0
+                    ? "Real furniture models."
+                    : models.MissingCount() + " of 7 slots still on placeholders.";
+            Step(1, "Scene", ready, (ready ? "Built. " : "Not built yet. ") + furniture);
 
             using (new EditorGUI.DisabledScope(Application.isPlaying))
             {
@@ -205,7 +211,12 @@ namespace EmotionRooms.EditorTools
 
         void DrawAfterStep()
         {
-            Step(5, "After", false, "Questionnaire, then bundle the logs.");
+            string bundled = Path.Combine(repoPath ?? "", "runs", "bundles",
+                                          participant + "_all.csv");
+            bool ready = !string.IsNullOrEmpty(repoPath) && File.Exists(bundled);
+            Step(5, "After", ready,
+                ready ? "Bundled to runs/bundles/" + participant + "_all.csv"
+                      : "Questionnaire, then bundle the logs.");
 
             EditorGUI.BeginChangeCheck();
             questionnaireUrl = EditorGUILayout.TextField("Questionnaire URL", questionnaireUrl);

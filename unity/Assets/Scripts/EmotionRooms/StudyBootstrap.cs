@@ -115,12 +115,17 @@ namespace EmotionRooms
         public void ApplyParticipantId()
         {
             if (string.IsNullOrEmpty(participantId)) return;
+
             if (trialRunner != null) trialRunner.participantId = participantId;
             if (oversightReview != null) oversightReview.participantId = participantId;
-            if (trialRunner != null && trialRunner.events != null)
-                trialRunner.events.participantId = participantId;
-            if (trialRunner != null && trialRunner.telemetry != null)
-                trialRunner.telemetry.participantId = participantId;
+
+            // Found in the scene rather than through TrialRunner, so a log still gets the
+            // right id if one of the runners is unwired. A writer that silently keeps the
+            // default id is worse than one that is obviously missing.
+            foreach (var log in FindObjectsByType<EventLog>(FindObjectsSortMode.None))
+                log.participantId = participantId;
+            foreach (var log in FindObjectsByType<StudyTelemetry>(FindObjectsSortMode.None))
+                log.participantId = participantId;
         }
 
         void Start()
