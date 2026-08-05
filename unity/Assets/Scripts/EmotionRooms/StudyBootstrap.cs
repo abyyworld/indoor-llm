@@ -168,6 +168,27 @@ namespace EmotionRooms
             if (autoStart) StartCoroutine(AutoStart());
         }
 
+        /// <summary>
+        /// Stopping play is a legitimate way to end a session, so it has to leave the
+        /// data in the same state a completed run would. Without this, quitting midway
+        /// left the per-file CSVs written but no combined file, and the combined file is
+        /// the one anybody actually opens.
+        /// </summary>
+        void OnApplicationQuit()
+        {
+            if (bundledOnExit) return;
+            bundledOnExit = true;
+
+            if (trialRunner != null && trialRunner.IsRunning)
+                trialRunner.Abort("stopped_early");
+            if (oversightReview != null && oversightReview.IsRunning)
+                oversightReview.Abort("stopped_early");
+
+            BundleNow("session stopped early");
+        }
+
+        bool bundledOnExit;
+
         void OnDestroy()
         {
             if (trialRunner != null) trialRunner.SessionFinished -= OnSessionFinished;

@@ -26,7 +26,7 @@ namespace EmotionRooms.EditorTools
         public const string Folder = "Assets/Textures";
         const int Size = 512;
 
-        [MenuItem("Emotion Rooms/Bake Wall Textures", priority = 2)]
+        [MenuItem("Emotion Rooms/Advanced/Bake Wall Textures", priority = 112)]
         public static void BakeMenu()
         {
             BakeAll();

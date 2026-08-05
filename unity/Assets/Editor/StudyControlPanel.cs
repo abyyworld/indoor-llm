@@ -196,6 +196,13 @@ namespace EmotionRooms.EditorTools
             bool running = Application.isPlaying && bootstrap != null &&
                            bootstrap.trialRunner != null && bootstrap.trialRunner.IsRunning;
 
+            EditorGUILayout.HelpBox(
+                "Watch the GAME tab, not Scene. Everything the participant sees — the " +
+                "rooms, the rating grid, and every questionnaire — is drawn to the Game " +
+                "view. The Scene view shows the room geometry only, so from there a " +
+                "session looks like rooms appearing and vanishing with nothing in " +
+                "between.", MessageType.Info);
+
             Numbered(1, "Sit them at the laptop with the headset OFF.");
             Numbered(2, "Press Play, then Begin. You do not touch anything after that " +
                         "until they take the headset off.");
@@ -245,30 +252,21 @@ namespace EmotionRooms.EditorTools
 
             Numbered(4, "Fit the headset. Check they can see clearly and are standing " +
                         "comfortably with room to turn around.");
-            Numbered(5, "2 warm-up rooms, then 8 real ones. ~15 min. They rate each room " +
-                        "on the grid by pointing and clicking. You do nothing.");
+            Numbered(5, "2 warm-up rooms, then 8 real ones. ~15 min. Each room appears " +
+                        "for 20 seconds, then vanishes and a 9x9 grid takes its place. " +
+                        "They click one square: left-right is pleasant-unpleasant, " +
+                        "up-down is calm-excited. Then the next room. You do nothing.");
             Numbered(6, "The review block: 12 rooms, asking whether anything looks wrong. " +
                         "~12 min. Still nothing for you to do.");
             Numbered(7, "Headset off. They fill in the after-forms on screen: sickness, " +
                         "workload, trust, presence, then the debrief.");
             Numbered(8, "The end screen names anything they skipped. Note it on paper.");
 
-            if (Application.isPlaying && bootstrap != null)
-            {
-                EditorGUILayout.Space(6f);
-                var previous = GUI.backgroundColor;
-                GUI.backgroundColor = new Color(1f, 0.7f, 0.7f);
-                if (GUILayout.Button("Participant wants to stop — end now", GUILayout.Height(26f)))
-                {
-                    if (EditorUtility.DisplayDialog("Stop the session",
-                        "End " + participant + " now?\n\nEverything recorded so far is kept " +
-                        "and marked as a withdrawal.", "Stop", "Cancel"))
-                        pending = bootstrap.WithdrawParticipant;
-                }
-                GUI.backgroundColor = previous;
-                EditorGUILayout.LabelField("Or they hold F12 for 1.5 s themselves.",
-                    EditorStyles.miniLabel);
-            }
+            if (Application.isPlaying)
+                EditorGUILayout.HelpBox(
+                    "To stop early, just press Play again. Everything recorded so far is " +
+                    "kept and the combined file is written on the way out, so stopping " +
+                    "midway costs nothing.", MessageType.None);
 
             EndSection();
         }

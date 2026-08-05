@@ -20,7 +20,7 @@ namespace EmotionRooms.EditorTools
     {
         const string RootName = "Study";
 
-        [MenuItem("Emotion Rooms/Set Up Study Scene", priority = 0)]
+        [MenuItem("Emotion Rooms/Advanced/Set Up Study Scene", priority = 100)]
         public static void SetUp()
         {
             var existing = GameObject.Find(RootName);
@@ -46,7 +46,6 @@ namespace EmotionRooms.EditorTools
             // from a static method, so there is no component alive to hold the reference.
             RoomBuilder.Models = FindFurnitureSet();
             rooms = RoomBuilder.BuildAll();
-            PersistMaterials(rooms);
 
             var root = new GameObject(RootName);
 
@@ -121,6 +120,13 @@ namespace EmotionRooms.EditorTools
             grid.events = events;
             telemetry.trialRunner = runner;
             telemetry.review = review;
+
+            // After everything exists. The grid and the three question panels build
+            // their own materials too, and persisting only the rooms left those invisible
+            // in play mode -- the room would hide for the rating and the participant
+            // would be looking at an empty scene with the grid right in front of them.
+            PersistMaterials(rooms);
+            PersistMaterials(root);
 
             Undo.RegisterCreatedObjectUndo(root, "Set Up Study Scene");
             Selection.activeGameObject = root;
@@ -217,12 +223,12 @@ namespace EmotionRooms.EditorTools
         /// Deduplicated by material name, so the eight furniture shades and the wall
         /// surface become nine assets rather than one per renderer.
         /// </summary>
-        static void PersistMaterials(GameObject rooms)
+        static void PersistMaterials(GameObject subject)
         {
             Directory.CreateDirectory(MaterialFolder);
 
             var byName = new System.Collections.Generic.Dictionary<string, Material>();
-            foreach (var renderer in rooms.GetComponentsInChildren<Renderer>(true))
+            foreach (var renderer in subject.GetComponentsInChildren<Renderer>(true))
             {
                 var slots = renderer.sharedMaterials;
                 for (int i = 0; i < slots.Length; i++)
@@ -247,8 +253,10 @@ namespace EmotionRooms.EditorTools
 
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
-            Debug.Log("Emotion Rooms: saved " + byName.Count + " materials to " +
-                      MaterialFolder + " so they survive play mode.");
+            if (byName.Count > 0)
+                Debug.Log("Emotion Rooms: saved " + byName.Count + " materials from " +
+                          subject.name + " to " + MaterialFolder +
+                          " so they survive play mode.");
         }
 
         static string Sanitise(string name)
@@ -433,7 +441,7 @@ namespace EmotionRooms.EditorTools
 
         // ------------------------------------------------------------------ checks
 
-        [MenuItem("Emotion Rooms/Check Scene", priority = 20)]
+        [MenuItem("Emotion Rooms/Advanced/Check Scene", priority = 101)]
         public static void CheckScene()
         {
             var problems = new System.Collections.Generic.List<string>();
@@ -512,34 +520,7 @@ namespace EmotionRooms.EditorTools
                                  string.Join("\n  - ", problems.ToArray()));
         }
 
-        [MenuItem("Emotion Rooms/Confirm Consent Taken", priority = 10)]
-        static void ConfirmConsent()
-        {
-            var bootstrap = Object.FindFirstObjectByType<StudyBootstrap>();
-            if (bootstrap == null)
-            {
-                EditorUtility.DisplayDialog("Emotion Rooms",
-                    "No StudyBootstrap in the scene. Run Set Up Study Scene first.", "OK");
-                return;
-            }
-            if (bootstrap.ConsentConfirmed)
-            {
-                EditorUtility.DisplayDialog("Emotion Rooms",
-                    "Consent is already recorded for this session.", "OK");
-                return;
-            }
-
-            bool ok = EditorUtility.DisplayDialog("Confirm consent",
-                "Confirm that the paper consent form for participant '" +
-                (bootstrap.trialRunner != null ? bootstrap.trialRunner.participantId : "?") +
-                "' has been read, questions answered, and the form signed -- before the " +
-                "headset goes on.\n\nThis writes a timestamped line to consent_log.csv. " +
-                "It is not the consent itself.",
-                "Consent was taken", "Cancel");
-            if (ok) bootstrap.ConfirmConsentTaken();
-        }
-
-        [MenuItem("Emotion Rooms/Reveal Data Folder", priority = 21)]
+        [MenuItem("Emotion Rooms/Advanced/Reveal Data Folder", priority = 102)]
         public static void RevealDataFolder()
         {
             Directory.CreateDirectory(Application.persistentDataPath);

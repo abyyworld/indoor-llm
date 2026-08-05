@@ -11,7 +11,7 @@ namespace EmotionRooms.EditorTools
 {
     public static class RoomBuilderMenu
     {
-        [MenuItem("Emotion Rooms/Build Both Shells")]
+        [MenuItem("Emotion Rooms/Advanced/Build Both Shells", priority = 110)]
         public static void BuildBothShells()
         {
             var existing = GameObject.Find("EmotionRooms");
@@ -37,7 +37,7 @@ namespace EmotionRooms.EditorTools
                 "RoomLoader's linearRoomRoot and curvedRoomRoot fields.");
         }
 
-        [MenuItem("Emotion Rooms/Report Dimensions")]
+        [MenuItem("Emotion Rooms/Advanced/Report Dimensions", priority = 111)]
         public static void ReportDimensions()
         {
             var errors = RoomDimensions.Validate();
