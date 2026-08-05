@@ -41,6 +41,7 @@ INCLUDE=(
   .gitignore
   sync-to-mine.sh
   demo.sh
+  test-participant.sh
   demo-plan.md
 )
 
