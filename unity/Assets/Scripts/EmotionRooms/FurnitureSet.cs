@@ -46,6 +46,18 @@ namespace EmotionRooms
         [Tooltip("Wall art. Used for both pieces.")]
         public GameObject wallArt;
 
+        [Tooltip("Replace every material on an imported model with a neutral grey.\n\n" +
+                 "Leave this ON. Asset-pack furniture ships with saturated colours baked " +
+                 "in -- Kenney's carpet material is a strong red and its wood is orange. " +
+                 "Hue and saturation ARE the manipulation here, so coloured furniture " +
+                 "would put a second, uncontrolled colour signal in every scene, " +
+                 "identical across conditions but competing with the one being measured. " +
+                 "The silhouette is what the models are for; their palette is not.")]
+        public bool forceNeutralMaterials = true;
+
+        [Tooltip("Greyscale value used when forceNeutralMaterials is on.")]
+        [Range(0f, 1f)] public float neutralShade = 0.42f;
+
         [Tooltip("Scale models to the placeholder footprint. Leave on: it keeps the " +
                  "furnishing identical across conditions regardless of how the source " +
                  "models were authored.")]

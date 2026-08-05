@@ -322,6 +322,23 @@ namespace EmotionRooms
             go.transform.localRotation = Quaternion.Euler(0f, yaw, 0f);
 
             if (Models.normaliseToFootprint) FitTo(go, footprint);
+
+            if (Models.forceNeutralMaterials)
+            {
+                var neutral = PropSurface(Models.neutralShade);
+                foreach (var renderer in go.GetComponentsInChildren<Renderer>())
+                {
+                    var slots = new Material[renderer.sharedMaterials.Length];
+                    for (int i = 0; i < slots.Length; i++) slots[i] = neutral;
+                    renderer.sharedMaterials = slots;
+                }
+            }
+
+            // Furniture must never intercept the pointer ray meant for a panel or the
+            // affect grid, and nothing here is physical.
+            foreach (var collider in go.GetComponentsInChildren<Collider>())
+                Object.DestroyImmediate(collider);
+
             return true;
         }
 
@@ -484,6 +501,10 @@ namespace EmotionRooms
             go.transform.localRotation = Quaternion.Euler(0f, yaw, 0f);
             go.transform.localScale = size;
             go.GetComponent<Renderer>().sharedMaterial = PropSurface(shade);
+
+            // Nothing in the study is physical, and a furniture collider nearer than a
+            // question panel would intercept the pointer ray meant for it.
+            Object.DestroyImmediate(go.GetComponent<Collider>());
         }
 
         static readonly Dictionary<float, Material> propSurfaces = new Dictionary<float, Material>();
