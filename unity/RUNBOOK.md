@@ -9,25 +9,35 @@ Two parts: a one-time project setup, then a short routine per participant.
 **Unity 6000.3.19f1**, URP template, platform Android. Record the exact editor version
 somewhere; the write-up needs it and "Unity 6" is not reproducible.
 
-Copy the scripts in:
+The scripts already live in the right place:
 
 ```
-Assets/Scripts/EmotionRooms/     all of unity/*.cs
-Assets/Editor/                   unity/Editor/RoomBuilderMenu.cs
+unity/Assets/Scripts/EmotionRooms/   the runtime code
+unity/Assets/Editor/                 the editor commands
 ```
 
-`RoomBuilderMenu.cs` **must** sit under a folder literally named `Editor`, or the player
-build fails on the `UnityEditor` reference.
+Editor scripts must sit under a folder literally named `Editor`, or the player build
+fails on the `UnityEditor` reference. That is already the case; do not move them.
+
+Open `unity/` as the project in Unity Hub, then:
+
+```
+Emotion Rooms > Set Up Study Scene
+```
+
+That builds both room shells, the light, the affect grid with its markers, and wires
+`RoomLoader`, `EventLog`, `TrialRunner`, `OversightReview` and `StudyBootstrap` to each
+other. Doing it by hand is about forty inspector fields and a mis-wired reference does
+not fail loudly: it fails as a grid that never responds, mid-session.
 
 Then:
 
 ```
-Emotion Rooms > Build Both Shells
-Emotion Rooms > Report Dimensions
+Emotion Rooms > Check Scene        confirms the wiring and that a session file exists
+Emotion Rooms > Report Dimensions  prints the matched sightlines and both floor areas
 ```
 
-The second prints the matched sightlines and both floor areas. If any constraint fails
-it says so in red; do not carry on past that.
+If either reports a problem, stop and fix it before going further.
 
 ---
 
