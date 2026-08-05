@@ -46,6 +46,7 @@ namespace EmotionRooms.EditorTools
             // from a static method, so there is no component alive to hold the reference.
             RoomBuilder.Models = FindFurnitureSet();
             rooms = RoomBuilder.BuildAll();
+            PersistMaterials(rooms);
 
             var root = new GameObject(RootName);
 
@@ -198,6 +199,63 @@ namespace EmotionRooms.EditorTools
 
             quad.SetActive(false);   // shown only when a response is wanted
             return grid;
+        }
+
+        const string MaterialFolder = "Assets/EmotionRooms/Materials";
+
+        /// <summary>
+        /// Replace every runtime-created material with a saved .mat asset.
+        ///
+        /// RoomBuilder builds materials with `new Material(...)`, which is correct for a
+        /// runtime path but does not survive the editor. Nothing references those objects
+        /// from an asset, so entering play mode -- or any script recompile -- destroys
+        /// them and leaves every renderer with a null sharedMaterial. The symptom is
+        /// RoomLoader throwing "No wall renderer with a material to derive the room
+        /// material from" on the first trial, which reads like a wiring problem and is
+        /// not one.
+        ///
+        /// Deduplicated by material name, so the eight furniture shades and the wall
+        /// surface become nine assets rather than one per renderer.
+        /// </summary>
+        static void PersistMaterials(GameObject rooms)
+        {
+            Directory.CreateDirectory(MaterialFolder);
+
+            var byName = new System.Collections.Generic.Dictionary<string, Material>();
+            foreach (var renderer in rooms.GetComponentsInChildren<Renderer>(true))
+            {
+                var slots = renderer.sharedMaterials;
+                for (int i = 0; i < slots.Length; i++)
+                {
+                    var material = slots[i];
+                    if (material == null) continue;
+                    if (AssetDatabase.Contains(material)) continue;
+
+                    Material asset;
+                    if (!byName.TryGetValue(material.name, out asset))
+                    {
+                        string path = AssetDatabase.GenerateUniqueAssetPath(
+                            MaterialFolder + "/" + Sanitise(material.name) + ".mat");
+                        asset = new Material(material);
+                        AssetDatabase.CreateAsset(asset, path);
+                        byName[material.name] = asset;
+                    }
+                    slots[i] = asset;
+                }
+                renderer.sharedMaterials = slots;
+            }
+
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+            Debug.Log("Emotion Rooms: saved " + byName.Count + " materials to " +
+                      MaterialFolder + " so they survive play mode.");
+        }
+
+        static string Sanitise(string name)
+        {
+            foreach (var bad in Path.GetInvalidFileNameChars())
+                name = name.Replace(bad, '_');
+            return name;
         }
 
         /// <summary>The project's FurnitureSet, or null to use the placeholders.</summary>

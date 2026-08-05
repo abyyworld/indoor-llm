@@ -1,11 +1,13 @@
-// The researcher-facing window. Everything needed to run one participant, in the order
-// it is needed, with the state of each step visible.
+// The whole researcher interface: Emotion Rooms > Study Control Panel (Cmd-Shift-E).
 //
-// This exists because the study was previously driven from three menu items, a component
-// context menu and four separately-typed participant ids. That is fine for the person who
-// wrote it and hostile to everyone else, including the same person in six weeks. A study
-// that is fiddly to run gets run inconsistently, and inconsistency between participants
-// is measurement error you cannot subtract later.
+// Written as a runbook rather than a settings window. It says what to do next, who does
+// it -- you or the participant -- and roughly how long it takes, because the person
+// running a session is usually not the person who wrote the software, and quite often is
+// the same person eight weeks later. A study that is fiddly to run gets run
+// inconsistently, and inconsistency between participants is measurement error nobody can
+// subtract afterwards.
+//
+// Nothing here needs a terminal, and nothing needs the inspector.
 
 using System;
 using System.Diagnostics;
@@ -19,68 +21,50 @@ namespace EmotionRooms.EditorTools
 {
     public class StudyControlPanel : EditorWindow
     {
-        const string ConsentUrlKey = "EmotionRooms.ConsentUrl";
-        const string QuestionnaireUrlKey = "EmotionRooms.QuestionnaireUrl";
         const string RepoKey = "EmotionRooms.RepoPath";
 
-        // Buttons queue their work instead of doing it inline.
-        //
-        // An exception thrown from inside OnGUI unwinds between a BeginVertical and its
-        // EndVertical, and IMGUI then reports "Invalid GUILayout state" on every repaint
-        // afterwards -- so one bad session file turned into a permanently broken panel,
-        // and the error you actually needed to read was buried under GUI noise. Running
-        // the action after layout has finished keeps a failure to one clear message.
-        Action pending;
-
         string participant = "";
-        string consentUrl = "";
-        string questionnaireUrl = "";
         string repoPath = "";
         Vector2 scroll;
-        string lastCommandOutput = "";
+        string lastOutput = "";
+        bool showScript;
+        bool showTrouble;
+        Action pending;
 
         [MenuItem("Emotion Rooms/Study Control Panel _%#e", priority = -100)]
         public static void Open()
         {
             var window = GetWindow<StudyControlPanel>(false, "Study Control");
-            window.minSize = new Vector2(380f, 560f);
+            window.minSize = new Vector2(430f, 620f);
             window.Show();
         }
 
         void OnEnable()
         {
-            consentUrl = EditorPrefs.GetString(ConsentUrlKey, "");
-            questionnaireUrl = EditorPrefs.GetString(QuestionnaireUrlKey, "");
             repoPath = EditorPrefs.GetString(RepoKey, GuessRepoPath());
             participant = NextParticipantId();
         }
 
+        void OnInspectorUpdate()
+        {
+            // The panel reports live session state, which changes without a mouse event.
+            if (Application.isPlaying) Repaint();
+        }
+
         void OnGUI()
         {
+            var bootstrap = UnityEngine.Object.FindFirstObjectByType<StudyBootstrap>();
+            var forms = UnityEngine.Object.FindFirstObjectByType<QuestionnaireRunner>();
+
             scroll = EditorGUILayout.BeginScrollView(scroll);
 
-            Title("Emotion Rooms study");
-            EditorGUILayout.LabelField(
-                "Run the steps top to bottom. Each one turns green when it is done.",
-                EditorStyles.wordWrappedMiniLabel);
-            Space();
-
-            var bootstrap = UnityEngine.Object.FindFirstObjectByType<StudyBootstrap>();
-
-            DrawSceneStep(bootstrap);
-            DrawModeStep(bootstrap);
-            DrawParticipantStep(bootstrap);
-            DrawConsentStep(bootstrap);
-            DrawRunStep(bootstrap);
-            DrawAfterStep();
-
-            if (!string.IsNullOrEmpty(lastCommandOutput))
-            {
-                Space();
-                EditorGUILayout.LabelField("Last command", EditorStyles.boldLabel);
-                EditorGUILayout.SelectableLabel(lastCommandOutput,
-                    EditorStyles.textArea, GUILayout.Height(110f));
-            }
+            DrawHeader(bootstrap);
+            DrawSetup(bootstrap);
+            DrawBeforeArrival(bootstrap);
+            DrawSession(bootstrap, forms);
+            DrawAfter();
+            DrawScript();
+            DrawTroubleshooting();
 
             EditorGUILayout.EndScrollView();
 
@@ -88,218 +72,302 @@ namespace EmotionRooms.EditorTools
             {
                 var action = pending;
                 pending = null;
-                try
-                {
-                    action();
-                }
+                try { action(); }
                 catch (Exception e)
                 {
-                    lastCommandOutput = e.Message;
+                    lastOutput = e.Message;
                     Debug.LogError("Study Control: " + e.Message + "\n" + e.StackTrace);
                 }
                 Repaint();
             }
         }
 
-        // ------------------------------------------------------------------ steps
+        // ------------------------------------------------------------------- header
 
-        void DrawSceneStep(StudyBootstrap bootstrap)
+        void DrawHeader(StudyBootstrap bootstrap)
         {
-            bool ready = bootstrap != null;
-            var models = StudySceneSetup.FindFurnitureSet();
-            string furniture = models == null
-                ? "Placeholder furniture (no FurnitureSet in the project)."
-                : models.MissingCount() == 0
-                    ? "Real furniture models."
-                    : models.MissingCount() + " of 7 slots still on placeholders.";
-            Step(1, "Scene", ready, (ready ? "Built. " : "Not built yet. ") + furniture);
-
-            using (new EditorGUI.DisabledScope(Application.isPlaying))
-            {
-                if (GUILayout.Button(ready ? "Rebuild study scene" : "Build study scene",
-                                     GUILayout.Height(24f)))
-                    pending = () => { StudySceneSetup.SetUp(); participant = NextParticipantId(); };
-            }
-            if (ready && GUILayout.Button("Check scene")) pending = StudySceneSetup.CheckScene;
-            EndStep();
-        }
-
-        void DrawModeStep(StudyBootstrap bootstrap)
-        {
-            EditorGUILayout.Space(8f);
-            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-            EditorGUILayout.LabelField("Mode", EditorStyles.boldLabel);
-
-            if (bootstrap == null)
-            {
-                EditorGUILayout.LabelField("Build the scene first.", EditorStyles.miniLabel);
-                EditorGUILayout.EndVertical();
-                return;
-            }
-
-            int mode = bootstrap.practiceOnly ? 1 : 0;
-            int picked = GUILayout.Toolbar(mode, new[] { "Real session", "Practice only" });
-            if (picked != mode)
-            {
-                bootstrap.practiceOnly = picked == 1;
-                EditorUtility.SetDirty(bootstrap);
-            }
-
-            EditorGUILayout.LabelField(
-                bootstrap.practiceOnly
-                    ? "Two warm-up rooms, then stop. Nothing scored, no review block. " +
-                      "Use this to pilot the kit or train a researcher without burning a " +
-                      "participant id."
-                    : "Warm-up rooms, eight scored trials, the review block, then the " +
-                      "after forms.",
-                EditorStyles.wordWrappedMiniLabel);
-
-            EditorGUI.BeginChangeCheck();
-            bool warmUp = EditorGUILayout.ToggleLeft(
-                "Show warm-up rooms before the first scored trial", bootstrap.practiceRooms);
-            if (EditorGUI.EndChangeCheck())
-            {
-                bootstrap.practiceRooms = warmUp;
-                EditorUtility.SetDirty(bootstrap);
-            }
-
-            EditorGUILayout.EndVertical();
-        }
-
-        void DrawParticipantStep(StudyBootstrap bootstrap)
-        {
-            string dest = Application.persistentDataPath;
-            bool haveSession = File.Exists(Path.Combine(dest, "session.json"));
-            bool haveBlock = File.Exists(Path.Combine(dest, "oversight.json"));
-            bool ready = haveSession && haveBlock;
-
-            Step(2, "Participant and stimuli", ready,
-                ready ? "session.json and oversight.json are in place."
-                      : "Missing " + (haveSession ? "" : "session.json ") +
-                        (haveBlock ? "" : "oversight.json"));
+            EditorGUILayout.Space(4f);
+            var title = new GUIStyle(EditorStyles.boldLabel) { fontSize = 16 };
+            EditorGUILayout.LabelField("Emotion Rooms", title);
 
             EditorGUILayout.BeginHorizontal();
-            participant = EditorGUILayout.TextField("Participant", participant);
-            if (GUILayout.Button("Next", GUILayout.Width(50f)))
+            EditorGUILayout.LabelField("Participant", GUILayout.Width(70f));
+            participant = EditorGUILayout.TextField(participant, GUILayout.Width(70f));
+            if (GUILayout.Button("Next", GUILayout.Width(46f)))
             {
                 participant = NextParticipantId();
                 GUI.FocusControl(null);
             }
+            GUILayout.FlexibleSpace();
             EditorGUILayout.EndHorizontal();
-            EditorGUILayout.LabelField(
-                " ", "Auto-suggested from the data folder. Never reuse an id.",
-                EditorStyles.miniLabel);
+
+            if (bootstrap != null)
+            {
+                int mode = bootstrap.practiceOnly ? 1 : 0;
+                int picked = GUILayout.Toolbar(mode, new[] { "Real session", "Practice only" });
+                if (picked != mode)
+                {
+                    bootstrap.practiceOnly = picked == 1;
+                    EditorUtility.SetDirty(bootstrap);
+                }
+                EditorGUILayout.LabelField(
+                    bootstrap.practiceOnly
+                        ? "Two warm-up rooms then stop. Nothing scored, no review block, " +
+                          "no participant id burned. Use this to try the kit."
+                        : "Warm-up, 8 scored rooms, the review block, then the after-forms. " +
+                          "About 45 minutes.",
+                    EditorStyles.wordWrappedMiniLabel);
+            }
+        }
+
+        // -------------------------------------------------------------------- setup
+
+        void DrawSetup(StudyBootstrap bootstrap)
+        {
+            Section("Setup", "Once per machine, and again after any code change.");
+
+            bool sceneBuilt = bootstrap != null;
+            Row(sceneBuilt, sceneBuilt ? "Scene built" : "Scene not built yet");
 
             using (new EditorGUI.DisabledScope(Application.isPlaying))
             {
-                if (GUILayout.Button("Prepare " + participant + "  (build session + review block)",
-                                     GUILayout.Height(26f)))
+                EditorGUILayout.BeginHorizontal();
+                if (GUILayout.Button(sceneBuilt ? "Rebuild scene" : "Build scene",
+                                     GUILayout.Height(24f)))
+                    pending = () => { StudySceneSetup.SetUp(); participant = NextParticipantId(); };
+                if (GUILayout.Button("Check", GUILayout.Height(24f), GUILayout.Width(70f)))
+                    pending = StudySceneSetup.CheckScene;
+                EditorGUILayout.EndHorizontal();
+            }
+
+            bool haveForms = File.Exists(Path.Combine(Application.streamingAssetsPath,
+                                                      "questionnaires.json"));
+            Row(haveForms, haveForms
+                ? "Questionnaires loaded (consent, demographics, SSQ, NASA-TLX, trust, presence, debrief)"
+                : "questionnaires.json missing — no forms will appear");
+            if (!haveForms && GUILayout.Button("Build questionnaires"))
+                pending = () => RunPython("emit-questionnaires");
+
+            var models = StudySceneSetup.FindFurnitureSet();
+            int missing = models == null ? 7 : models.MissingCount();
+            Row(missing < 7, models == null
+                ? "Furniture: placeholders only"
+                : (7 - missing) + " of 7 furniture models loaded" +
+                  (missing > 0 ? " (teacup and wall art stay procedural)" : ""));
+
+            EndSection();
+        }
+
+        // ------------------------------------------------------------ before arrival
+
+        void DrawBeforeArrival(StudyBootstrap bootstrap)
+        {
+            Section("Before they arrive", "Builds this participant's rooms. Takes a second.");
+
+            string dir = Application.persistentDataPath;
+            bool session = File.Exists(Path.Combine(dir, "session.json"));
+            bool block = File.Exists(Path.Combine(dir, "oversight.json"));
+            bool practice = File.Exists(Path.Combine(dir, "practice.json"));
+
+            Row(session && block && practice,
+                session && block && practice
+                    ? "Rooms ready: 8 trials, 12 review trials, 2 warm-up"
+                    : "Rooms not built for this participant yet");
+
+            using (new EditorGUI.DisabledScope(Application.isPlaying))
+            {
+                if (GUILayout.Button("Prepare " + participant, GUILayout.Height(26f)))
                     pending = () => PrepareParticipant(bootstrap);
             }
-            EndStep();
+            EditorGUILayout.LabelField(
+                "Each participant gets a different room order. Never reuse an id: a second " +
+                "session under the same id appends to the first and neither is recoverable.",
+                EditorStyles.wordWrappedMiniLabel);
+
+            EndSection();
         }
 
-        void DrawConsentStep(StudyBootstrap bootstrap)
+        // ------------------------------------------------------------------ session
+
+        void DrawSession(StudyBootstrap bootstrap, QuestionnaireRunner forms)
         {
-            bool ready = bootstrap != null && bootstrap.ConsentConfirmed;
-            Step(3, "Consent  (before the headset goes on)", ready,
-                ready ? "Recorded for this session."
-                      : "Take consent on the web form, then confirm here.");
+            Section("Running the session", "Follow these in order.");
 
-            EditorGUI.BeginChangeCheck();
-            consentUrl = EditorGUILayout.TextField("Consent form URL", consentUrl);
-            if (!string.IsNullOrEmpty(consentUrl) && !consentUrl.Contains("PARTICIPANT_ID"))
-                EditorGUILayout.HelpBox(
-                    "This link has no PARTICIPANT_ID placeholder, so the id will not be " +
-                    "prefilled and the participant has to type it. Use the prefill link " +
-                    "that build-forms.gs prints, not the form's plain share URL.",
-                    MessageType.Warning);
-            if (EditorGUI.EndChangeCheck()) EditorPrefs.SetString(ConsentUrlKey, consentUrl);
+            bool running = Application.isPlaying && bootstrap != null &&
+                           bootstrap.trialRunner != null && bootstrap.trialRunner.IsRunning;
 
-            using (new EditorGUI.DisabledScope(string.IsNullOrEmpty(consentUrl)))
-            {
-                if (GUILayout.Button("Open consent form for " + participant, GUILayout.Height(24f)))
-                    Application.OpenURL(WithParticipant(consentUrl, participant));
-            }
+            Numbered(1, "Sit them at the laptop with the headset OFF.");
+            Numbered(2, "Press Play, then Begin. You do not touch anything after that " +
+                        "until they take the headset off.");
 
-            using (new EditorGUI.DisabledScope(bootstrap == null || ready))
-            {
-                if (GUILayout.Button("Consent was taken — record it", GUILayout.Height(24f)))
-                    pending = () =>
-                    {
-                        bootstrap.participantId = participant;
-                        bootstrap.ApplyParticipantId();
-                        bootstrap.ConfirmConsentTaken();
-                    };
-            }
-            if (!Application.isPlaying)
-                EditorGUILayout.HelpBox(
-                    "Recording consent writes consent_log.csv. Do it in play mode so it " +
-                    "lands in the same session as the data.", MessageType.None);
-            EndStep();
-        }
-
-        void DrawRunStep(StudyBootstrap bootstrap)
-        {
-            bool running = Application.isPlaying &&
-                           bootstrap != null && bootstrap.trialRunner != null &&
-                           bootstrap.trialRunner.IsRunning;
-            Step(4, "Run", running, running
-                ? "Trial " + bootstrap.trialRunner.CompletedTrials + " of 8 complete."
-                : Application.isPlaying ? "Ready to begin." : "Press Play first.");
-
+            EditorGUILayout.BeginHorizontal();
             if (!Application.isPlaying)
             {
-                if (GUILayout.Button("Enter play mode", GUILayout.Height(26f)))
+                if (GUILayout.Button("Press Play", GUILayout.Height(30f)))
                     EditorApplication.isPlaying = true;
             }
             else
             {
                 using (new EditorGUI.DisabledScope(bootstrap == null || running))
                 {
-                    if (GUILayout.Button("Begin study", GUILayout.Height(30f)))
-                        pending = bootstrap.BeginStudy;
+                    if (GUILayout.Button(running ? "Running…" : "Begin " + participant,
+                                         GUILayout.Height(30f)))
+                        pending = () =>
+                        {
+                            bootstrap.participantId = participant;
+                            bootstrap.ApplyParticipantId();
+                            bootstrap.BeginStudy();
+                        };
                 }
-                using (new EditorGUI.DisabledScope(bootstrap == null))
+            }
+            EditorGUILayout.EndHorizontal();
+
+            Numbered(3, "THEY fill in consent, demographics and how they feel, on screen. " +
+                        "Leave them to it. Every form can be skipped.");
+
+            if (Application.isPlaying && forms != null)
+            {
+                var outstanding = forms.Outstanding();
+                EditorGUILayout.LabelField(
+                    outstanding.Count == 0
+                        ? "      All forms completed."
+                        : "      Outstanding: " + outstanding.Count,
+                    EditorStyles.miniLabel);
+                foreach (var line in outstanding)
+                    EditorGUILayout.LabelField("        " + line, EditorStyles.miniLabel);
+
+                if (bootstrap != null && !bootstrap.ConsentConfirmed)
+                    EditorGUILayout.HelpBox(
+                        "Consent not yet affirmed. The session still runs and the gap is " +
+                        "recorded, but this participant's data is not usable until it is.",
+                        MessageType.Warning);
+            }
+
+            Numbered(4, "Fit the headset. Check they can see clearly and are standing " +
+                        "comfortably with room to turn around.");
+            Numbered(5, "2 warm-up rooms, then 8 real ones. ~15 min. They rate each room " +
+                        "on the grid by pointing and clicking. You do nothing.");
+            Numbered(6, "The review block: 12 rooms, asking whether anything looks wrong. " +
+                        "~12 min. Still nothing for you to do.");
+            Numbered(7, "Headset off. They fill in the after-forms on screen: sickness, " +
+                        "workload, trust, presence, then the debrief.");
+            Numbered(8, "The end screen names anything they skipped. Note it on paper.");
+
+            if (Application.isPlaying && bootstrap != null)
+            {
+                EditorGUILayout.Space(6f);
+                var previous = GUI.backgroundColor;
+                GUI.backgroundColor = new Color(1f, 0.7f, 0.7f);
+                if (GUILayout.Button("Participant wants to stop — end now", GUILayout.Height(26f)))
                 {
-                    var previous = GUI.backgroundColor;
-                    GUI.backgroundColor = new Color(1f, 0.75f, 0.75f);
-                    if (GUILayout.Button("Participant withdrew — stop now"))
-                    {
-                        if (EditorUtility.DisplayDialog("Withdraw",
-                            "End " + participant + "'s session now?\n\nEverything recorded " +
-                            "so far is kept and marked withdrawn.", "Withdraw", "Cancel"))
-                            pending = bootstrap.WithdrawParticipant;
-                    }
-                    GUI.backgroundColor = previous;
+                    if (EditorUtility.DisplayDialog("Stop the session",
+                        "End " + participant + " now?\n\nEverything recorded so far is kept " +
+                        "and marked as a withdrawal.", "Stop", "Cancel"))
+                        pending = bootstrap.WithdrawParticipant;
                 }
-                EditorGUILayout.LabelField(" ", "Or hold F12 for 1.5 s in the headset.",
+                GUI.backgroundColor = previous;
+                EditorGUILayout.LabelField("Or they hold F12 for 1.5 s themselves.",
                     EditorStyles.miniLabel);
             }
-            EndStep();
+
+            EndSection();
         }
 
-        void DrawAfterStep()
+        // -------------------------------------------------------------------- after
+
+        void DrawAfter()
         {
-            string bundled = Path.Combine(repoPath ?? "", "runs", "bundles",
-                                          participant + "_all.csv");
-            bool ready = !string.IsNullOrEmpty(repoPath) && File.Exists(bundled);
-            Step(5, "After", ready,
-                ready ? "Bundled to runs/bundles/" + participant + "_all.csv"
-                      : "The after-forms run in the app. Then bundle the logs.");
+            Section("After", "Nothing to run. The combined file is already written.");
 
-            if (GUILayout.Button("Bundle " + participant + "'s logs into one file",
-                                 GUILayout.Height(24f)))
-                pending = BundleLogs;
+            string bundle = Path.Combine(Application.persistentDataPath, "bundles",
+                                         participant + "_all.csv");
+            bool done = File.Exists(bundle);
+            Row(done, done
+                ? "bundles/" + participant + "_all.csv — every response, event and 20 Hz sample in one file"
+                : "Written automatically when the session ends or a participant withdraws");
 
-            if (GUILayout.Button("Reveal data folder"))
-                EditorUtility.RevealInFinder(Application.persistentDataPath);
-            EndStep();
+            if (GUILayout.Button("Show me the data folder"))
+                EditorUtility.RevealInFinder(
+                    done ? bundle : Application.persistentDataPath);
 
-            Space();
+            EndSection();
+        }
+
+        // ------------------------------------------------------------------- script
+
+        void DrawScript()
+        {
+            showScript = EditorGUILayout.Foldout(showScript, "What to say", true);
+            if (!showScript) return;
+
+            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+            Say("On arrival",
+                "\"Thanks for coming. You'll wear a VR headset and stand in some virtual " +
+                "rooms. After each one I'll ask how it made you feel. It takes about " +
+                "45 minutes. You can stop at any point, for any reason or none, and " +
+                "nothing happens if you do. First, some questions on this laptop.\"");
+            Say("Before the headset",
+                "\"Any questions before we start? If you feel dizzy or unwell at any " +
+                "point, say so and we stop straight away — that's not a problem, it " +
+                "happens.\"");
+            Say("Fitting the headset",
+                "\"Let me know when it's comfortable and you can read text clearly. " +
+                "You'll be standing and you can turn around. Point with the controller " +
+                "and press the trigger to answer.\"");
+            Say("Before the first room",
+                "\"The first two rooms are practice, just to get used to the grid. " +
+                "After that they count, but there are no right answers — just how the " +
+                "room makes you feel.\"");
+            Say("Before the review block",
+                "\"Now you'll see some rooms again. Each was built to feel a certain " +
+                "way. I'll ask whether anything looks wrong for that feeling. Sometimes " +
+                "nothing is wrong, so 'no' is a real answer.\"");
+            Say("At the end",
+                "\"That's everything. A few last questions on the laptop, including an " +
+                "explanation of what we were actually testing.\"");
+            EditorGUILayout.EndVertical();
+        }
+
+        static void Say(string when, string what)
+        {
+            EditorGUILayout.LabelField(when, EditorStyles.boldLabel);
+            EditorGUILayout.LabelField(what, EditorStyles.wordWrappedMiniLabel);
+            EditorGUILayout.Space(4f);
+        }
+
+        void DrawTroubleshooting()
+        {
+            showTrouble = EditorGUILayout.Foldout(showTrouble, "If something goes wrong", true);
+            if (!showTrouble) return;
+
+            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+            Say("\"No wall renderer with a material\"",
+                "The scene's materials were lost on a recompile. Rebuild the scene in " +
+                "Setup. Materials are saved as assets now, so it should not recur.");
+            Say("The room is empty or furniture is missing",
+                "Rebuild the scene. If furniture is still placeholder boxes, run " +
+                "Emotion Rooms > Import Furniture Models.");
+            Say("Nothing happens when the participant clicks",
+                "Check the console. If the review block is waiting on an answer, the " +
+                "panel it wants is missing — rebuild the scene and run Check.");
+            Say("The bundle says there is no data",
+                "That participant never wrote anything, usually because the session was " +
+                "never begun under that id. Check the id in the header matches the one " +
+                "you ran.");
+            Say("Repo path",
+                "Only needed for Prepare. It should hold pipeline/ and configs/.");
+            EditorGUILayout.Space(2f);
             EditorGUI.BeginChangeCheck();
             repoPath = EditorGUILayout.TextField("Repo path", repoPath);
             if (EditorGUI.EndChangeCheck()) EditorPrefs.SetString(RepoKey, repoPath);
+
+            if (!string.IsNullOrEmpty(lastOutput))
+            {
+                EditorGUILayout.LabelField("Last command", EditorStyles.boldLabel);
+                EditorGUILayout.SelectableLabel(lastOutput, EditorStyles.textArea,
+                    GUILayout.Height(90f));
+            }
+            EditorGUILayout.EndVertical();
         }
 
         // ------------------------------------------------------------------ actions
@@ -309,17 +377,17 @@ namespace EmotionRooms.EditorTools
             if (!Directory.Exists(repoPath))
             {
                 EditorUtility.DisplayDialog("Emotion Rooms",
-                    "Set the repo path at the bottom of this window first.\n\nIt should be " +
-                    "the folder holding pipeline/ and configs/.", "OK");
+                    "Set the repo path under \"If something goes wrong\" first.\n\n" +
+                    "It is the folder holding pipeline/ and configs/.", "OK");
                 return;
             }
 
             int index = IndexOf(participant);
-            string args = string.Format("./test-participant.sh {0} {1} {2}",
-                participant, 40 + index, index);
-            bool ok = Run("/bin/bash", "-c \"" + args + "\"", repoPath);
+            if (!RunShell(string.Format("./test-participant.sh {0} {1} {2}",
+                                        participant, 40 + index, index)))
+                return;
 
-            if (ok && bootstrap != null)
+            if (bootstrap != null)
             {
                 bootstrap.participantId = participant;
                 bootstrap.ApplyParticipantId();
@@ -328,26 +396,23 @@ namespace EmotionRooms.EditorTools
             AssetDatabase.Refresh();
         }
 
-        void BundleLogs()
+        void RunPython(string command)
         {
             if (!Directory.Exists(repoPath))
             {
                 EditorUtility.DisplayDialog("Emotion Rooms", "Set the repo path first.", "OK");
                 return;
             }
-            string args = string.Format(
-                "python3 -m pipeline.cli bundle-participant --participant {0} --data '{1}'",
-                participant, Application.persistentDataPath);
-            Run("/bin/bash", "-c \"" + args + "\"", repoPath);
+            if (RunShell("python3 -m pipeline.cli " + command)) AssetDatabase.Refresh();
         }
 
-        bool Run(string file, string arguments, string workingDirectory)
+        bool RunShell(string command)
         {
             try
             {
-                var info = new ProcessStartInfo(file, arguments)
+                var info = new ProcessStartInfo("/bin/bash", "-c \"" + command + "\"")
                 {
-                    WorkingDirectory = workingDirectory,
+                    WorkingDirectory = repoPath,
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
@@ -358,33 +423,29 @@ namespace EmotionRooms.EditorTools
                     string output = process.StandardOutput.ReadToEnd();
                     string error = process.StandardError.ReadToEnd();
                     process.WaitForExit();
-                    lastCommandOutput = (output + "\n" + error).Trim();
-                    Repaint();
+                    lastOutput = (output + "\n" + error).Trim();
 
                     if (process.ExitCode != 0)
                     {
-                        Debug.LogError("Study Control: command failed\n" + lastCommandOutput);
+                        Debug.LogError("Study Control: command failed\n" + lastOutput);
+                        showTrouble = true;
                         return false;
                     }
-                    Debug.Log("Study Control:\n" + lastCommandOutput);
+                    Debug.Log("Study Control:\n" + lastOutput);
                     return true;
                 }
             }
             catch (Exception e)
             {
-                lastCommandOutput = e.Message;
-                Debug.LogError("Study Control: could not run the command. " + e.Message);
+                lastOutput = e.Message;
+                Debug.LogError("Study Control: " + e.Message);
+                showTrouble = true;
                 return false;
             }
         }
 
         // ------------------------------------------------------------------ helpers
 
-        /// <summary>
-        /// One past the highest id already in the data folder. Reused ids are the classic
-        /// way to lose a participant: the second session appends to the first one's files
-        /// and neither is recoverable afterwards.
-        /// </summary>
         static string NextParticipantId()
         {
             int highest = 0;
@@ -392,88 +453,68 @@ namespace EmotionRooms.EditorTools
             if (Directory.Exists(dir))
             {
                 foreach (var path in Directory.GetFiles(dir, "*.csv", SearchOption.AllDirectories))
-                {
                     foreach (Match m in Regex.Matches(Path.GetFileName(path), @"p(\d+)"))
-                    {
-                        int value;
-                        if (int.TryParse(m.Groups[1].Value, out value) && value > highest)
-                            highest = value;
-                    }
-                }
+                        highest = Math.Max(highest, Parse(m.Groups[1].Value));
 
                 string consent = Path.Combine(dir, "consent_log.csv");
                 if (File.Exists(consent))
-                {
                     foreach (Match m in Regex.Matches(File.ReadAllText(consent), @"\bp(\d+)\b"))
-                    {
-                        int value;
-                        if (int.TryParse(m.Groups[1].Value, out value) && value > highest)
-                            highest = value;
-                    }
-                }
+                        highest = Math.Max(highest, Parse(m.Groups[1].Value));
             }
             return "p" + (highest + 1).ToString("00");
+        }
+
+        static int Parse(string text)
+        {
+            int value;
+            return int.TryParse(text, out value) ? value : 0;
         }
 
         static int IndexOf(string id)
         {
             var m = Regex.Match(id ?? "", @"(\d+)");
-            int value;
-            if (m.Success && int.TryParse(m.Groups[1].Value, out value)) return Mathf.Max(0, value - 1);
-            return 0;
-        }
-
-        /// <summary>
-        /// Put the participant id into the form link.
-        ///
-        /// Google Forms prefill links carry the field's own generated entry id, which
-        /// build-forms.gs emits with PARTICIPANT_ID as a placeholder. Substituting it is
-        /// the only thing that actually prefills; appending ?participant=p01 to a form
-        /// URL does nothing, because Google ignores parameters it does not recognise.
-        /// The fallback query string is kept for any other form host.
-        /// </summary>
-        static string WithParticipant(string url, string id)
-        {
-            if (string.IsNullOrEmpty(url)) return url;
-            if (url.Contains("PARTICIPANT_ID"))
-                return url.Replace("PARTICIPANT_ID", Uri.EscapeDataString(id));
-            return url + (url.Contains("?") ? "&" : "?") + "participant=" + Uri.EscapeDataString(id);
+            return m.Success ? Mathf.Max(0, Parse(m.Groups[1].Value) - 1) : 0;
         }
 
         static string GuessRepoPath()
         {
-            // Assets/.. is the Unity project; the repo is its parent.
             var project = Directory.GetParent(Application.dataPath);
             return project != null && project.Parent != null ? project.Parent.FullName : "";
         }
 
-        // ------------------------------------------------------------------ chrome
+        // ------------------------------------------------------------------- chrome
 
-        static void Title(string text)
+        static void Section(string name, string detail)
         {
-            var style = new GUIStyle(EditorStyles.boldLabel) { fontSize = 15 };
-            EditorGUILayout.LabelField(text, style);
-        }
-
-        static void Space() { EditorGUILayout.Space(6f); }
-
-        void Step(int number, string name, bool done, string detail)
-        {
-            EditorGUILayout.Space(8f);
+            EditorGUILayout.Space(10f);
             EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-
-            EditorGUILayout.BeginHorizontal();
-            var tick = new GUIStyle(EditorStyles.boldLabel)
-            {
-                normal = { textColor = done ? new Color(0.2f, 0.7f, 0.3f) : Color.gray },
-            };
-            EditorGUILayout.LabelField(done ? "●" : "○", tick, GUILayout.Width(16f));
-            EditorGUILayout.LabelField(number + ". " + name, EditorStyles.boldLabel);
-            EditorGUILayout.EndHorizontal();
-
-            EditorGUILayout.LabelField(detail, EditorStyles.wordWrappedMiniLabel);
+            EditorGUILayout.LabelField(name, EditorStyles.boldLabel);
+            if (!string.IsNullOrEmpty(detail))
+                EditorGUILayout.LabelField(detail, EditorStyles.wordWrappedMiniLabel);
+            EditorGUILayout.Space(2f);
         }
 
-        static void EndStep() { EditorGUILayout.EndVertical(); }
+        static void EndSection() { EditorGUILayout.EndVertical(); }
+
+        static void Row(bool done, string text)
+        {
+            EditorGUILayout.BeginHorizontal();
+            var style = new GUIStyle(EditorStyles.boldLabel)
+            {
+                normal = { textColor = done ? new Color(0.25f, 0.7f, 0.35f) : new Color(0.75f, 0.55f, 0.2f) },
+            };
+            EditorGUILayout.LabelField(done ? "●" : "○", style, GUILayout.Width(14f));
+            EditorGUILayout.LabelField(text, EditorStyles.wordWrappedMiniLabel);
+            EditorGUILayout.EndHorizontal();
+        }
+
+        static void Numbered(int n, string text)
+        {
+            EditorGUILayout.Space(3f);
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField(n + ".", EditorStyles.boldLabel, GUILayout.Width(18f));
+            EditorGUILayout.LabelField(text, EditorStyles.wordWrappedLabel);
+            EditorGUILayout.EndHorizontal();
+        }
     }
 }

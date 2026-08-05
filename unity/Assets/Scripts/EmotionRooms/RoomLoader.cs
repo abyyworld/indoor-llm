@@ -350,10 +350,26 @@ namespace EmotionRooms
                     source = wallRenderers[i];
                 }
             }
-            if (source == null || source.sharedMaterial == null)
+            if (source == null)
             {
                 throw new RoomConfigException(
-                    "[RoomLoader] No wall renderer with a material to derive the room material from.");
+                    "[RoomLoader] wallRenderers holds no live renderer. Rebuild the scene " +
+                    "from the Study Control Panel.");
+            }
+
+            if (source.sharedMaterial == null)
+            {
+                // Recoverable, so recover. A null material here used to throw and end the
+                // session on trial one; it means the surfaces were built with a material
+                // that was never saved as an asset, not that anything is mis-wired. The
+                // colour and roughness are about to be overwritten from the config
+                // anyway, so a fresh standard material loses nothing.
+                var shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
+                wallMaterial = new Material(shader) { name = "Room Surface (recovered)" };
+                Debug.LogWarning("[RoomLoader] Wall renderers had no material, so one was " +
+                                 "created. Rebuild the scene from the Study Control Panel " +
+                                 "to save materials as assets and stop this recurring.");
+                return wallMaterial;
             }
 
             // One runtime instance shared by every wall, so we never write into the

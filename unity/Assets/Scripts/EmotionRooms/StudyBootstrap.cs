@@ -294,6 +294,7 @@ namespace EmotionRooms
 
             if (questionnaires != null) questionnaires.ShowSummary();
             WriteConsentRow("withdrawn", CompletedSoFar());
+            BundleNow("participant withdrew");
             Debug.LogWarning("StudyBootstrap: participant withdrew. Take the headset off, " +
                              "debrief, and note the reason on the paper record.");
         }
@@ -349,6 +350,7 @@ namespace EmotionRooms
                 Debug.Log("StudyBootstrap: practice run finished. Nothing was scored and " +
                           "the review block was skipped.");
                 if (questionnaires != null) questionnaires.ShowSummary();
+                BundleNow("practice run finished");
                 return;
             }
 
@@ -378,7 +380,21 @@ namespace EmotionRooms
                 questionnaires.BatchFinished -= ShowSummaryAfterForms;
                 questionnaires.ShowSummary();
             }
-            Debug.Log("StudyBootstrap: session complete for " + participantId + ".");
+            BundleNow("session complete");
+        }
+
+        /// <summary>Write the combined CSV. Runs itself, so nobody has to remember to.</summary>
+        void BundleNow(string why)
+        {
+            string path = SessionBundle.Write(participantId);
+            if (path == null)
+            {
+                Debug.LogWarning("StudyBootstrap: " + why + " for " + participantId +
+                                 ", but there was nothing to bundle.");
+                return;
+            }
+            Debug.Log("StudyBootstrap: " + why + " for " + participantId +
+                      ". Everything combined into:\n  " + path);
         }
 
         void OnDetectionAnswered(string value, float confidence)
