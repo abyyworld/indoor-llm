@@ -949,6 +949,86 @@ class TestCounterbalancing(unittest.TestCase):
                           variants_per_emotion=1, counterbalance="latin")
 
 
+class TestInstruments(unittest.TestCase):
+    """The published scales, at their published scoring. A transcription slip here makes
+    every score incomparable to the literature the instrument was chosen for."""
+
+    def test_ssq_maximum_matches_kennedy(self):
+        from pipeline.instruments import SSQ_SYMPTOMS, score_ssq
+
+        worst = score_ssq({key: 3 for key, _ in SSQ_SYMPTOMS})
+        # Kennedy et al. (1993): total score maxes at 235.62 with every item "severe".
+        self.assertAlmostEqual(worst["total"], 235.62, places=1)
+
+    def test_ssq_zero_when_nothing_is_reported(self):
+        from pipeline.instruments import score_ssq
+
+        self.assertEqual(score_ssq({})["total"], 0.0)
+
+    def test_every_ssq_subscale_item_is_a_real_symptom(self):
+        from pipeline.instruments import SSQ_SUBSCALES, SSQ_SYMPTOMS
+
+        known = {key for key, _ in SSQ_SYMPTOMS}
+        for name, (items, _) in SSQ_SUBSCALES.items():
+            for item in items:
+                self.assertIn(item, known, f"{name} scores a symptom that does not exist")
+
+    def test_raw_tlx_is_the_unweighted_mean(self):
+        from pipeline.instruments import TLX_ITEMS, score_tlx
+
+        answers = {key: 60 for key, *_ in TLX_ITEMS}
+        self.assertAlmostEqual(score_tlx(answers)["raw_tlx"], 60.0)
+
+    def test_trust_reverses_the_five_distrust_items(self):
+        from pipeline.instruments import TRUST_ITEMS, score_trust
+
+        # All 7s: the five distrust items become 1, the seven trust items stay 7.
+        self.assertAlmostEqual(score_trust({k: 7 for k, _, _ in TRUST_ITEMS})["trust_mean"],
+                               (5 * 1 + 7 * 7) / 12)
+        self.assertEqual(sum(1 for _, _, rev in TRUST_ITEMS if rev), 5)
+
+    def test_presence_reversed_items_are_flipped(self):
+        from pipeline.instruments import IPQ_ITEMS, score_presence
+
+        answers = {key: 7 for key, *_ in IPQ_ITEMS}
+        scored = score_presence(answers)
+        # A blanket 7 cannot come out as 7 overall, because six items are reverse-keyed.
+        self.assertLess(scored["presence_mean"], 7.0)
+        self.assertGreater(scored["presence_mean"], 1.0)
+
+    def test_nothing_is_scheduled_during_the_trials(self):
+        # The affect rating is the only thing collected inside a room. A questionnaire
+        # mid-session would measure the interruption as much as the room.
+        from pipeline.instruments import FORMS
+
+        for form in FORMS:
+            self.assertIn(form["when"], ("before", "after"), form["id"])
+
+    def test_consent_and_debrief_sit_on_the_right_side_of_the_session(self):
+        from pipeline.instruments import FORMS
+
+        when = {f["id"]: f["when"] for f in FORMS}
+        self.assertEqual(when["consent"], "before")
+        self.assertEqual(when["ssq_before"], "before")
+        # A debrief before the study would tell them what it is about.
+        self.assertEqual(when["debrief"], "after")
+        # TLX asks about the review block, so it cannot precede it.
+        self.assertEqual(when["nasa_tlx"], "after")
+
+    def test_form_and_item_ids_are_unique(self):
+        from pipeline.instruments import FORMS
+
+        self.assertEqual(len({f["id"] for f in FORMS}), len(FORMS))
+        for form in FORMS:
+            ids = [i["id"] for i in form["items"]]
+            self.assertEqual(len(set(ids)), len(ids), f"{form['id']} repeats an item id")
+
+    def test_generated_json_carries_every_form(self):
+        from pipeline.instruments import FORMS, as_dict
+
+        self.assertEqual(len(as_dict()["forms"]), len(FORMS))
+
+
 class TestParticipantBundle(unittest.TestCase):
     """One participant, one file. The bundle replaces five files, so anything it drops
     is information that no longer exists anywhere an analyst will look."""

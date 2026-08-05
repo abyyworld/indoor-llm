@@ -27,6 +27,7 @@ SOURCES = {
     "responses.csv": "trial",
     "oversight_responses.csv": "review",
     "consent_log.csv": "consent",
+    "questionnaire_responses.csv": "questionnaire",
 }
 
 # Prefixes of the per-run files, which carry a participant and timestamp in the name.
@@ -132,6 +133,17 @@ def summarise(rows: list[dict[str, str]], participant: str) -> dict[str, Any]:
     consented = any(
         row["source"] == "consent" and row.get("event") == "consent_taken" for row in rows
     )
+
+    # Which questionnaires actually came back, so a missing instrument is visible here
+    # rather than discovered during analysis.
+    forms: dict[str, str] = {}
+    for row in rows:
+        if row["source"] != "questionnaire":
+            continue
+        name = row.get("form")
+        if name:
+            forms[name] = row.get("state", "")
+    incomplete_forms = sorted(k for k, v in forms.items() if v != "Completed")
     return {
         "participant": participant,
         "rows": len(rows),
@@ -140,6 +152,8 @@ def summarise(rows: list[dict[str, str]], participant: str) -> dict[str, Any]:
         "withdrew": withdrew,
         "trials": counts.get("trial", 0),
         "review_trials": counts.get("review", 0),
+        "forms": forms,
+        "incomplete_forms": incomplete_forms,
         # Stated rather than inferred. A bundle whose completeness has to be guessed at
         # is one somebody will guess wrong about.
         "complete": consented and not withdrew and counts.get("trial", 0) >= 8,

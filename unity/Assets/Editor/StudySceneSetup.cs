@@ -101,7 +101,12 @@ namespace EmotionRooms.EditorTools
             review.attributionPanel = attribution;
             review.correctionPanel = correction;
 
+            var forms = root.AddComponent<QuestionnaireRunner>();
+            forms.events = events;
+            forms.telemetry = telemetry;
+
             var bootstrap = root.AddComponent<StudyBootstrap>();
+            bootstrap.questionnaires = forms;
             bootstrap.detectionPanel = detection;
             bootstrap.attributionPanel = attribution;
             bootstrap.correctionPanel = correction;
@@ -419,6 +424,15 @@ namespace EmotionRooms.EditorTools
                 if (review.correctionPanel == null)
                     problems.Add("OversightReview has no correction panel; it will hang after an attribution");
             }
+
+            if (root.GetComponent<QuestionnaireRunner>() == null)
+                problems.Add("no QuestionnaireRunner, so no consent, TLX, SSQ or debrief " +
+                             "forms will appear");
+            else if (!File.Exists(Path.Combine(Application.streamingAssetsPath,
+                                               "questionnaires.json")))
+                problems.Add("no StreamingAssets/questionnaires.json (build it with: " +
+                             "python3 -m pipeline.cli emit-questionnaires). The session " +
+                             "will run, but with no forms at all.");
 
             if (bootstrap != null && bootstrap.detectionPanel == null)
                 problems.Add("StudyBootstrap has no panels wired, so nothing forwards an " +

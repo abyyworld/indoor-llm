@@ -8,6 +8,7 @@ Commands, in the order design-spec.md section 8 says to use them:
     validate           gate a config, batch or session file
     build-practice     practice rooms shown before the real trials
     bundle-participant join one participant's files into a single record
+    emit-questionnaires write the in-app questionnaires for Unity
     emit-unity-pools   regenerate unity/PoolConstants.cs from pools.py
     generate           ask Claude for candidates for one target label
     generate-all       every emotion plus the neutral control arm
@@ -284,10 +285,31 @@ def cmd_bundle_participant(args: argparse.Namespace) -> int:
         f"{name} {count}" for name, count in sorted(report["by_source"].items())
     ))
     print(f"  consent recorded: {report['consent_recorded']}")
+    if report["forms"]:
+        print(f"  questionnaires: {len(report['forms'])} returned")
+    if report["incomplete_forms"]:
+        print("  NOT COMPLETED: " + ", ".join(report["incomplete_forms"]))
     if report["withdrew"]:
         print("  WITHDREW -- partial session, decide whether to keep it")
     if not report["complete"]:
         print("  INCOMPLETE -- fewer than 8 trials, no consent row, or withdrawn")
+    return 0
+
+
+def cmd_emit_questionnaires(args: argparse.Namespace) -> int:
+    import json
+    from pathlib import Path
+
+    from .instruments import FORMS, as_dict
+
+    out = Path(args.out)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(as_dict(), indent=2) + "\n", encoding="utf-8")
+
+    print(f"wrote {out}")
+    for form in FORMS:
+        citation = form["citation"] or "study-specific, not a validated instrument"
+        print(f"  {form['when']:<7} {form['id']:<14} {len(form['items']):>2} items   {citation}")
     return 0
 
 
@@ -551,6 +573,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument("--out", default="runs/bundles")
     p.set_defaults(func=cmd_bundle_participant)
+
+    p = sub.add_parser(
+        "emit-questionnaires",
+        help="write questionnaires.json for the Unity forms",
+    )
+    p.add_argument("--out", default="unity/Assets/StreamingAssets/questionnaires.json")
+    p.set_defaults(func=cmd_emit_questionnaires)
 
     p = sub.add_parser("emit-unity-pools", help="regenerate unity/PoolConstants.cs")
     p.add_argument("--out", default="unity/Assets/Scripts/EmotionRooms/PoolConstants.cs")

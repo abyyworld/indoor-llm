@@ -1,0 +1,978 @@
+{
+  "version": 1,
+  "forms": [
+    {
+      "id": "consent",
+      "title": "Information and consent",
+      "when": "before",
+      "citation": "",
+      "instruction": "Please read this before deciding whether to take part. Ask the researcher anything at any point, including after you have started.\n\nWHAT HAPPENS. You will wear a VR headset and stand in a series of virtual rooms, about 20 seconds each. After each one you say how the room made you feel, using a grid you point at inside the headset. In the second half you see rooms again and are asked whether anything looks wrong and what you would change. About 45 minutes including breaks.\n\nWHAT WE RECORD. Your answers, and how you moved your head and the controller. No video, no audio, no images of you, nothing about your face or eyes. Data is stored under a participant code, not your name.\n\nVOLUNTARY. You can stop at any moment without giving a reason and nothing follows from it. You can ask us to delete your data within two weeks.\n\nRISKS. Some people feel briefly dizzy or nauseous in VR. Tell the researcher and stop if so. You will be standing; say if that is a problem and we will seat you.",
+      "items": [
+        {
+          "id": "understood",
+          "type": "choice",
+          "options": [
+            "Yes"
+          ],
+          "text": "I have read and understood the information above."
+        },
+        {
+          "id": "questions",
+          "type": "choice",
+          "options": [
+            "Yes"
+          ],
+          "text": "I have had the chance to ask questions, and they were answered."
+        },
+        {
+          "id": "voluntary",
+          "type": "choice",
+          "options": [
+            "Yes"
+          ],
+          "text": "I understand that taking part is voluntary and I can stop at any time."
+        },
+        {
+          "id": "recording",
+          "type": "choice",
+          "options": [
+            "Yes"
+          ],
+          "text": "I understand what will be recorded and that it is stored under a code."
+        },
+        {
+          "id": "sharing",
+          "type": "choice",
+          "options": [
+            "Yes"
+          ],
+          "text": "I understand anonymised data may be published and shared, and that I cannot be identified from it."
+        },
+        {
+          "id": "age",
+          "type": "choice",
+          "options": [
+            "Yes"
+          ],
+          "text": "I am 18 or over."
+        },
+        {
+          "id": "agree",
+          "type": "choice",
+          "options": [
+            "Yes"
+          ],
+          "text": "I agree to take part."
+        }
+      ]
+    },
+    {
+      "id": "demographics",
+      "title": "About you",
+      "when": "before",
+      "citation": "",
+      "instruction": "A few details before we start. Say so if you would rather not answer.",
+      "items": [
+        {
+          "id": "age",
+          "text": "Age",
+          "type": "text"
+        },
+        {
+          "id": "gender",
+          "text": "Gender",
+          "type": "choice",
+          "options": [
+            "Woman",
+            "Man",
+            "Non-binary",
+            "Prefer to self-describe",
+            "Prefer not to say"
+          ]
+        },
+        {
+          "id": "vision_correction",
+          "text": "Do you wear glasses or contact lenses?",
+          "type": "choice",
+          "options": [
+            "No",
+            "Yes, wearing them now",
+            "Yes, not wearing them now"
+          ]
+        },
+        {
+          "id": "colour_vision",
+          "text": "Do you have any colour vision deficiency?",
+          "help": "The study varies room colour, so this matters for the results. It does not stop you taking part.",
+          "type": "choice",
+          "options": [
+            "No",
+            "Yes",
+            "Not sure"
+          ]
+        },
+        {
+          "id": "vr_experience",
+          "text": "How often have you used virtual reality before?",
+          "type": "choice",
+          "options": [
+            "Never",
+            "Once or twice",
+            "A few times a year",
+            "Monthly",
+            "Weekly or more"
+          ]
+        },
+        {
+          "id": "rested",
+          "text": "How well rested do you feel right now?",
+          "type": "scale",
+          "min": 1,
+          "max": 5,
+          "min_label": "Not at all",
+          "max_label": "Very well rested"
+        }
+      ]
+    },
+    {
+      "id": "ssq_before",
+      "title": "How you feel right now",
+      "when": "before",
+      "citation": "Kennedy, Lane, Berbaum & Lilienthal (1993), IJAP 3(3), 203-220.",
+      "instruction": "For each one, choose how much you feel it right now.",
+      "items": [
+        {
+          "id": "general_discomfort",
+          "text": "General discomfort",
+          "type": "choice",
+          "options": [
+            "None",
+            "Slight",
+            "Moderate",
+            "Severe"
+          ]
+        },
+        {
+          "id": "fatigue",
+          "text": "Fatigue",
+          "type": "choice",
+          "options": [
+            "None",
+            "Slight",
+            "Moderate",
+            "Severe"
+          ]
+        },
+        {
+          "id": "headache",
+          "text": "Headache",
+          "type": "choice",
+          "options": [
+            "None",
+            "Slight",
+            "Moderate",
+            "Severe"
+          ]
+        },
+        {
+          "id": "eyestrain",
+          "text": "Eyestrain",
+          "type": "choice",
+          "options": [
+            "None",
+            "Slight",
+            "Moderate",
+            "Severe"
+          ]
+        },
+        {
+          "id": "difficulty_focusing",
+          "text": "Difficulty focusing",
+          "type": "choice",
+          "options": [
+            "None",
+            "Slight",
+            "Moderate",
+            "Severe"
+          ]
+        },
+        {
+          "id": "increased_salivation",
+          "text": "Increased salivation",
+          "type": "choice",
+          "options": [
+            "None",
+            "Slight",
+            "Moderate",
+            "Severe"
+          ]
+        },
+        {
+          "id": "sweating",
+          "text": "Sweating",
+          "type": "choice",
+          "options": [
+            "None",
+            "Slight",
+            "Moderate",
+            "Severe"
+          ]
+        },
+        {
+          "id": "nausea",
+          "text": "Nausea",
+          "type": "choice",
+          "options": [
+            "None",
+            "Slight",
+            "Moderate",
+            "Severe"
+          ]
+        },
+        {
+          "id": "difficulty_concentrating",
+          "text": "Difficulty concentrating",
+          "type": "choice",
+          "options": [
+            "None",
+            "Slight",
+            "Moderate",
+            "Severe"
+          ]
+        },
+        {
+          "id": "fullness_of_head",
+          "text": "Fullness of head",
+          "type": "choice",
+          "options": [
+            "None",
+            "Slight",
+            "Moderate",
+            "Severe"
+          ]
+        },
+        {
+          "id": "blurred_vision",
+          "text": "Blurred vision",
+          "type": "choice",
+          "options": [
+            "None",
+            "Slight",
+            "Moderate",
+            "Severe"
+          ]
+        },
+        {
+          "id": "dizzy_eyes_open",
+          "text": "Dizziness with eyes open",
+          "type": "choice",
+          "options": [
+            "None",
+            "Slight",
+            "Moderate",
+            "Severe"
+          ]
+        },
+        {
+          "id": "dizzy_eyes_closed",
+          "text": "Dizziness with eyes closed",
+          "type": "choice",
+          "options": [
+            "None",
+            "Slight",
+            "Moderate",
+            "Severe"
+          ]
+        },
+        {
+          "id": "vertigo",
+          "text": "Vertigo",
+          "type": "choice",
+          "options": [
+            "None",
+            "Slight",
+            "Moderate",
+            "Severe"
+          ]
+        },
+        {
+          "id": "stomach_awareness",
+          "text": "Stomach awareness",
+          "type": "choice",
+          "options": [
+            "None",
+            "Slight",
+            "Moderate",
+            "Severe"
+          ]
+        },
+        {
+          "id": "burping",
+          "text": "Burping",
+          "type": "choice",
+          "options": [
+            "None",
+            "Slight",
+            "Moderate",
+            "Severe"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ssq_after",
+      "title": "How you feel now",
+      "when": "after",
+      "citation": "Kennedy, Lane, Berbaum & Lilienthal (1993), IJAP 3(3), 203-220.",
+      "instruction": "For each one, choose how much you feel it right now.",
+      "items": [
+        {
+          "id": "general_discomfort",
+          "text": "General discomfort",
+          "type": "choice",
+          "options": [
+            "None",
+            "Slight",
+            "Moderate",
+            "Severe"
+          ]
+        },
+        {
+          "id": "fatigue",
+          "text": "Fatigue",
+          "type": "choice",
+          "options": [
+            "None",
+            "Slight",
+            "Moderate",
+            "Severe"
+          ]
+        },
+        {
+          "id": "headache",
+          "text": "Headache",
+          "type": "choice",
+          "options": [
+            "None",
+            "Slight",
+            "Moderate",
+            "Severe"
+          ]
+        },
+        {
+          "id": "eyestrain",
+          "text": "Eyestrain",
+          "type": "choice",
+          "options": [
+            "None",
+            "Slight",
+            "Moderate",
+            "Severe"
+          ]
+        },
+        {
+          "id": "difficulty_focusing",
+          "text": "Difficulty focusing",
+          "type": "choice",
+          "options": [
+            "None",
+            "Slight",
+            "Moderate",
+            "Severe"
+          ]
+        },
+        {
+          "id": "increased_salivation",
+          "text": "Increased salivation",
+          "type": "choice",
+          "options": [
+            "None",
+            "Slight",
+            "Moderate",
+            "Severe"
+          ]
+        },
+        {
+          "id": "sweating",
+          "text": "Sweating",
+          "type": "choice",
+          "options": [
+            "None",
+            "Slight",
+            "Moderate",
+            "Severe"
+          ]
+        },
+        {
+          "id": "nausea",
+          "text": "Nausea",
+          "type": "choice",
+          "options": [
+            "None",
+            "Slight",
+            "Moderate",
+            "Severe"
+          ]
+        },
+        {
+          "id": "difficulty_concentrating",
+          "text": "Difficulty concentrating",
+          "type": "choice",
+          "options": [
+            "None",
+            "Slight",
+            "Moderate",
+            "Severe"
+          ]
+        },
+        {
+          "id": "fullness_of_head",
+          "text": "Fullness of head",
+          "type": "choice",
+          "options": [
+            "None",
+            "Slight",
+            "Moderate",
+            "Severe"
+          ]
+        },
+        {
+          "id": "blurred_vision",
+          "text": "Blurred vision",
+          "type": "choice",
+          "options": [
+            "None",
+            "Slight",
+            "Moderate",
+            "Severe"
+          ]
+        },
+        {
+          "id": "dizzy_eyes_open",
+          "text": "Dizziness with eyes open",
+          "type": "choice",
+          "options": [
+            "None",
+            "Slight",
+            "Moderate",
+            "Severe"
+          ]
+        },
+        {
+          "id": "dizzy_eyes_closed",
+          "text": "Dizziness with eyes closed",
+          "type": "choice",
+          "options": [
+            "None",
+            "Slight",
+            "Moderate",
+            "Severe"
+          ]
+        },
+        {
+          "id": "vertigo",
+          "text": "Vertigo",
+          "type": "choice",
+          "options": [
+            "None",
+            "Slight",
+            "Moderate",
+            "Severe"
+          ]
+        },
+        {
+          "id": "stomach_awareness",
+          "text": "Stomach awareness",
+          "type": "choice",
+          "options": [
+            "None",
+            "Slight",
+            "Moderate",
+            "Severe"
+          ]
+        },
+        {
+          "id": "burping",
+          "text": "Burping",
+          "type": "choice",
+          "options": [
+            "None",
+            "Slight",
+            "Moderate",
+            "Severe"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "nasa_tlx",
+      "title": "How that felt to do",
+      "when": "after",
+      "citation": "Hart & Staveland (1988); raw TLX per Hart (2006).",
+      "instruction": "These are about the second half, where you were asked whether anything looked wrong in a room and what you would change.",
+      "items": [
+        {
+          "id": "mental_demand",
+          "text": "Mental demand",
+          "help": "How mentally demanding was the task?",
+          "type": "scale",
+          "min": 0,
+          "max": 100,
+          "step": 5,
+          "min_label": "Very low",
+          "max_label": "Very high",
+          "reversed": false
+        },
+        {
+          "id": "physical_demand",
+          "text": "Physical demand",
+          "help": "How physically demanding was the task?",
+          "type": "scale",
+          "min": 0,
+          "max": 100,
+          "step": 5,
+          "min_label": "Very low",
+          "max_label": "Very high",
+          "reversed": false
+        },
+        {
+          "id": "temporal_demand",
+          "text": "Temporal demand",
+          "help": "How hurried or rushed was the pace of the task?",
+          "type": "scale",
+          "min": 0,
+          "max": 100,
+          "step": 5,
+          "min_label": "Very low",
+          "max_label": "Very high",
+          "reversed": false
+        },
+        {
+          "id": "performance",
+          "text": "Performance",
+          "help": "How successful were you in accomplishing what you were asked to do?",
+          "type": "scale",
+          "min": 0,
+          "max": 100,
+          "step": 5,
+          "min_label": "Perfect",
+          "max_label": "Failure",
+          "reversed": true
+        },
+        {
+          "id": "effort",
+          "text": "Effort",
+          "help": "How hard did you have to work to accomplish your level of performance?",
+          "type": "scale",
+          "min": 0,
+          "max": 100,
+          "step": 5,
+          "min_label": "Very low",
+          "max_label": "Very high",
+          "reversed": false
+        },
+        {
+          "id": "frustration",
+          "text": "Frustration",
+          "help": "How insecure, discouraged, irritated, stressed and annoyed were you?",
+          "type": "scale",
+          "min": 0,
+          "max": 100,
+          "step": 5,
+          "min_label": "Very low",
+          "max_label": "Very high",
+          "reversed": false
+        }
+      ]
+    },
+    {
+      "id": "trust",
+      "title": "The system that designed the rooms",
+      "when": "after",
+      "citation": "Jian, Bisantz & Drury (2000), IJCE 4(1), 53-71.",
+      "instruction": "The rooms were designed by an AI system. For each statement, 1 means not at all and 7 means very much.",
+      "items": [
+        {
+          "id": "deceptive",
+          "text": "The system is deceptive",
+          "type": "scale",
+          "min": 1,
+          "max": 7,
+          "min_label": "Not at all",
+          "max_label": "Very much",
+          "reversed": true
+        },
+        {
+          "id": "underhanded",
+          "text": "The system behaves in an underhanded manner",
+          "type": "scale",
+          "min": 1,
+          "max": 7,
+          "min_label": "Not at all",
+          "max_label": "Very much",
+          "reversed": true
+        },
+        {
+          "id": "suspicious",
+          "text": "I am suspicious of the system's intent, action, or outputs",
+          "type": "scale",
+          "min": 1,
+          "max": 7,
+          "min_label": "Not at all",
+          "max_label": "Very much",
+          "reversed": true
+        },
+        {
+          "id": "wary",
+          "text": "I am wary of the system",
+          "type": "scale",
+          "min": 1,
+          "max": 7,
+          "min_label": "Not at all",
+          "max_label": "Very much",
+          "reversed": true
+        },
+        {
+          "id": "harmful",
+          "text": "The system's actions will have a harmful or injurious outcome",
+          "type": "scale",
+          "min": 1,
+          "max": 7,
+          "min_label": "Not at all",
+          "max_label": "Very much",
+          "reversed": true
+        },
+        {
+          "id": "confident",
+          "text": "I am confident in the system",
+          "type": "scale",
+          "min": 1,
+          "max": 7,
+          "min_label": "Not at all",
+          "max_label": "Very much",
+          "reversed": false
+        },
+        {
+          "id": "security",
+          "text": "The system provides security",
+          "type": "scale",
+          "min": 1,
+          "max": 7,
+          "min_label": "Not at all",
+          "max_label": "Very much",
+          "reversed": false
+        },
+        {
+          "id": "integrity",
+          "text": "The system has integrity",
+          "type": "scale",
+          "min": 1,
+          "max": 7,
+          "min_label": "Not at all",
+          "max_label": "Very much",
+          "reversed": false
+        },
+        {
+          "id": "dependable",
+          "text": "The system is dependable",
+          "type": "scale",
+          "min": 1,
+          "max": 7,
+          "min_label": "Not at all",
+          "max_label": "Very much",
+          "reversed": false
+        },
+        {
+          "id": "reliable",
+          "text": "The system is reliable",
+          "type": "scale",
+          "min": 1,
+          "max": 7,
+          "min_label": "Not at all",
+          "max_label": "Very much",
+          "reversed": false
+        },
+        {
+          "id": "trust",
+          "text": "I can trust the system",
+          "type": "scale",
+          "min": 1,
+          "max": 7,
+          "min_label": "Not at all",
+          "max_label": "Very much",
+          "reversed": false
+        },
+        {
+          "id": "familiar",
+          "text": "I am familiar with the system",
+          "type": "scale",
+          "min": 1,
+          "max": 7,
+          "min_label": "Not at all",
+          "max_label": "Very much",
+          "reversed": false
+        }
+      ]
+    },
+    {
+      "id": "presence",
+      "title": "Being there",
+      "when": "after",
+      "citation": "Schubert, Friedmann & Regenbrecht (2001), Presence 10(3), 266-281 (IPQ).",
+      "instruction": "About the rooms you stood in. Scored 1 to 7.",
+      "items": [
+        {
+          "id": "g1",
+          "text": "In the computer generated world I had a sense of being there",
+          "type": "scale",
+          "min": 1,
+          "max": 7,
+          "min_label": "Not at all",
+          "max_label": "Very much",
+          "reversed": false,
+          "subscale": "general"
+        },
+        {
+          "id": "sp1",
+          "text": "Somehow I felt that the virtual world surrounded me",
+          "type": "scale",
+          "min": 1,
+          "max": 7,
+          "min_label": "Fully disagree",
+          "max_label": "Fully agree",
+          "reversed": false,
+          "subscale": "spatial"
+        },
+        {
+          "id": "sp2",
+          "text": "I felt like I was just perceiving pictures",
+          "type": "scale",
+          "min": 1,
+          "max": 7,
+          "min_label": "Fully disagree",
+          "max_label": "Fully agree",
+          "reversed": true,
+          "subscale": "spatial"
+        },
+        {
+          "id": "sp3",
+          "text": "I did not feel present in the virtual space",
+          "type": "scale",
+          "min": 1,
+          "max": 7,
+          "min_label": "Did not feel",
+          "max_label": "Felt present",
+          "reversed": true,
+          "subscale": "spatial"
+        },
+        {
+          "id": "sp4",
+          "text": "I had a sense of acting in the virtual space, rather than operating something from outside",
+          "type": "scale",
+          "min": 1,
+          "max": 7,
+          "min_label": "Fully disagree",
+          "max_label": "Fully agree",
+          "reversed": false,
+          "subscale": "spatial"
+        },
+        {
+          "id": "sp5",
+          "text": "I felt present in the virtual space",
+          "type": "scale",
+          "min": 1,
+          "max": 7,
+          "min_label": "Fully disagree",
+          "max_label": "Fully agree",
+          "reversed": false,
+          "subscale": "spatial"
+        },
+        {
+          "id": "inv1",
+          "text": "How aware were you of the real world surrounding while navigating in the virtual world?",
+          "type": "scale",
+          "min": 1,
+          "max": 7,
+          "min_label": "Extremely aware",
+          "max_label": "Not aware at all",
+          "reversed": true,
+          "subscale": "involvement"
+        },
+        {
+          "id": "inv2",
+          "text": "I was not aware of my real environment",
+          "type": "scale",
+          "min": 1,
+          "max": 7,
+          "min_label": "Fully disagree",
+          "max_label": "Fully agree",
+          "reversed": false,
+          "subscale": "involvement"
+        },
+        {
+          "id": "inv3",
+          "text": "I still paid attention to the real environment",
+          "type": "scale",
+          "min": 1,
+          "max": 7,
+          "min_label": "Fully disagree",
+          "max_label": "Fully agree",
+          "reversed": true,
+          "subscale": "involvement"
+        },
+        {
+          "id": "inv4",
+          "text": "I was completely captivated by the virtual world",
+          "type": "scale",
+          "min": 1,
+          "max": 7,
+          "min_label": "Fully disagree",
+          "max_label": "Fully agree",
+          "reversed": false,
+          "subscale": "involvement"
+        },
+        {
+          "id": "real1",
+          "text": "How real did the virtual world seem to you?",
+          "type": "scale",
+          "min": 1,
+          "max": 7,
+          "min_label": "Completely real",
+          "max_label": "Not real at all",
+          "reversed": true,
+          "subscale": "realism"
+        },
+        {
+          "id": "real2",
+          "text": "How much did your experience in the virtual environment seem consistent with your real world experience?",
+          "type": "scale",
+          "min": 1,
+          "max": 7,
+          "min_label": "Not consistent",
+          "max_label": "Very consistent",
+          "reversed": false,
+          "subscale": "realism"
+        },
+        {
+          "id": "real3",
+          "text": "How real did the virtual world seem to you?",
+          "type": "scale",
+          "min": 1,
+          "max": 7,
+          "min_label": "Like an imagined world",
+          "max_label": "Indistinguishable from the real world",
+          "reversed": false,
+          "subscale": "realism"
+        },
+        {
+          "id": "real4",
+          "text": "The virtual world seemed more realistic than the real world",
+          "type": "scale",
+          "min": 1,
+          "max": 7,
+          "min_label": "Fully disagree",
+          "max_label": "Fully agree",
+          "reversed": false,
+          "subscale": "realism"
+        }
+      ]
+    },
+    {
+      "id": "strategy",
+      "title": "The second half",
+      "when": "after",
+      "citation": "",
+      "instruction": "In your own words. There are no right answers here.",
+      "items": [
+        {
+          "id": "how_decided",
+          "type": "paragraph",
+          "text": "When you were asked whether something looked wrong in a room, how did you decide?",
+          "help": "Whatever you actually did, including guessing."
+        },
+        {
+          "id": "unnameable",
+          "type": "paragraph",
+          "text": "Was there anything that felt wrong but you could not put your finger on what?"
+        },
+        {
+          "id": "correction_goal",
+          "type": "paragraph",
+          "text": "When you changed something about a room, what were you trying to achieve?"
+        },
+        {
+          "id": "self_rated_detection",
+          "type": "scale",
+          "min": 1,
+          "max": 5,
+          "text": "How confident are you that you spotted the rooms with something wrong?",
+          "min_label": "Not at all",
+          "max_label": "Very confident"
+        },
+        {
+          "id": "anything_else",
+          "type": "paragraph",
+          "text": "Anything that felt odd, uncomfortable, unclear, or worth telling us?"
+        }
+      ]
+    },
+    {
+      "id": "debrief",
+      "title": "What this was about",
+      "when": "after",
+      "citation": "",
+      "instruction": "The rooms were designed by an AI system asked to make a space feel a particular way, by choosing colour, brightness and materials.\n\nIn the second half, some rooms had one of those choices deliberately replaced with a value the system had picked for a different feeling. We did not tell you which, because knowing would have changed what you noticed. We were measuring whether people can tell when a system like this has got something wrong, and whether they can say which part.\n\nNothing you did was right or wrong. Rooms where you noticed nothing are as informative as rooms where you did. If you want your data removed, say so now or contact the researcher within two weeks.",
+      "items": [
+        {
+          "id": "read",
+          "type": "choice",
+          "options": [
+            "Yes"
+          ],
+          "text": "I have read the explanation above."
+        }
+      ]
+    }
+  ],
+  "scoring": {
+    "ssq_subscales": {
+      "nausea": {
+        "items": [
+          "general_discomfort",
+          "increased_salivation",
+          "sweating",
+          "nausea",
+          "difficulty_concentrating",
+          "stomach_awareness",
+          "burping"
+        ],
+        "weight": 9.54
+      },
+      "oculomotor": {
+        "items": [
+          "general_discomfort",
+          "fatigue",
+          "headache",
+          "eyestrain",
+          "difficulty_focusing",
+          "difficulty_concentrating",
+          "blurred_vision"
+        ],
+        "weight": 7.58
+      },
+      "disorientation": {
+        "items": [
+          "difficulty_focusing",
+          "nausea",
+          "fullness_of_head",
+          "blurred_vision",
+          "dizzy_eyes_open",
+          "dizzy_eyes_closed",
+          "vertigo"
+        ],
+        "weight": 13.92
+      }
+    },
+    "ssq_total_weight": 3.74
+  }
+}
