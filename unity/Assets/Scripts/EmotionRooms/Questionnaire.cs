@@ -278,7 +278,9 @@ namespace EmotionRooms
             foreach (var form in set.forms)
             {
                 if (StateOf(form.id) == FormState.Completed) continue;
-                missing.Add(form.title + "  (" + Describe(StateOf(form.id)) + ")");
+                bool onScreen = current != null && current.id == form.id;
+                missing.Add(form.title + "  (" +
+                            (onScreen ? "on screen now" : Describe(StateOf(form.id))) + ")");
             }
             return missing;
         }
@@ -303,36 +305,90 @@ namespace EmotionRooms
             if (summaryVisible) { DrawSummary(); return; }
             if (current == null) return;
 
-            float w = Mathf.Min(760f, Screen.width - 40f);
+            // Explicit rects for the header and the footer, with the scroll view given
+            // exactly what is left over.
+            //
+            // The first version laid all three out in one GUILayout flow with the
+            // instruction text above the scroll view. The consent instruction is six
+            // paragraphs, so it consumed the whole area, and GUILayout handed the scroll
+            // view and the buttons nothing -- the questions and both buttons were pushed
+            // off the bottom of the screen. The form rendered, could not be answered, and
+            // could not be skipped either. Reserving the footer first means the buttons
+            // exist no matter how long the content is.
+            float w = Mathf.Min(820f, Screen.width - 40f);
             float h = Screen.height - 60f;
             var area = new Rect((Screen.width - w) / 2f, 30f, w, h);
 
+            // Opaque, so room geometry behind the form cannot show through the text.
+            GUI.DrawTexture(area, Backdrop());
             GUI.Box(area, GUIContent.none);
-            GUILayout.BeginArea(new Rect(area.x + 18f, area.y + 14f, area.width - 36f,
-                                         area.height - 28f));
 
-            GUILayout.Label(current.title, Heading());
-            if (!string.IsNullOrEmpty(current.instruction))
-                GUILayout.Label(current.instruction, Body());
+            const float pad = 18f;
+            const float footer = 46f;
 
-            GUILayout.Space(8f);
+            var header = new Rect(area.x + pad, area.y + 12f, area.width - pad * 2f, 34f);
+            GUI.Label(header, current.title, Heading());
+
+            var body = new Rect(area.x + pad, header.yMax + 6f, area.width - pad * 2f,
+                                area.height - header.height - footer - 30f);
+            var footerRect = new Rect(area.x + pad, area.yMax - footer,
+                                      area.width - pad * 2f, footer - 10f);
+
+            GUILayout.BeginArea(body);
             scroll = GUILayout.BeginScrollView(scroll);
+
+            // Instruction inside the scroll view, so a long consent text scrolls rather
+            // than crowding the questions out.
+            if (!string.IsNullOrEmpty(current.instruction))
+            {
+                GUILayout.Label(current.instruction, Body());
+                GUILayout.Space(10f);
+            }
             foreach (var item in current.items) DrawItem(current, item);
+            GUILayout.Space(12f);
+
             GUILayout.EndScrollView();
-
-            GUILayout.Space(6f);
-            GUILayout.BeginHorizontal();
-            if (GUILayout.Button("Skip this form", GUILayout.Height(30f), GUILayout.Width(150f)))
-                Finish(true);
-            GUILayout.FlexibleSpace();
-            if (!string.IsNullOrEmpty(current.citation))
-                GUILayout.Label(current.citation, Fine());
-            GUILayout.FlexibleSpace();
-            if (GUILayout.Button("Continue", GUILayout.Height(30f), GUILayout.Width(150f)))
-                Finish(false);
-            GUILayout.EndHorizontal();
-
             GUILayout.EndArea();
+
+            GUILayout.BeginArea(footerRect);
+            GUILayout.BeginHorizontal();
+
+            if (GUILayout.Button("Skip this form", GUILayout.Height(30f), GUILayout.Width(160f)))
+                Finish(true);
+
+            GUILayout.FlexibleSpace();
+            GUILayout.BeginVertical();
+            GUILayout.Space(6f);
+            GUILayout.Label(Progress(), Fine());
+            GUILayout.EndVertical();
+            GUILayout.FlexibleSpace();
+
+            if (GUILayout.Button("Continue", GUILayout.Height(30f), GUILayout.Width(160f)))
+                Finish(false);
+
+            GUILayout.EndHorizontal();
+            GUILayout.EndArea();
+        }
+
+        string Progress()
+        {
+            int answered = 0;
+            foreach (var item in current.items)
+                if (answers.ContainsKey(Key(current, item))) answered++;
+            return answered + " of " + current.items.Length + " answered" +
+                   (pending.Count > 0 ? "   ·   " + pending.Count + " more forms" : "");
+        }
+
+        static Texture2D backdrop;
+
+        static Texture2D Backdrop()
+        {
+            if (backdrop != null) return backdrop;
+            backdrop = new Texture2D(1, 1);
+            backdrop.SetPixel(0, 0, new Color(0.11f, 0.11f, 0.13f, 0.97f));
+            backdrop.Apply();
+            backdrop.hideFlags = HideFlags.HideAndDontSave;
+            return backdrop;
         }
 
         void DrawItem(QuestionForm form, QuestionItem item)
@@ -352,9 +408,15 @@ namespace EmotionRooms
                     foreach (var option in item.options)
                     {
                         bool on = value == option;
-                        if (GUILayout.Toggle(on, "  " + option, GUILayout.Width(150f)) && !on)
+                        // A button rather than a tick box: on a dark backdrop the default
+                        // toggle glyph and its label are nearly invisible, and a chosen
+                        // answer has to be obvious to the person who chose it.
+                        var style = on ? Chosen() : GUI.skin.button;
+                        if (GUILayout.Button((on ? "● " : "○ ") + option, style,
+                                             GUILayout.Width(160f), GUILayout.Height(26f)))
                             answers[key] = option;
                     }
+                    GUILayout.FlexibleSpace();
                     GUILayout.EndHorizontal();
                     break;
 
@@ -367,8 +429,9 @@ namespace EmotionRooms
                         string label = v.ToString(CultureInfo.InvariantCulture);
                         bool on = value == label;
                         // Narrow buttons so a 21-point TLX scale fits on one line.
-                        float width = (item.max - item.min) / item.Step > 10 ? 24f : 34f;
-                        if (GUILayout.Toggle(on, label, GUI.skin.button, GUILayout.Width(width)) && !on)
+                        float width = (item.max - item.min) / item.Step > 10 ? 26f : 36f;
+                        if (GUILayout.Button(label, on ? Chosen() : GUI.skin.button,
+                                             GUILayout.Width(width), GUILayout.Height(24f)))
                             answers[key] = label;
                     }
                     GUILayout.Label(item.max_label ?? "", Fine(), GUILayout.Width(120f));
@@ -390,6 +453,7 @@ namespace EmotionRooms
         {
             float w = Mathf.Min(680f, Screen.width - 40f);
             var area = new Rect((Screen.width - w) / 2f, 60f, w, Screen.height - 120f);
+            GUI.DrawTexture(area, Backdrop());
             GUI.Box(area, GUIContent.none);
             GUILayout.BeginArea(new Rect(area.x + 20f, area.y + 18f, area.width - 40f,
                                          area.height - 36f));
@@ -418,26 +482,50 @@ namespace EmotionRooms
             GUILayout.EndArea();
         }
 
-        static GUIStyle heading, body, fine;
+        static GUIStyle heading, body, fine, chosen;
+
+        static GUIStyle Chosen()
+        {
+            if (chosen == null)
+                chosen = new GUIStyle(GUI.skin.button)
+                {
+                    fontStyle = FontStyle.Bold,
+                    normal = { textColor = new Color(0.45f, 0.85f, 1f) },
+                    hover = { textColor = new Color(0.45f, 0.85f, 1f) },
+                };
+            return chosen;
+        }
+
+        static readonly Color Ink = new Color(0.93f, 0.93f, 0.95f);
+        static readonly Color Muted = new Color(0.68f, 0.68f, 0.72f);
 
         static GUIStyle Heading()
         {
             if (heading == null)
-                heading = new GUIStyle(GUI.skin.label) { fontSize = 20, fontStyle = FontStyle.Bold };
+                heading = new GUIStyle(GUI.skin.label)
+                {
+                    fontSize = 21, fontStyle = FontStyle.Bold, normal = { textColor = Ink },
+                };
             return heading;
         }
 
         static GUIStyle Body()
         {
             if (body == null)
-                body = new GUIStyle(GUI.skin.label) { fontSize = 14, wordWrap = true };
+                body = new GUIStyle(GUI.skin.label)
+                {
+                    fontSize = 15, wordWrap = true, normal = { textColor = Ink },
+                };
             return body;
         }
 
         static GUIStyle Fine()
         {
             if (fine == null)
-                fine = new GUIStyle(GUI.skin.label) { fontSize = 11, wordWrap = true };
+                fine = new GUIStyle(GUI.skin.label)
+                {
+                    fontSize = 12, wordWrap = true, normal = { textColor = Muted },
+                };
             return fine;
         }
     }
