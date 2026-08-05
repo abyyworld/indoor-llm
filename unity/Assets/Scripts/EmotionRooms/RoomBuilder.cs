@@ -277,15 +277,28 @@ namespace EmotionRooms
             var tableAt     = new Vector3(0f, 0f, depth - 1.5f);
             var teacupAt    = new Vector3(0.18f, 0.4f, depth - 1.5f);
             var rugAt       = new Vector3(0f, 0.005f, depth - 1.2f);
-            var shelfAt     = new Vector3(halfWidth - 0.22f, 0f, depth - 2.2f);
-            var artAAt      = new Vector3(-0.55f, 1.6f, depth - 0.1f);
-            var artBAt      = new Vector3(0.55f, 1.6f, depth - 0.1f);
+            // Plan view in the schematic is drawn looking down with the participant at the
+            // top facing the far wall, so page-left is the participant's RIGHT (+X) and
+            // page-right is their LEFT (-X). Reading it the other way puts the door and
+            // the bookcase on the wrong walls, which is what happened here.
+            //
+            // Bookcase and armchair: participant's left. Door and the second picture:
+            // participant's right. Both side-wall items sit within the vestibule depth so
+            // they exist in the curved shell too, where the side walls stop at 2.2 m.
+            var shelfAt     = new Vector3(-(halfWidth - 0.22f), 0f, depth - 2.2f);
+            var artAAt      = new Vector3(-0.3f, 1.55f, depth - 0.1f);
+            var artBAt      = new Vector3(halfWidth - 0.08f, 1.55f, 1.15f);
+            var doorAt      = new Vector3(halfWidth - 0.04f, 0f, 2.05f);
 
             if (!TryModel(furniture, "sofa", "Sofa", sofaAt, new Vector3(2.1f, 0.8f, 0.85f), 0f))
                 BuildSofa(furniture, sofaAt);
 
-            if (!TryModel(furniture, "armchair", "Armchair", armchairAt, new Vector3(0.85f, 0.8f, 0.85f), 55f))
-                BuildArmchair(furniture, armchairAt, 55f);
+            // -60 not +55: the imported models face -Z (their backrests sit at +Z, which
+            // the OBJ vertex bounds confirm), so an armchair on the participant's left
+            // needs to turn toward the table at +X. The old value was tuned for the box
+            // placeholder and pointed the real model out at the wall.
+            if (!TryModel(furniture, "armchair", "Armchair", armchairAt, new Vector3(0.85f, 0.8f, 0.85f), ArmchairYaw))
+                BuildArmchair(furniture, armchairAt, ArmchairYaw);
 
             if (!TryModel(furniture, "coffeeTable", "Coffee Table", tableAt, new Vector3(1.1f, 0.4f, 0.6f), 0f))
                 BuildCoffeeTable(furniture, tableAt);
@@ -297,13 +310,19 @@ namespace EmotionRooms
                 AddBox(furniture, "Rug", rugAt + new Vector3(0f, 0.01f, 0f),
                     new Vector3(2.4f, 0.02f, 1.6f), 0f, 0.60f);
 
-            if (!TryModel(furniture, "bookshelf", "Bookshelf", shelfAt, new Vector3(0.35f, 1.8f, 0.9f), 0f))
-                BuildBookshelf(furniture, shelfAt);
+            if (!TryModel(furniture, "bookshelf", "Bookshelf", shelfAt, new Vector3(0.9f, 1.8f, 0.35f), BookshelfYaw))
+                BuildBookshelf(furniture, shelfAt, BookshelfYaw);
 
+            // One picture on the far wall, one on the side wall by the door, as drawn.
             if (!TryModel(furniture, "wallArt", "Wall Art A", artAAt, new Vector3(0.7f, 0.5f, 0.05f), 0f))
-                BuildWallArt(furniture, "Wall Art A", artAAt);
-            if (!TryModel(furniture, "wallArt", "Wall Art B", artBAt, new Vector3(0.7f, 0.5f, 0.05f), 0f))
-                BuildWallArt(furniture, "Wall Art B", artBAt);
+                BuildWallArt(furniture, "Wall Art A", artAAt, 0f);
+            if (!TryModel(furniture, "wallArt", "Wall Art B", artBAt, new Vector3(0.05f, 0.5f, 0.7f), SideWallYaw))
+                BuildWallArt(furniture, "Wall Art B", artBAt, SideWallYaw);
+
+            // The door. Closed and non-functional: it is there because a room with no way
+            // in does not read as a room, and the schematic draws one. It is furnishing,
+            // not a tintable surface, so the manipulation never touches it.
+            BuildDoor(furniture, doorAt, SideWallYaw);
         }
 
         /// <summary>The furniture models to use, or null for procedural placeholders.</summary>
@@ -362,12 +381,24 @@ namespace EmotionRooms
                 scale = Mathf.Min(scale, footprint.y / bounds.size.y);
             go.transform.localScale *= scale;
 
-            // Re-measure after scaling: sit the model on the floor rather than trusting
-            // that its pivot is at the base, which is a coin flip across asset packs.
+            // Re-measure, then move the model so its own centre lands on the anchor and
+            // its base sits on the floor.
+            //
+            // Correcting height alone is not enough, which is what the first version did.
+            // Asset-pack pivots are wherever the artist left them: Kenney's sofa spans
+            // x[-0.98, 0], so its origin is at one END. Placed at x=0 the whole sofa sat
+            // in the left half of the room, and every other piece was off by half its own
+            // size in some direction. The layout looked scattered rather than like the
+            // plan, and worse, it silently stopped matching the schematic the two shape
+            // conditions are supposed to hold constant.
             bounds = renderers[0].bounds;
             for (int i = 1; i < renderers.Length; i++) bounds.Encapsulate(renderers[i].bounds);
-            float lift = go.transform.position.y - bounds.min.y;
-            go.transform.localPosition += new Vector3(0f, lift, 0f);
+
+            Vector3 centre = go.transform.position;
+            go.transform.position += new Vector3(
+                centre.x - bounds.center.x,
+                centre.y - bounds.min.y,
+                centre.z - bounds.center.z);
         }
 
         // ------------------------------------------------------ procedural placeholders
@@ -431,9 +462,9 @@ namespace EmotionRooms
             AddBox(g, "Handle", new Vector3(0.055f, 0.05f, 0f), new Vector3(0.025f, 0.03f, 0.012f), 0f, 0.92f);
         }
 
-        static void BuildBookshelf(GameObject parent, Vector3 at)
+        static void BuildBookshelf(GameObject parent, Vector3 at, float yaw)
         {
-            var g = Group(parent, "Bookshelf", at, 0f);
+            var g = Group(parent, "Bookshelf", at, yaw);
             AddBox(g, "Side L", new Vector3(0f, 0.9f, -0.44f), new Vector3(0.35f, 1.8f, 0.03f), 0f, 0.36f);
             AddBox(g, "Side R", new Vector3(0f, 0.9f, 0.44f),  new Vector3(0.35f, 1.8f, 0.03f), 0f, 0.36f);
             AddBox(g, "Back",   new Vector3(0.16f, 0.9f, 0f),  new Vector3(0.03f, 1.8f, 0.9f),  0f, 0.33f);
@@ -456,9 +487,28 @@ namespace EmotionRooms
             }
         }
 
-        static void BuildWallArt(GameObject parent, string name, Vector3 at)
+        /// <summary>Armchair turned toward the coffee table. See AddFurniture.</summary>
+        const float ArmchairYaw = -60f;
+
+        /// <summary>Backs onto the participant's left wall, opening into the room.</summary>
+        const float BookshelfYaw = -90f;
+
+        /// <summary>Flat against the participant's right wall, facing into the room.</summary>
+        const float SideWallYaw = -90f;
+
+        static void BuildDoor(GameObject parent, Vector3 at, float yaw)
         {
-            var g = Group(parent, name, at, 0f);
+            var g = Group(parent, "Door", at, yaw);
+            AddBox(g, "Leaf",    new Vector3(0f, 1.0f, 0f),   new Vector3(0.86f, 2.0f, 0.04f), 0f, 0.55f);
+            AddBox(g, "Frame L", new Vector3(-0.47f, 1.03f, 0f), new Vector3(0.08f, 2.06f, 0.06f), 0f, 0.3f);
+            AddBox(g, "Frame R", new Vector3(0.47f, 1.03f, 0f),  new Vector3(0.08f, 2.06f, 0.06f), 0f, 0.3f);
+            AddBox(g, "Frame Top", new Vector3(0f, 2.03f, 0f), new Vector3(1.02f, 0.06f, 0.06f), 0f, 0.3f);
+            AddBox(g, "Handle",  new Vector3(0.34f, 1.05f, -0.04f), new Vector3(0.12f, 0.03f, 0.05f), 0f, 0.75f);
+        }
+
+        static void BuildWallArt(GameObject parent, string name, Vector3 at, float yaw)
+        {
+            var g = Group(parent, name, at, yaw);
             AddBox(g, "Frame",  new Vector3(0f, 0f, -0.01f), new Vector3(0.7f, 0.5f, 0.04f), 0f, 0.25f);
             AddBox(g, "Canvas", new Vector3(0f, 0f, -0.035f), new Vector3(0.62f, 0.42f, 0.01f), 0f, 0.78f);
         }
