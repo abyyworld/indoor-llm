@@ -272,40 +272,58 @@ namespace EmotionRooms
 
             // Three-seat sofa against the far wall, centred on width.
             AddProp(furniture, "Sofa (placeholder)",
-                new Vector3(0f, 0.4f, depth - 0.45f), new Vector3(2.1f, 0.8f, 0.85f));
+                new Vector3(0f, 0.4f, depth - 0.45f), new Vector3(2.1f, 0.8f, 0.85f),
+                shade: 0.34f);
 
             // Armchair, offset to one side, angled in toward the coffee table.
             AddProp(furniture, "Armchair (placeholder)",
                 new Vector3(-1.35f, 0.4f, depth - 1.45f), new Vector3(0.8f, 0.8f, 0.8f),
-                yaw: 55f);
+                yaw: 55f, shade: 0.40f);
 
             // Coffee table in front of the sofa.
             AddProp(furniture, "Coffee Table (placeholder)",
-                new Vector3(0f, 0.2f, depth - 1.5f), new Vector3(1.1f, 0.4f, 0.6f));
+                new Vector3(0f, 0.2f, depth - 1.5f), new Vector3(1.1f, 0.4f, 0.6f),
+                shade: 0.47f);
 
             // Teacup on the table. Small, but it is in the list and it is the kind of
             // detail that makes a greybox read as a room rather than a diagram.
             AddProp(furniture, "Teacup (placeholder)",
-                new Vector3(0.18f, 0.44f, depth - 1.5f), new Vector3(0.08f, 0.08f, 0.08f));
+                new Vector3(0.18f, 0.44f, depth - 1.5f), new Vector3(0.08f, 0.08f, 0.08f),
+                shade: 0.88f);
 
             // Rug under the table and the sofa's front portion.
             AddProp(furniture, "Rug (placeholder)",
-                new Vector3(0f, 0.01f, depth - 1.2f), new Vector3(2.4f, 0.02f, 1.6f));
+                new Vector3(0f, 0.01f, depth - 1.2f), new Vector3(2.4f, 0.02f, 1.6f),
+                shade: 0.60f);
 
             // Bookshelf against a side wall, clear of the matched facing sightline.
             AddProp(furniture, "Bookshelf (placeholder)",
                 new Vector3(halfWidth - 0.2f, 0.9f, depth - 2.2f),
-                new Vector3(0.35f, 1.8f, 0.9f));
+                new Vector3(0.35f, 1.8f, 0.9f), shade: 0.43f);
 
             // Two wall art pieces above and behind the sofa, symmetric about centre.
             AddProp(furniture, "Wall Art A (placeholder)",
-                new Vector3(-0.55f, 1.6f, depth - 0.12f), new Vector3(0.7f, 0.5f, 0.04f));
+                new Vector3(-0.55f, 1.6f, depth - 0.12f), new Vector3(0.7f, 0.5f, 0.04f),
+                shade: 0.72f);
             AddProp(furniture, "Wall Art B (placeholder)",
-                new Vector3(0.55f, 1.6f, depth - 0.12f), new Vector3(0.7f, 0.5f, 0.04f));
+                new Vector3(0.55f, 1.6f, depth - 0.12f), new Vector3(0.7f, 0.5f, 0.04f),
+                shade: 0.72f);
         }
 
+        /// <param name="shade">
+        /// Neutral greyscale value, 0 = near black, 1 = white.
+        ///
+        /// Achromatic on purpose. Every prop sharing one white material made the room
+        /// unreadable -- white furniture against white walls, which is why the greybox
+        /// looks nothing like the plan even though every piece is present and correctly
+        /// placed. Distinct greys make the layout legible without introducing a second
+        /// colour signal: hue and saturation are the manipulation, and furniture that
+        /// carried any hue of its own would compete with it. These are identical across
+        /// every emotion and both shells, and none of these renderers carries
+        /// TintableSurface, so the manipulation still cannot reach them.
+        /// </param>
         static void AddProp(GameObject parent, string name, Vector3 centre, Vector3 size,
-                            float yaw = 0f)
+                            float yaw = 0f, float shade = 0.5f)
         {
             var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
             go.name = name;
@@ -313,7 +331,31 @@ namespace EmotionRooms
             go.transform.localPosition = centre;
             go.transform.localRotation = Quaternion.Euler(0f, yaw, 0f);
             go.transform.localScale = size;
-            go.GetComponent<Renderer>().sharedMaterial = DefaultSurface();
+            go.GetComponent<Renderer>().sharedMaterial = PropSurface(shade);
+        }
+
+        static readonly Dictionary<float, Material> propSurfaces = new Dictionary<float, Material>();
+
+        /// <summary>One shared material per shade, so eight props do not become eight
+        /// material instances leaking on every room rebuild.</summary>
+        static Material PropSurface(float shade)
+        {
+            Material cached;
+            if (propSurfaces.TryGetValue(shade, out cached) && cached != null) return cached;
+
+            var shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
+            var material = new Material(shader) { name = "Greybox Prop " + shade.ToString("0.00") };
+            var colour = new Color(shade, shade, shade);
+            // _BaseColor is URP, _Color built-in. Set whichever the shader actually has
+            // rather than assuming a pipeline.
+            if (material.HasProperty("_BaseColor")) material.SetColor("_BaseColor", colour);
+            if (material.HasProperty("_Color")) material.SetColor("_Color", colour);
+            // Furnishing should not read as polished plastic next to matte walls.
+            if (material.HasProperty("_Glossiness")) material.SetFloat("_Glossiness", 0.15f);
+            if (material.HasProperty("_Smoothness")) material.SetFloat("_Smoothness", 0.15f);
+
+            propSurfaces[shade] = material;
+            return material;
         }
 
         static Material cachedSurface;
