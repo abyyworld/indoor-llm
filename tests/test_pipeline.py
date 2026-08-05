@@ -740,6 +740,23 @@ class TestOversightTrials(unittest.TestCase):
         self.assertEqual(out["saturation"], calm["saturation"])  # nothing else moved
         self.assertNotEqual(out["hue"], calm["hue"])
 
+    def test_every_llm_controlled_variable_can_actually_be_swapped(self):
+        # Regression. ATTRIBUTABLE spelled the material axis "material" while configs
+        # spell it "texture", and _attributable_fields keeps only keys the config has,
+        # so texture was silently unswappable: one of the five variables never appeared
+        # in the block and could never be attributed to. A distribution test would not
+        # have caught it -- the field just never showed up.
+        from pipeline.oversight import swappable_fields
+
+        calm, tense = self.CONFIGS[0], self.CONFIGS[2]
+        self.assertIn("texture", swappable_fields(calm, tense))
+
+    def test_attributable_covers_both_field_vocabularies(self):
+        from pipeline.oversight import ATTRIBUTABLE
+
+        self.assertIn("texture", ATTRIBUTABLE)   # this repo's configs
+        self.assertIn("material", ATTRIBUTABLE)  # Mengkai's
+
     def test_swaping_with_an_identical_donor_value_is_refused(self):
         # Otherwise the trial would claim a fault that is not visible, and every
         # participant would be scored wrong for not seeing it.
@@ -930,6 +947,32 @@ class TestCounterbalancing(unittest.TestCase):
         with self.assertRaises(ValueError):
             build_session(self.ROOMS, participant="P", seed=1,
                           variants_per_emotion=1, counterbalance="latin")
+
+
+class TestUnityCorrectionValues(unittest.TestCase):
+    """The correction panel narrows to the attributed field, so the generated C# has to
+    know the values of every field a participant can attribute to. A field missing from
+    ValuesFor shows an empty correction screen mid-session."""
+
+    def test_values_for_covers_every_attributable_field(self):
+        from pipeline.emit_unity import render
+        from pipeline.oversight import ATTRIBUTABLE
+
+        cs = render()
+        for field in ATTRIBUTABLE:
+            self.assertIn(f'case "{field}"', cs, f"ValuesFor has no case for {field!r}")
+
+    def test_attributable_list_is_mirrored_into_csharp(self):
+        from pipeline.emit_unity import render
+        from pipeline.oversight import ATTRIBUTABLE
+
+        cs = render()
+        block = cs.split("Attributable =", 1)[1].split(";", 1)[0]
+        # The alias is deliberately absent on the C# side: it is one panel, one vocabulary.
+        for field in ATTRIBUTABLE:
+            if field == "material":
+                continue
+            self.assertIn(f'"{field}"', block)
 
 
 class TestOversightConfidenceAndTiming(unittest.TestCase):

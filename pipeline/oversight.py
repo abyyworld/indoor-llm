@@ -37,9 +37,15 @@ CONDITIONS: tuple[str, ...] = (FAITHFUL, SWAPPED, RANDOM, RATIONALE_MISMATCHED)
 #: Variables a participant can be asked to attribute an error to. Kept here rather than
 #: derived from pools.py because Phase B asks about the agent's *decisions*, and which
 #: decisions exist is a design question, not a pool question.
+# Both vocabularies on purpose. This repo's configs call the material axis `texture`;
+# Mengkai's call it `material`. `_attributable_fields` keeps only the keys a given
+# config actually has, so listing both makes the swap work either way -- and listing
+# only `material`, as this did, meant no trial could ever swap the material axis at
+# all, silently dropping one of the five variables from the oversight block.
 ATTRIBUTABLE: tuple[str, ...] = (
     "hue",
     "saturation",
+    "texture",
     "material",
     "roughness",
     "brightness",

@@ -130,6 +130,7 @@ namespace EmotionRooms
         [Header("Wiring")]
         public RoomLoader loader;
         public EventLog events;
+        public StudyTelemetry telemetry;
 
         [Tooltip("The same affect grid used in Phase A. Needed for the re-rating step: " +
                  "after a participant corrects a room they see their corrected version " +
@@ -137,14 +138,15 @@ namespace EmotionRooms
         public AffectGrid grid;
 
         [Tooltip("Screen asking whether the room looks consistent with the stated target emotion.")]
-        public GameObject detectionPanel;
+        public QuestionPanel detectionPanel;
 
         [Tooltip("Screen asking which variable is not consistent with the target emotion. One option per attributable " +
                  "variable, plus an explicit 'nothing looks swapped'.")]
-        public GameObject attributionPanel;
+        public QuestionPanel attributionPanel;
 
-        [Tooltip("Screen asking what value would fit the target emotion better.")]
-        public GameObject correctionPanel;
+        [Tooltip("Screen asking what value would fit the target emotion better. Carries " +
+                 "every pool value; the ones offered are narrowed to the attributed variable.")]
+        public QuestionPanel correctionPanel;
 
         [Header("Session")]
         public string participantId = "p00";
@@ -233,6 +235,30 @@ namespace EmotionRooms
             correctionAnswered = true;
         }
 
+        /// <summary>Stop the review block, keeping everything already written.</summary>
+        public void Abort(string reason)
+        {
+            if (!IsRunning) return;
+
+            StopAllCoroutines();
+            IsRunning = false;
+
+            if (loader != null) loader.HideRooms();
+            if (grid != null) grid.Hide();
+            HideAll();
+
+            if (telemetry != null) { telemetry.SetPhase("aborted"); telemetry.Mark("review_aborted"); }
+            if (events != null)
+            {
+                events.WriteValues("review_aborted", reason,
+                    completed.Count.ToString(CultureInfo.InvariantCulture), null);
+                events.Flush();
+            }
+
+            Debug.LogWarning("OversightReview: block aborted (" + reason + ") after " +
+                             completed.Count + " trials. Data kept.");
+        }
+
         public void BeginBlock()
         {
             if (IsRunning) return;
@@ -294,6 +320,16 @@ namespace EmotionRooms
                 yield break;
             }
 
+            if (telemetry != null)
+            {
+                telemetry.ClearTrialResponse();
+                telemetry.SetPhase("B");
+                telemetry.SetTrial(index, trial.trial_id);
+                telemetry.SetReviewTrial(trial.condition,
+                    trial.ground_truth != null ? trial.ground_truth.swapped_field : null);
+                telemetry.SetSegment(false, false, false, true);
+                telemetry.Mark("review_trial_start");
+            }
             if (events != null)
             {
                 events.Phase = "B";
@@ -329,10 +365,14 @@ namespace EmotionRooms
             }
 
             detectionAnswered = false;
-            if (detectionPanel != null) detectionPanel.SetActive(true);
+            if (detectionPanel != null)
+                detectionPanel.Show("This room was built to feel " + trial.target_emotion_shown +
+                                    ". Does anything about it look wrong for that?");
+            if (telemetry != null) { telemetry.SetReviewSegment(true, false, false); telemetry.Mark("detection_shown"); }
             if (events != null) events.Write("detection_shown", null);
             while (!detectionAnswered) yield return null;
-            if (detectionPanel != null) detectionPanel.SetActive(false);
+            if (detectionPanel != null) detectionPanel.Hide();
+            if (telemetry != null) telemetry.SetDetection(pendingDetected, pendingDetectionConfidence);
             if (events != null)
                 events.WriteValues("detection_answered", pendingDetected ? "noticed_swap" : "looks_consistent",
                     pendingDetectionConfidence.ToString("0.##"), null);
@@ -346,19 +386,33 @@ namespace EmotionRooms
             if (pendingDetected)
             {
                 attributionAnswered = false;
-                if (attributionPanel != null) attributionPanel.SetActive(true);
+                if (attributionPanel != null)
+                    attributionPanel.Show("Which one is wrong for " + trial.target_emotion_shown + "?");
+                if (telemetry != null) { telemetry.SetReviewSegment(false, true, false); telemetry.Mark("attribution_shown"); }
                 if (events != null) events.Write("attribution_shown", null);
                 while (!attributionAnswered) yield return null;
-                if (attributionPanel != null) attributionPanel.SetActive(false);
+                if (attributionPanel != null) attributionPanel.Hide();
+                if (telemetry != null) telemetry.SetAttribution(pendingAttributedField, pendingAttributionConfidence);
                 if (events != null)
                     events.WriteValues("attribution_answered", pendingAttributedField,
                         pendingAttributionConfidence.ToString("0.##"), null);
 
+                // They said something was off, then could not point at anything. That is a
+                // real response, not a missing one, so it is recorded and the correction
+                // step is skipped rather than being forced.
+                if (pendingAttributedField == "nothing_wrong")
+                    pendingAttributedField = null;
+
                 correctionAnswered = false;
-                if (correctionPanel != null) correctionPanel.SetActive(true);
+                if (pendingAttributedField == null) correctionAnswered = true;
+                else if (correctionPanel != null)
+                    correctionPanel.Show("What should " + (pendingAttributedField ?? "it") +
+                                         " be instead?", PoolConstants.ValuesFor(pendingAttributedField));
+                if (telemetry != null) { telemetry.SetReviewSegment(false, false, true); telemetry.Mark("correction_shown"); }
                 if (events != null) events.Write("correction_shown", null);
                 while (!correctionAnswered) yield return null;
-                if (correctionPanel != null) correctionPanel.SetActive(false);
+                if (correctionPanel != null) correctionPanel.Hide();
+                if (telemetry != null) telemetry.SetCorrection(pendingCorrectedValue);
                 if (events != null)
                     events.WriteValues("correction_answered", pendingCorrectedValue, null, null);
             }
@@ -444,9 +498,9 @@ namespace EmotionRooms
 
         void HideAll()
         {
-            if (detectionPanel != null) detectionPanel.SetActive(false);
-            if (attributionPanel != null) attributionPanel.SetActive(false);
-            if (correctionPanel != null) correctionPanel.SetActive(false);
+            if (detectionPanel != null) detectionPanel.Hide();
+            if (attributionPanel != null) attributionPanel.Hide();
+            if (correctionPanel != null) correctionPanel.Hide();
         }
 
         string ReadBlockJson()

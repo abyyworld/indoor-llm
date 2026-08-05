@@ -64,19 +64,42 @@ namespace EmotionRooms.EditorTools
             var events = root.AddComponent<EventLog>();
             events.headTransform = camera.transform;
 
+            var telemetry = root.AddComponent<StudyTelemetry>();
+            telemetry.loader = loader;
+            telemetry.grid = grid;
+            telemetry.headTransform = camera.transform;
+
             var runner = root.AddComponent<TrialRunner>();
             runner.loader = loader;
             runner.grid = grid;
             runner.events = events;
             runner.sessionFileName = "session.json";
+            runner.telemetry = telemetry;
 
             var review = root.AddComponent<OversightReview>();
             review.loader = loader;
             review.grid = grid;
             review.events = events;
             review.blockFileName = "oversight.json";
+            review.telemetry = telemetry;
+
+            // The three review panels. Without these OversightReview waits forever on
+            // detectionAnswered and the session hangs after the eighth room.
+            var detection = BuildPanel(root, camera, "Detection Panel",
+                new[] { "yes", "no" }, true);
+            var attribution = BuildPanel(root, camera, "Attribution Panel",
+                AttributionLabels(), true);
+            var correction = BuildPanel(root, camera, "Correction Panel",
+                PoolValueLabels(), false);
+
+            review.detectionPanel = detection;
+            review.attributionPanel = attribution;
+            review.correctionPanel = correction;
 
             var bootstrap = root.AddComponent<StudyBootstrap>();
+            bootstrap.detectionPanel = detection;
+            bootstrap.attributionPanel = attribution;
+            bootstrap.correctionPanel = correction;
             bootstrap.trialRunner = runner;
             bootstrap.oversightReview = review;
             bootstrap.grid = grid;
@@ -85,6 +108,8 @@ namespace EmotionRooms.EditorTools
             bootstrap.chainOversightBlock = true;
 
             grid.events = events;
+            telemetry.trialRunner = runner;
+            telemetry.review = review;
 
             Undo.RegisterCreatedObjectUndo(root, "Set Up Study Scene");
             Selection.activeGameObject = root;
@@ -94,6 +119,7 @@ namespace EmotionRooms.EditorTools
                 "Study scene ready.\n" +
                 "  " + wallRenderers.Length + " tintable surfaces wired\n" +
                 "  grid at eye height, 1.2 m ahead of the standing position\n" +
+                "  telemetry at " + telemetry.sampleHz + " Hz, every column every row\n" +
                 "  session.json and oversight.json expected in:\n    " +
                 Application.persistentDataPath + "\n\n" +
                 "Press play, then use the Study object's context menu (three dots) and " +
@@ -162,6 +188,105 @@ namespace EmotionRooms.EditorTools
 
             quad.SetActive(false);   // shown only when a response is wanted
             return grid;
+        }
+
+        static string[] AttributionLabels()
+        {
+            // Field names exactly as RoomConfig.With and the block file's swapped_field
+            // spell them, so a chosen attribution can be scored and applied without a
+            // translation step. Plus a way to say the detection was a false alarm.
+            var labels = new System.Collections.Generic.List<string>(PoolConstants.Attributable);
+            labels.Add("nothing_wrong");
+            return labels.ToArray();
+        }
+
+        static string[] PoolValueLabels()
+        {
+            // Every value a participant could propose, across all five variables. Built
+            // from the same ValuesFor the correction panel narrows by, so the strings
+            // match exactly -- a near-miss here would show an empty correction screen.
+            var labels = new System.Collections.Generic.List<string>();
+            foreach (var field in PoolConstants.Attributable)
+            {
+                var values = PoolConstants.ValuesFor(field);
+                if (values == null) continue;
+                foreach (var v in values)
+                {
+                    if (!labels.Contains(v)) labels.Add(v);
+                }
+            }
+            return labels.ToArray();
+        }
+
+        static QuestionPanel BuildPanel(GameObject root, Camera camera, string name,
+                                        string[] values, bool withConfidence)
+        {
+            var go = new GameObject(name);
+            go.transform.SetParent(root.transform, false);
+            go.transform.position = camera.transform.position + camera.transform.forward * 1.2f;
+            go.transform.rotation = Quaternion.LookRotation(camera.transform.forward);
+
+            var panel = go.AddComponent<QuestionPanel>();
+
+            // Laid out in a grid so a long option list stays reachable without leaning.
+            int perRow = values.Length > 6 ? 5 : Mathf.Max(values.Length, 1);
+            float w = 0.22f, h = 0.11f, gapX = 0.02f, gapY = 0.03f;
+
+            for (int i = 0; i < values.Length; i++)
+            {
+                int col = i % perRow;
+                int rowIndex = i / perRow;
+                int inThisRow = Mathf.Min(perRow, values.Length - rowIndex * perRow);
+
+                var cell = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                cell.name = values[i];
+                cell.transform.SetParent(go.transform, false);
+                cell.transform.localScale = new Vector3(w, h, 0.01f);
+                cell.transform.localPosition = new Vector3(
+                    (col - (inThisRow - 1) / 2f) * (w + gapX),
+                    0.2f - rowIndex * (h + gapY),
+                    0f);
+
+                var collider = cell.GetComponent<BoxCollider>();
+                collider.isTrigger = true;   // must not push the rig around
+
+                var material = new Material(DefaultShader()) { name = values[i] };
+                material.color = new Color(0.85f, 0.85f, 0.85f);
+                cell.GetComponent<Renderer>().sharedMaterial = material;
+
+                panel.options.Add(new QuestionPanel.Option
+                {
+                    value = values[i],
+                    target = cell.transform,
+                });
+            }
+
+            if (withConfidence)
+            {
+                var strip = new GameObject("Confidence").transform;
+                strip.SetParent(go.transform, false);
+                strip.localPosition = new Vector3(0f, -0.28f, 0f);
+                panel.confidenceStrip = strip;
+                panel.confidenceSteps = 5;
+
+                for (int i = 0; i < panel.confidenceSteps; i++)
+                {
+                    var step = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                    step.name = "conf_" + i;
+                    step.transform.SetParent(strip, false);
+                    step.transform.localScale = new Vector3(0.12f, 0.06f, 0.01f);
+                    step.transform.localPosition =
+                        new Vector3((i - (panel.confidenceSteps - 1) / 2f) * 0.14f, 0f, 0f);
+                    step.GetComponent<BoxCollider>().isTrigger = true;
+
+                    var material = new Material(DefaultShader()) { name = step.name };
+                    material.color = new Color(0.85f, 0.85f, 0.85f);
+                    step.GetComponent<Renderer>().sharedMaterial = material;
+                }
+            }
+
+            go.SetActive(false);
+            return panel;
         }
 
         static Transform Marker(GameObject parent, string name, Color colour, float size)
@@ -258,6 +383,26 @@ namespace EmotionRooms.EditorTools
             if (bootstrap == null) problems.Add("no StudyBootstrap, so nothing drives grid input");
             else if (bootstrap.grid == null) problems.Add("StudyBootstrap has no grid; it will be unresponsive");
 
+            var review = root.GetComponent<OversightReview>();
+            if (review == null) problems.Add("no OversightReview");
+            else
+            {
+                // The failure this catches is the nastiest one in the study: a missing
+                // panel does not error, it makes the review block wait forever on an
+                // answer nobody can give, half an hour into a session with a participant
+                // in the headset.
+                if (review.detectionPanel == null)
+                    problems.Add("OversightReview has no detection panel; the review block will hang");
+                if (review.attributionPanel == null)
+                    problems.Add("OversightReview has no attribution panel; it will hang after a detection");
+                if (review.correctionPanel == null)
+                    problems.Add("OversightReview has no correction panel; it will hang after an attribution");
+            }
+
+            if (bootstrap != null && bootstrap.detectionPanel == null)
+                problems.Add("StudyBootstrap has no panels wired, so nothing forwards an " +
+                             "answer to OversightReview and the review block will hang");
+
             var events = root.GetComponent<EventLog>();
             if (events != null && events.headTransform == null)
                 problems.Add("EventLog has no head transform, so head pose will not be logged");
@@ -272,6 +417,33 @@ namespace EmotionRooms.EditorTools
             else
                 Debug.LogWarning("Scene check found " + problems.Count + " issue(s):\n  - " +
                                  string.Join("\n  - ", problems.ToArray()));
+        }
+
+        [MenuItem("Emotion Rooms/Confirm Consent Taken", priority = 10)]
+        static void ConfirmConsent()
+        {
+            var bootstrap = Object.FindFirstObjectByType<StudyBootstrap>();
+            if (bootstrap == null)
+            {
+                EditorUtility.DisplayDialog("Emotion Rooms",
+                    "No StudyBootstrap in the scene. Run Set Up Study Scene first.", "OK");
+                return;
+            }
+            if (bootstrap.ConsentConfirmed)
+            {
+                EditorUtility.DisplayDialog("Emotion Rooms",
+                    "Consent is already recorded for this session.", "OK");
+                return;
+            }
+
+            bool ok = EditorUtility.DisplayDialog("Confirm consent",
+                "Confirm that the paper consent form for participant '" +
+                (bootstrap.trialRunner != null ? bootstrap.trialRunner.participantId : "?") +
+                "' has been read, questions answered, and the form signed -- before the " +
+                "headset goes on.\n\nThis writes a timestamped line to consent_log.csv. " +
+                "It is not the consent itself.",
+                "Consent was taken", "Cancel");
+            if (ok) bootstrap.ConfirmConsentTaken();
         }
 
         [MenuItem("Emotion Rooms/Reveal Data Folder", priority = 21)]

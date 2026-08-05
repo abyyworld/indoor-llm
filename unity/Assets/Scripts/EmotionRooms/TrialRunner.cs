@@ -80,6 +80,10 @@ namespace EmotionRooms
                  "answer, this records what happened on the way to it.")]
         public EventLog events;
 
+        [Tooltip("Continuous telemetry: one complete row per tick, every column filled. " +
+                 "EventLog is the sparse per-change companion; both are wanted.")]
+        public StudyTelemetry telemetry;
+
         [Tooltip("Root holding everything the participant sees between trials. Shown " +
                  "during the gap so they are not left in an empty void.")]
         public GameObject restScreen;
@@ -139,6 +143,42 @@ namespace EmotionRooms
         }
 
         /// <summary>Load the session file and run it start to finish.</summary>
+        /// <summary>
+        /// Stop the session where it stands and leave the data written so far intact.
+        ///
+        /// A withdrawal is not an error: the participant is exercising a right they were
+        /// told they had. The trials they completed stay on disk with a marker in the
+        /// event log saying where the session ended, so analysis can decide whether to
+        /// keep a partial session rather than having that decision made for it by a
+        /// deleted file.
+        /// </summary>
+        public void Abort(string reason)
+        {
+            if (!IsRunning) return;
+
+            StopAllCoroutines();
+            IsRunning = false;
+
+            if (loader != null) loader.HideRooms();
+            if (grid != null) grid.Hide();
+            if (restScreen != null) restScreen.SetActive(false);
+
+            if (telemetry != null)
+            {
+                telemetry.SetPhase("aborted");
+                telemetry.Mark("session_aborted");
+            }
+            if (events != null)
+            {
+                events.WriteValues("session_aborted", reason,
+                    completed.Count.ToString(CultureInfo.InvariantCulture), null);
+                events.Flush();
+            }
+
+            Debug.LogWarning("TrialRunner: session aborted (" + reason + ") after " +
+                             completed.Count + " trials. Data kept.");
+        }
+
         public void BeginSession()
         {
             if (IsRunning)
@@ -179,6 +219,11 @@ namespace EmotionRooms
             }
 
             WriteHeaderIfNeeded();
+            if (telemetry != null)
+            {
+                telemetry.SetPhase("A");
+                telemetry.latinSeed = 0;
+            }
             if (events != null)
             {
                 events.Phase = "A";
@@ -223,6 +268,13 @@ namespace EmotionRooms
                 events.TrialId = config.Id;
                 events.WriteRoom("trial_start", config, null);
             }
+            if (telemetry != null)
+            {
+                telemetry.ClearTrialResponse();
+                telemetry.SetTrial(index, config.Id);
+                telemetry.SetSegment(true, false, false, false);
+                telemetry.Mark("trial_start");
+            }
 
             loader.Load(config);
             if (events != null) events.WriteRoom("room_shown", config, "exposure begins");
@@ -239,9 +291,16 @@ namespace EmotionRooms
                     "hidden before the grid, so the room is rated from memory not sight");
 
             hasLatest = false;
+            if (telemetry != null)
+            {
+                telemetry.SetSegment(false, true, false, false);
+                telemetry.Mark("grid_shown");
+            }
             grid.Show();
             if (events != null) events.Write("grid_shown", null);
             while (!hasLatest) yield return null;
+            if (telemetry != null)
+                telemetry.SetResponse(latest.valence, latest.arousal, latest.durationMs);
             grid.Hide();
             if (events != null)
                 events.WriteGrid("grid_hidden", latest.valence, latest.arousal, 0f, 0f, "response committed");
@@ -270,6 +329,11 @@ namespace EmotionRooms
             if (events != null) events.Write("trial_end", null);
             if (index < session.rooms.Length)
             {
+                if (telemetry != null)
+                {
+                    telemetry.SetSegment(false, false, true, false);
+                    telemetry.Mark("transition_start");
+                }
                 if (events != null) events.Write("transition_start", null);
                 yield return new WaitForSeconds(transitionSeconds);
                 if (events != null) events.Write("transition_end", null);

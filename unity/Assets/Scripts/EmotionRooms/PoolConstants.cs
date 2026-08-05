@@ -73,6 +73,31 @@ namespace EmotionRooms
             return false;
         }
 
+        /// <summary>
+        /// Every legal value of one attributable field, as the strings the correction
+        /// panel shows and RoomConfig.With parses back. Null for an unknown field.
+        /// "material" is accepted as an alias of "texture" so a config in Mengkai's
+        /// vocabulary attributes to the same pool.
+        /// </summary>
+        public static string[] ValuesFor(string field)
+        {
+            switch (field)
+            {
+                case "hue": return System.Array.ConvertAll(Hues, v => v.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                case "saturation": return System.Array.ConvertAll(Saturations, v => v.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture));
+                case "brightness": return System.Array.ConvertAll(Brightnesses, v => v.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture));
+                case "texture":
+                case "material": return (string[])Textures.Clone();
+                case "roughness": return (string[])Roughnesses.Clone();
+                default: return null;
+            }
+        }
+
+        /// <summary>Fields a participant can attribute a problem to. Mirrors
+        /// pipeline/oversight.py ATTRIBUTABLE, minus the vocabulary alias.</summary>
+        public static readonly string[] Attributable =
+            { "hue", "saturation", "texture", "roughness", "brightness" };
+
         public static string Join(int[] pool) { return string.Join(", ", System.Array.ConvertAll(pool, v => v.ToString())); }
 
         public static string Join(float[] pool) { return string.Join(", ", System.Array.ConvertAll(pool, v => v.ToString())); }
