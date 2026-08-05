@@ -61,6 +61,11 @@ fi
 # Real participant logs are data, not code. Keep only the worked example.
 find "$WORK/logs" -name '*.csv' ! -name 'EXAMPLE_*' -delete 2>/dev/null || true
 
+# Unity build cache. cp does not read .gitignore, and unity/Library is ~750 files of
+# rebuildable junk that has no business in a public repository.
+rm -rf "$WORK/unity/Library" "$WORK/unity/Logs" "$WORK/unity/UserSettings" \
+       "$WORK/unity/Temp" "$WORK/unity/obj" "$WORK/unity/Build" "$WORK/unity/Builds" 2>/dev/null || true
+
 # Build artefacts. .gitignore covers them in the shared repo but cp does not read it.
 find "$WORK" -name '__pycache__' -type d -prune -exec rm -rf {} + 2>/dev/null || true
 find "$WORK" -name '.DS_Store' -delete 2>/dev/null || true

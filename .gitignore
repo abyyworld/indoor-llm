@@ -7,3 +7,15 @@ runs/
 # event logs are participant data: keep the example, ignore real ones
 logs/*.csv
 !logs/EXAMPLE_*.csv
+
+# Unity project. Library is a rebuildable cache and is enormous; Logs and UserSettings
+# are per-machine. ProjectSettings and Packages ARE tracked: they define the project.
+unity/Library/
+unity/Logs/
+unity/UserSettings/
+unity/Temp/
+unity/obj/
+unity/Build/
+unity/Builds/
+unity/*.csproj
+unity/*.sln
