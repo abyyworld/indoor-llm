@@ -16,6 +16,55 @@ sections below explain what each step does and what to do when one of them compl
 
 Two parts below: a one-time project setup, then the per-participant routine.
 
+## Running it on a headset
+
+Tracking and the trigger use Unity's built-in XR module, so there is nothing to wire and
+no interaction toolkit to learn. `XRRig` adds head and controller tracking at runtime and
+is inert when no headset is connected, so the same scene runs on a laptop with a mouse --
+which is what piloting should use.
+
+One step cannot be scripted, and has to be done once per machine:
+
+```
+Project Settings > XR Plug-in Management
+  tick OpenXR on the platform tab you will run
+  under OpenXR, add the interaction profile for your controllers
+    (Oculus Touch Controller Profile for a Quest)
+```
+
+The control panel has a button that opens that page, and tells you whether a headset is
+actually tracking once you press Play.
+
+**The camera keeps its researcher-set standing position.** Tracking is applied relative
+to an anchor rather than by moving the camera in world space, so a participant's height
+and posture never change where the study says they are standing.
+
+## Running it on someone else's machine
+
+They need no Unity, no Python and no copy of this repo.
+
+```bash
+python3 -m pipeline.cli build-participants --count 30
+python3 -m pipeline.cli emit-questionnaires
+```
+
+Then **Emotion Rooms > Build for Windows (for Mengkai)**. Send the whole output folder,
+not just the .exe.
+
+In the build, **F9** shows the same panel: pick a participant, open the forms, Begin. The
+stimuli for all 30 participants travel inside the app, and the counterbalancing comes from
+the participant number, so participant 7 gets the same trial order whoever runs them.
+
+Their data lands in their own app data folder as `bundles/pNN_all.csv`, which is the one
+file to send back.
+
+Two things to warn them about:
+
+  * **Windows Firewall** prompts on first launch, because the questionnaires are served
+    over `localhost`. Allow it on private networks. Nothing leaves the machine.
+  * **Windows Build Support (Mono)** must be installed in *your* Unity Hub to produce
+    their build from a Mac. Unity Hub > Installs > the gear icon > Add modules.
+
 ---
 
 ## 1. Project setup, once

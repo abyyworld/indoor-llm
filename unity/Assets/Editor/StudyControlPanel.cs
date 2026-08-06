@@ -62,6 +62,8 @@ namespace EmotionRooms.EditorTools
             DrawBeforeArrival(bootstrap);
             DrawSession(bootstrap, forms);
             DrawAfter();
+            DrawHeadset();
+            DrawHandoff();
             DrawScript();
             DrawTroubleshooting();
 
@@ -175,6 +177,71 @@ namespace EmotionRooms.EditorTools
         }
 
         // ------------------------------------------------------------ before arrival
+
+        void DrawHeadset()
+        {
+            Section("Headset", "Only needed for real participants. Piloting works on the " +
+                               "laptop with a mouse.");
+
+            bool packagesIn = Directory.Exists(Path.Combine(
+                Directory.GetParent(Application.dataPath).FullName, "Library/PackageCache"))
+                && File.ReadAllText(Path.Combine(
+                    Directory.GetParent(Application.dataPath).FullName,
+                    "Packages/manifest.json")).Contains("com.unity.xr.openxr");
+
+            Row(packagesIn, packagesIn
+                ? "OpenXR package requested"
+                : "OpenXR not in the manifest");
+
+            EditorGUILayout.LabelField(
+                "Tracking and the trigger come from Unity's built-in XR module, so there " +
+                "is nothing to wire. The one step that cannot be scripted is turning the " +
+                "OpenXR loader on:", EditorStyles.wordWrappedMiniLabel);
+            EditorGUILayout.LabelField(
+                "   1.  Project Settings > XR Plug-in Management\n" +
+                "   2.  Tick OpenXR, on the platform tab you will run\n" +
+                "   3.  Under OpenXR, add the interaction profile for your controllers\n" +
+                "        (Oculus Touch for a Quest)",
+                EditorStyles.wordWrappedMiniLabel);
+
+            if (GUILayout.Button("Open XR settings"))
+                pending = () => SettingsService.OpenProjectSettings("Project/XR Plug-in Management");
+
+            if (Application.isPlaying)
+            {
+                bool live = XRRig.IsHeadsetRunning();
+                Row(live, live ? "Headset detected and tracking"
+                               : "No headset — pointer falls back to the mouse");
+            }
+
+            EndSection();
+        }
+
+        void DrawHandoff()
+        {
+            Section("Give it to someone else", "They need no Unity, no Python and no repo.");
+
+            string packs = Path.Combine(Application.streamingAssetsPath, "participants");
+            int count = Directory.Exists(packs) ? Directory.GetDirectories(packs).Length : 0;
+            Row(count > 0, count > 0
+                ? count + " participants pre-built into the app"
+                : "No participant packs — the build would have no rooms");
+
+            if (count == 0 && GUILayout.Button("Build participant packs"))
+                pending = () => RunPython("build-participants --count 30");
+
+            using (new EditorGUI.DisabledScope(Application.isPlaying || count == 0))
+            {
+                if (GUILayout.Button("Build the Windows app", GUILayout.Height(26f)))
+                    pending = StudyBuild.BuildWindows;
+            }
+            EditorGUILayout.LabelField(
+                "Send them the whole output folder, not just the .exe. In the app, F9 " +
+                "shows the same panel as this one.",
+                EditorStyles.wordWrappedMiniLabel);
+
+            EndSection();
+        }
 
         void DrawBeforeArrival(StudyBootstrap bootstrap)
         {
