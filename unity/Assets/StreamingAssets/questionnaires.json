@@ -135,6 +135,33 @@
       ]
     },
     {
+      "id": "baseline_mood",
+      "title": "How you feel at the moment",
+      "when": "before",
+      "citation": "Single-item valence and arousal, after Russell's circumplex.",
+      "instruction": "Before we start, how are you feeling right now? Not about the study, just generally.",
+      "items": [
+        {
+          "id": "valence",
+          "type": "scale",
+          "min": 1,
+          "max": 9,
+          "text": "Right now I feel",
+          "min_label": "Very unpleasant",
+          "max_label": "Very pleasant"
+        },
+        {
+          "id": "arousal",
+          "type": "scale",
+          "min": 1,
+          "max": 9,
+          "text": "Right now I feel",
+          "min_label": "Very calm / sleepy",
+          "max_label": "Very alert / worked up"
+        }
+      ]
+    },
+    {
       "id": "ssq_before",
       "title": "How you feel right now",
       "when": "before",
@@ -874,6 +901,117 @@
           "max_label": "Fully agree",
           "reversed": false,
           "subscale": "realism"
+        }
+      ]
+    },
+    {
+      "id": "awareness",
+      "title": "What you noticed",
+      "when": "after",
+      "citation": "",
+      "instruction": "There are no right answers here, and guessing is fine.",
+      "items": [
+        {
+          "id": "guessed_purpose",
+          "type": "paragraph",
+          "text": "What do you think this study was trying to find out?",
+          "help": "Your honest guess, even if you are not sure."
+        },
+        {
+          "id": "noticed_varying",
+          "type": "paragraph",
+          "text": "What, if anything, did you notice changing between the rooms?"
+        },
+        {
+          "id": "noticed_colour",
+          "type": "choice",
+          "options": [
+            "Yes",
+            "No",
+            "Not sure"
+          ],
+          "text": "Did you notice the colour of the walls changing?"
+        },
+        {
+          "id": "noticed_brightness",
+          "type": "choice",
+          "options": [
+            "Yes",
+            "No",
+            "Not sure"
+          ],
+          "text": "Did you notice the brightness changing?"
+        },
+        {
+          "id": "noticed_material",
+          "type": "choice",
+          "options": [
+            "Yes",
+            "No",
+            "Not sure"
+          ],
+          "text": "Did you notice the wall material changing?"
+        },
+        {
+          "id": "noticed_shape",
+          "type": "choice",
+          "options": [
+            "Yes",
+            "No",
+            "Not sure"
+          ],
+          "text": "Did you notice that some rooms were curved and some were square?"
+        },
+        {
+          "id": "tried_to_please",
+          "type": "scale",
+          "min": 1,
+          "max": 7,
+          "text": "I found myself answering the way I thought the researcher wanted.",
+          "min_label": "Not at all",
+          "max_label": "Very much"
+        }
+      ]
+    },
+    {
+      "id": "preference",
+      "title": "What you liked",
+      "when": "after",
+      "citation": "",
+      "instruction": "Separately from how the rooms made you feel: which did you like?",
+      "items": [
+        {
+          "id": "shape_preference",
+          "type": "choice",
+          "options": [
+            "The curved rooms",
+            "The square rooms",
+            "No preference"
+          ],
+          "text": "Which room shape did you prefer?"
+        },
+        {
+          "id": "shape_reason",
+          "type": "paragraph",
+          "text": "Why?"
+        },
+        {
+          "id": "would_live_in",
+          "type": "paragraph",
+          "text": "Which room would you most want to spend time in, and what made it that one?"
+        },
+        {
+          "id": "attention_check",
+          "type": "choice",
+          "options": [
+            "Strongly disagree",
+            "Disagree",
+            "Neither",
+            "Agree",
+            "Strongly agree"
+          ],
+          "text": "Please select \"Disagree\" for this item.",
+          "help": "This one checks the form is being read. It is not about you."
         }
       ]
     },

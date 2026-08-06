@@ -84,8 +84,25 @@ namespace EmotionRooms
         }
 
         /// <summary>Present the grid and start accepting input.</summary>
+        [Tooltip("Camera the grid places itself in front of when shown. Empty uses " +
+                 "Camera.main.")]
+        public Camera viewer;
+
+        [Tooltip("Metres in front of the viewer.")]
+        public float distance = 1.2f;
+
+        [Tooltip("Move the grid in front of the viewer each time it is shown.\n\n" +
+                 "On by default. The grid was positioned once at scene-build time, so it " +
+                 "sat wherever the camera happened to be then -- and if the camera moved, " +
+                 "or the participant turned, the rating screen appeared somewhere behind " +
+                 "them and the session looked like it had frozen on an empty scene.")]
+        public bool followViewer = true;
+
         public void Show()
         {
+            PlaceInFrontOfViewer();
+            EnsureVisible();
+
             HasResponded = false;
             IsAwaitingResponse = true;
             shownAt = Time.time;
@@ -95,6 +112,46 @@ namespace EmotionRooms
             if (selectionMarker != null) selectionMarker.gameObject.SetActive(false);
             if (hoverMarker != null) hoverMarker.gameObject.SetActive(true);
             gameObject.SetActive(true);
+        }
+
+        void PlaceInFrontOfViewer()
+        {
+            if (!followViewer) return;
+
+            var camera = viewer != null ? viewer : Camera.main;
+            if (camera == null) return;
+
+            var eye = camera.transform;
+            // Level with the eye but not tilted with it: a grid pitched to match a
+            // downward glance is harder to read and harder to point at.
+            var forward = eye.forward;
+            forward.y = 0f;
+            if (forward.sqrMagnitude < 0.0001f) forward = Vector3.forward;
+            forward.Normalize();
+
+            transform.position = eye.position + forward * distance;
+            transform.rotation = Quaternion.LookRotation(forward);
+        }
+
+        /// <summary>
+        /// Give every renderer under the grid a material if it has lost one.
+        ///
+        /// Editor-created materials are not saved unless something writes them out as
+        /// assets, so a recompile could leave the grid present, correctly positioned and
+        /// completely invisible. Indistinguishable from a frozen session, and it happened.
+        /// </summary>
+        void EnsureVisible()
+        {
+            foreach (var renderer in GetComponentsInChildren<Renderer>(true))
+            {
+                if (renderer.sharedMaterial != null) continue;
+
+                var shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
+                renderer.sharedMaterial = new Material(shader) { name = "Grid (recovered)" };
+                Debug.LogWarning("[AffectGrid] " + renderer.name + " had no material, so " +
+                                 "one was created. Rebuild the scene from the Study " +
+                                 "Control Panel to stop this recurring.");
+            }
         }
 
         public void Hide()

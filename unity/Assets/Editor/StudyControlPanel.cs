@@ -42,7 +42,6 @@ namespace EmotionRooms.EditorTools
         void OnEnable()
         {
             repoPath = EditorPrefs.GetString(RepoKey, GuessRepoPath());
-            participant = NextParticipantId();
         }
 
         void OnInspectorUpdate()
@@ -92,14 +91,19 @@ namespace EmotionRooms.EditorTools
 
             EditorGUILayout.BeginHorizontal();
             EditorGUILayout.LabelField("Participant", GUILayout.Width(70f));
-            participant = EditorGUILayout.TextField(participant, GUILayout.Width(70f));
-            if (GUILayout.Button("Next", GUILayout.Width(46f)))
-            {
-                participant = NextParticipantId();
-                GUI.FocusControl(null);
-            }
+            participant = EditorGUILayout.TextField(participant, GUILayout.Width(90f));
             GUILayout.FlexibleSpace();
             EditorGUILayout.EndHorizontal();
+
+            if (string.IsNullOrEmpty(participant))
+                EditorGUILayout.HelpBox(
+                    "Type the participant id before anything else. Everything written " +
+                    "this session is filed under it, and reusing one appends a second " +
+                    "session onto the first with neither recoverable.", MessageType.Warning);
+            else if (HasDataAlready(participant))
+                EditorGUILayout.HelpBox(
+                    "There is already data filed under " + participant + ". Use a " +
+                    "different id unless you mean to add to it.", MessageType.Warning);
 
             if (bootstrap != null)
             {
@@ -134,7 +138,7 @@ namespace EmotionRooms.EditorTools
                 EditorGUILayout.BeginHorizontal();
                 if (GUILayout.Button(sceneBuilt ? "Rebuild scene" : "Build scene",
                                      GUILayout.Height(24f)))
-                    pending = () => { StudySceneSetup.SetUp(); participant = NextParticipantId(); };
+                    pending = StudySceneSetup.SetUp;
                 if (GUILayout.Button("Check", GUILayout.Height(24f), GUILayout.Width(70f)))
                     pending = StudySceneSetup.CheckScene;
                 EditorGUILayout.EndHorizontal();
@@ -203,9 +207,10 @@ namespace EmotionRooms.EditorTools
                 "session looks like rooms appearing and vanishing with nothing in " +
                 "between.", MessageType.Info);
 
-            Numbered(1, "Sit them at the laptop with the headset OFF.");
-            Numbered(2, "Press Play, then Begin. You do not touch anything after that " +
-                        "until they take the headset off.");
+            Numbered(1, "Sit them at the laptop with the headset OFF. Press Play.");
+            Numbered(2, "Open the BEFORE forms below and hand them the keyboard. " +
+                        "They open in a browser, not in the headset. When they submit, " +
+                        "each one turns green here.");
 
             EditorGUILayout.BeginHorizontal();
             if (!Application.isPlaying)
@@ -229,26 +234,12 @@ namespace EmotionRooms.EditorTools
             }
             EditorGUILayout.EndHorizontal();
 
-            Numbered(3, "THEY fill in consent, demographics and how they feel, on screen. " +
-                        "Leave them to it. Every form can be skipped.");
+            DrawForms("before", forms, UnityEngine.Object.FindFirstObjectByType<FormServer>());
 
-            if (Application.isPlaying && forms != null)
-            {
-                var outstanding = forms.Outstanding();
-                EditorGUILayout.LabelField(
-                    outstanding.Count == 0
-                        ? "      All forms completed."
-                        : "      Outstanding: " + outstanding.Count,
-                    EditorStyles.miniLabel);
-                foreach (var line in outstanding)
-                    EditorGUILayout.LabelField("        " + line, EditorStyles.miniLabel);
-
-                if (bootstrap != null && !bootstrap.ConsentConfirmed)
-                    EditorGUILayout.HelpBox(
-                        "Consent not yet affirmed. The session still runs and the gap is " +
-                        "recorded, but this participant's data is not usable until it is.",
-                        MessageType.Warning);
-            }
+            if (Application.isPlaying && bootstrap != null && !bootstrap.ConsentConfirmed)
+                EditorGUILayout.HelpBox(
+                    "Consent not yet affirmed. Nothing is blocked, but this participant's " +
+                    "data is not usable until it is.", MessageType.Warning);
 
             Numbered(4, "Fit the headset. Check they can see clearly and are standing " +
                         "comfortably with room to turn around.");
@@ -258,9 +249,12 @@ namespace EmotionRooms.EditorTools
                         "up-down is calm-excited. Then the next room. You do nothing.");
             Numbered(6, "The review block: 12 rooms, asking whether anything looks wrong. " +
                         "~12 min. Still nothing for you to do.");
-            Numbered(7, "Headset off. They fill in the after-forms on screen: sickness, " +
-                        "workload, trust, presence, then the debrief.");
-            Numbered(8, "The end screen names anything they skipped. Note it on paper.");
+            Numbered(7, "Headset off. Open the AFTER forms and hand back the keyboard.");
+
+            DrawForms("after", forms, UnityEngine.Object.FindFirstObjectByType<FormServer>());
+
+            Numbered(8, "Check nothing above is still amber, then stop Play. The combined " +
+                        "file is written on the way out.");
 
             if (Application.isPlaying)
                 EditorGUILayout.HelpBox(
@@ -272,6 +266,51 @@ namespace EmotionRooms.EditorTools
         }
 
         // -------------------------------------------------------------------- after
+
+        void DrawForms(string when, QuestionnaireRunner forms, FormServer server)
+        {
+            if (forms == null || server == null)
+            {
+                EditorGUILayout.LabelField(
+                    "      (press Play to open forms)", EditorStyles.miniLabel);
+                return;
+            }
+            if (!server.IsRunning)
+            {
+                EditorGUILayout.HelpBox("The form server is not running. See the console.",
+                    MessageType.Warning);
+                return;
+            }
+
+            foreach (var form in forms.Due(when))
+            {
+                var state = forms.StateOf(form.id);
+                EditorGUILayout.BeginHorizontal();
+
+                var tick = new GUIStyle(EditorStyles.boldLabel)
+                {
+                    normal =
+                    {
+                        textColor = state == FormState.Completed
+                            ? new Color(0.25f, 0.7f, 0.35f)
+                            : new Color(0.75f, 0.55f, 0.2f),
+                    },
+                };
+                EditorGUILayout.LabelField(state == FormState.Completed ? "●" : "○", tick,
+                    GUILayout.Width(14f));
+
+                if (GUILayout.Button(form.title, GUILayout.Height(22f)))
+                {
+                    string url = server.Root + "form?id=" + form.id;
+                    pending = () => Application.OpenURL(url);
+                }
+                EditorGUILayout.LabelField(
+                    state == FormState.Completed ? "done" :
+                    state == FormState.PartlyAnswered ? "partly" : "",
+                    EditorStyles.miniLabel, GUILayout.Width(46f));
+                EditorGUILayout.EndHorizontal();
+            }
+        }
 
         void DrawAfter()
         {
@@ -443,6 +482,18 @@ namespace EmotionRooms.EditorTools
         }
 
         // ------------------------------------------------------------------ helpers
+
+        static bool HasDataAlready(string id)
+        {
+            string dir = Application.persistentDataPath;
+            if (!Directory.Exists(dir)) return false;
+            foreach (var path in Directory.GetFiles(dir, "*.csv", SearchOption.AllDirectories))
+                if (Path.GetFileName(path).Contains(id)) return true;
+
+            string consent = Path.Combine(dir, "consent_log.csv");
+            return File.Exists(consent) &&
+                   File.ReadAllText(consent).Contains("\n" + id + ",");
+        }
 
         static string NextParticipantId()
         {

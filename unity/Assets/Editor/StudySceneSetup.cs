@@ -105,6 +105,9 @@ namespace EmotionRooms.EditorTools
             forms.events = events;
             forms.telemetry = telemetry;
 
+            var server = root.AddComponent<FormServer>();
+            server.questionnaires = forms;
+
             var bootstrap = root.AddComponent<StudyBootstrap>();
             bootstrap.questionnaires = forms;
             bootstrap.detectionPanel = detection;
@@ -199,6 +202,7 @@ namespace EmotionRooms.EditorTools
             box.size = new Vector3(1f, 1f, 0.01f);
 
             var grid = quad.AddComponent<AffectGrid>();
+            grid.viewer = camera;
             grid.cells = 9;
             grid.hoverMarker = Marker(quad, "Hover Marker", new Color(1f, 1f, 1f, 0.9f), 0.05f);
             grid.selectionMarker = Marker(quad, "Selection Marker", new Color(0.2f, 0.9f, 0.3f), 0.07f);

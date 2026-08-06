@@ -374,16 +374,112 @@ CONSENT = {
     ],
 }
 
+# ------------------------------------------------------------------ baseline mood
+
+# Two single items rather than full PANAS, which is 20 items and would cost more
+# participant patience than it buys here.
+#
+# The reason to ask at all: the dependent variable is how a room makes someone feel, and
+# someone who arrives cheerful rates every room higher than someone who arrives flat.
+# Within-subjects design removes that from the shape and emotion contrasts, but the
+# thesis will want to report the sample's starting state, and a reviewer who asks "were
+# your participants in a normal mood?" needs an answer that is not a shrug.
+
+BASELINE_MOOD = {
+    "id": "baseline_mood",
+    "title": "How you feel at the moment",
+    "when": "before",
+    "citation": "Single-item valence and arousal, after Russell's circumplex.",
+    "instruction": "Before we start, how are you feeling right now? Not about the study, "
+                   "just generally.",
+    "items": [
+        {"id": "valence", "type": "scale", "min": 1, "max": 9,
+         "text": "Right now I feel", "min_label": "Very unpleasant",
+         "max_label": "Very pleasant"},
+        {"id": "arousal", "type": "scale", "min": 1, "max": 9,
+         "text": "Right now I feel", "min_label": "Very calm / sleepy",
+         "max_label": "Very alert / worked up"},
+    ],
+}
+
+# ---------------------------------------------------------- awareness and preference
+
+# Two things a thesis on this design will be asked about, and neither is answerable from
+# the trial data.
+#
+# AWARENESS. If participants worked out that colour, brightness and material were being
+# varied to produce particular feelings, their ratings may be reporting what they thought
+# was wanted rather than what they felt. This is the standard demand-characteristics
+# check and it is cheap. Asking openly first, before the checklist, matters: the
+# checklist itself tells people what varied, so a free-text answer given afterwards is
+# worthless.
+#
+# PREFERENCE. Liking and affect are not the same thing and they correlate. Without a
+# preference measure, "the warm room was rated more pleasant" cannot be separated from
+# "people preferred the warm room", and those support different claims.
+
+AWARENESS = {
+    "id": "awareness",
+    "title": "What you noticed",
+    "when": "after",
+    "citation": "",
+    "instruction": "There are no right answers here, and guessing is fine.",
+    "items": [
+        {"id": "guessed_purpose", "type": "paragraph",
+         "text": "What do you think this study was trying to find out?",
+         "help": "Your honest guess, even if you are not sure."},
+        {"id": "noticed_varying", "type": "paragraph",
+         "text": "What, if anything, did you notice changing between the rooms?"},
+        # Only after the two open questions, because the checklist gives the answer away.
+        {"id": "noticed_colour", "type": "choice", "options": ["Yes", "No", "Not sure"],
+         "text": "Did you notice the colour of the walls changing?"},
+        {"id": "noticed_brightness", "type": "choice", "options": ["Yes", "No", "Not sure"],
+         "text": "Did you notice the brightness changing?"},
+        {"id": "noticed_material", "type": "choice", "options": ["Yes", "No", "Not sure"],
+         "text": "Did you notice the wall material changing?"},
+        {"id": "noticed_shape", "type": "choice", "options": ["Yes", "No", "Not sure"],
+         "text": "Did you notice that some rooms were curved and some were square?"},
+        {"id": "tried_to_please", "type": "scale", "min": 1, "max": 7,
+         "text": "I found myself answering the way I thought the researcher wanted.",
+         "min_label": "Not at all", "max_label": "Very much"},
+    ],
+}
+
+PREFERENCE = {
+    "id": "preference",
+    "title": "What you liked",
+    "when": "after",
+    "citation": "",
+    "instruction": "Separately from how the rooms made you feel: which did you like?",
+    "items": [
+        {"id": "shape_preference", "type": "choice",
+         "options": ["The curved rooms", "The square rooms", "No preference"],
+         "text": "Which room shape did you prefer?"},
+        {"id": "shape_reason", "type": "paragraph",
+         "text": "Why?"},
+        {"id": "would_live_in", "type": "paragraph",
+         "text": "Which room would you most want to spend time in, and what made it that "
+                 "one?"},
+        {"id": "attention_check", "type": "choice",
+         "options": ["Strongly disagree", "Disagree", "Neither", "Agree", "Strongly agree"],
+         "text": "Please select \"Disagree\" for this item.",
+         "help": "This one checks the form is being read. It is not about you."},
+    ],
+}
+
 # ----------------------------------------------------------------------------- order
 
 FORMS = [
     CONSENT,
     DEMOGRAPHICS,
+    BASELINE_MOOD,
     SSQ_BEFORE,
     SSQ_AFTER,
     NASA_TLX,
     TRUST,
     PRESENCE,
+    AWARENESS,
+    PREFERENCE,
     STRATEGY,
     DEBRIEF,
 ]
@@ -446,6 +542,21 @@ def score_trust(answers: dict[str, int]) -> dict[str, float]:
         total += (8.0 - value) if reverse else value
         count += 1
     return {"trust_mean": total / count if count else 0.0, "items_answered": count}
+
+
+ATTENTION_CHECK = ("preference", "attention_check", "Disagree")
+
+
+def passed_attention_check(answers: dict[str, str]) -> bool | None:
+    """True, False, or None when the item was not answered.
+
+    None rather than False on a blank, because "did not answer" and "answered wrongly"
+    are different exclusion decisions and the analysis should get to make its own.
+    """
+    _, item, expected = ATTENTION_CHECK
+    if item not in answers or not answers[item]:
+        return None
+    return answers[item] == expected
 
 
 def score_presence(answers: dict[str, int]) -> dict[str, float]:

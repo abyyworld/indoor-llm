@@ -230,14 +230,10 @@ namespace EmotionRooms
             }
             ApplyParticipantId();
 
-            // The 'before' forms, then the rooms. If there are none, or the file is
-            // missing, the session starts immediately rather than waiting on a screen
-            // that will never appear.
-            if (questionnaires != null && questionnaires.Begin("before"))
-            {
-                questionnaires.BatchFinished += StartTrialsAfterForms;
-                return;
-            }
+            // Straight into the rooms. The before-forms are browser pages the researcher
+            // opens while the headset is still off, so the app has nothing to wait for --
+            // and a session that waited on a form would be a session a skipped form could
+            // stall.
             trialRunner.BeginSession();
         }
 
@@ -268,12 +264,6 @@ namespace EmotionRooms
                                  "this participant's data is not usable until consent is " +
                                  "taken on paper and noted.");
             }
-        }
-
-        void StartTrialsAfterForms()
-        {
-            questionnaires.BatchFinished -= StartTrialsAfterForms;
-            trialRunner.BeginSession();
         }
 
         /// <summary>
@@ -384,24 +374,11 @@ namespace EmotionRooms
 
         void OnBlockFinished()
         {
-            // The 'after' forms, then the end screen. NASA-TLX asks about the review
-            // block, so it has to come after it and while it is still fresh.
-            if (questionnaires != null && questionnaires.Begin("after"))
-            {
-                questionnaires.BatchFinished += ShowSummaryAfterForms;
-                return;
-            }
-            ShowSummaryAfterForms();
-        }
-
-        void ShowSummaryAfterForms()
-        {
-            if (questionnaires != null)
-            {
-                questionnaires.BatchFinished -= ShowSummaryAfterForms;
-                questionnaires.ShowSummary();
-            }
-            BundleNow("session complete");
+            // The VR part is over. The after-forms are opened from the panel once the
+            // headset is off -- NASA-TLX asks about the review block, so it wants to be
+            // soon, but it does not want to be answered through a headset.
+            if (questionnaires != null) questionnaires.ShowSummary();
+            BundleNow("rooms and review finished");
         }
 
         /// <summary>Write the combined CSV. Runs itself, so nobody has to remember to.</summary>

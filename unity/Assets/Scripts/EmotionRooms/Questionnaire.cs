@@ -89,21 +89,12 @@ namespace EmotionRooms
         [Tooltip("File written next to the other results, one row per answered item.")]
         public string responsesFileName = "questionnaire_responses.csv";
 
-        public bool IsShowing { get { return current != null; } }
-
-        /// <summary>Fires when the current batch of forms is done or skipped past.</summary>
-        public event Action BatchFinished;
-
         /// <summary>Fires as each form closes, with its id and how it ended.</summary>
         public event Action<string, FormState> FormFinished;
 
         QuestionnaireSet set;
-        readonly Queue<QuestionForm> pending = new Queue<QuestionForm>();
-        QuestionForm current;
         readonly Dictionary<string, string> answers = new Dictionary<string, string>();
         readonly Dictionary<string, FormState> states = new Dictionary<string, FormState>();
-        Vector2 scroll;
-        float shownAt;
         bool summaryVisible;
 
         void Awake()
@@ -127,61 +118,14 @@ namespace EmotionRooms
             foreach (var form in set.forms) states[form.id] = FormState.NotShown;
         }
 
-        /// <summary>Queue every form marked for this point. Returns false if there are none,
-        /// so the caller can carry straight on rather than waiting for a screen that will
-        /// never appear.</summary>
-        public bool Begin(string when)
+        /// <summary>Forms due at this point in the session, for the panel to offer.</summary>
+        public List<QuestionForm> Due(string when)
         {
-            if (set == null || set.forms == null) return false;
-
-            pending.Clear();
+            var due = new List<QuestionForm>();
+            if (set == null || set.forms == null) return due;
             foreach (var form in set.forms)
-                if (form.when == when) pending.Enqueue(form);
-
-            if (pending.Count == 0) return false;
-            Next();
-            return true;
-        }
-
-        void Next()
-        {
-            if (pending.Count == 0)
-            {
-                current = null;
-                var handler = BatchFinished;
-                if (handler != null) handler();
-                return;
-            }
-            current = pending.Dequeue();
-            scroll = Vector2.zero;
-            shownAt = Time.unscaledTime;
-
-            if (telemetry != null) telemetry.Mark("form_shown=" + current.id);
-            if (events != null) events.WriteValues("form_shown", current.id, null, null);
-        }
-
-        void Finish(bool skipped)
-        {
-            if (current == null) return;
-
-            int answered = 0;
-            foreach (var item in current.items)
-                if (answers.ContainsKey(Key(current, item))) answered++;
-
-            states[current.id] = skipped
-                ? (answered > 0 ? FormState.PartlyAnswered : FormState.Skipped)
-                : (answered == current.items.Length ? FormState.Completed : FormState.PartlyAnswered);
-
-            Write(current, answered, Time.unscaledTime - shownAt);
-
-            if (telemetry != null) telemetry.Mark("form_done=" + current.id);
-            if (events != null)
-                events.WriteValues("form_done", current.id, states[current.id].ToString(), null);
-
-            var finished = FormFinished;
-            if (finished != null) finished(current.id, states[current.id]);
-
-            Next();
+                if (form.when == when) due.Add(form);
+            return due;
         }
 
         static string Key(QuestionForm form, QuestionItem item)
@@ -263,6 +207,66 @@ namespace EmotionRooms
             return false;
         }
 
+        /// <summary>Every form, in order. For the server's index and the control panel.</summary>
+        public IEnumerable<QuestionForm> AllForms()
+        {
+            if (set == null || set.forms == null) yield break;
+            foreach (var form in set.forms) yield return form;
+        }
+
+        public QuestionForm Find(string formId)
+        {
+            if (set == null || set.forms == null || string.IsNullOrEmpty(formId)) return null;
+            foreach (var form in set.forms) if (form.id == formId) return form;
+            return null;
+        }
+
+        /// <summary>
+        /// Record a submission from the browser form.
+        ///
+        /// Blank answers are kept as blanks rather than dropped. A question someone chose
+        /// not to answer and a question that was never put to them look identical in a
+        /// wide file otherwise, and only one of those is a problem.
+        /// </summary>
+        public void SubmitFromWeb(string formId, Dictionary<string, string> fields)
+        {
+            var form = Find(formId);
+            if (form == null)
+            {
+                Debug.LogWarning("Questionnaire: submission for unknown form " + formId);
+                return;
+            }
+
+            int answered = 0;
+            foreach (var item in form.items)
+            {
+                string value;
+                if (!fields.TryGetValue(item.id, out value) || string.IsNullOrEmpty(value))
+                {
+                    answers.Remove(Key(form, item));
+                    continue;
+                }
+                answers[Key(form, item)] = value;
+                answered++;
+            }
+
+            states[form.id] = answered == form.items.Length
+                ? FormState.Completed
+                : (answered > 0 ? FormState.PartlyAnswered : FormState.Skipped);
+
+            Write(form, answered, 0f);
+
+            if (telemetry != null) telemetry.Mark("form_submitted=" + form.id);
+            if (events != null)
+                events.WriteValues("form_submitted", form.id, states[form.id].ToString(), null);
+
+            var handler = FormFinished;
+            if (handler != null) handler(form.id, states[form.id]);
+
+            Debug.Log("Questionnaire: " + form.title + " submitted (" + answered + " of " +
+                      form.items.Length + " answered).");
+        }
+
         public FormState StateOf(string formId)
         {
             FormState state;
@@ -278,9 +282,7 @@ namespace EmotionRooms
             foreach (var form in set.forms)
             {
                 if (StateOf(form.id) == FormState.Completed) continue;
-                bool onScreen = current != null && current.id == form.id;
-                missing.Add(form.title + "  (" +
-                            (onScreen ? "on screen now" : Describe(StateOf(form.id))) + ")");
+                missing.Add(form.title + "  (" + Describe(StateOf(form.id)) + ")");
             }
             return missing;
         }
@@ -302,151 +304,10 @@ namespace EmotionRooms
 
         void OnGUI()
         {
-            if (summaryVisible) { DrawSummary(); return; }
-            if (current == null) return;
-
-            // Explicit rects for the header and the footer, with the scroll view given
-            // exactly what is left over.
-            //
-            // The first version laid all three out in one GUILayout flow with the
-            // instruction text above the scroll view. The consent instruction is six
-            // paragraphs, so it consumed the whole area, and GUILayout handed the scroll
-            // view and the buttons nothing -- the questions and both buttons were pushed
-            // off the bottom of the screen. The form rendered, could not be answered, and
-            // could not be skipped either. Reserving the footer first means the buttons
-            // exist no matter how long the content is.
-            float w = Mathf.Min(820f, Screen.width - 40f);
-            float h = Screen.height - 60f;
-            var area = new Rect((Screen.width - w) / 2f, 30f, w, h);
-
-            // Opaque, so room geometry behind the form cannot show through the text.
-            GUI.DrawTexture(area, Backdrop());
-            GUI.Box(area, GUIContent.none);
-
-            const float pad = 18f;
-            const float footer = 46f;
-
-            var header = new Rect(area.x + pad, area.y + 12f, area.width - pad * 2f, 34f);
-            GUI.Label(header, current.title, Heading());
-
-            var body = new Rect(area.x + pad, header.yMax + 6f, area.width - pad * 2f,
-                                area.height - header.height - footer - 30f);
-            var footerRect = new Rect(area.x + pad, area.yMax - footer,
-                                      area.width - pad * 2f, footer - 10f);
-
-            GUILayout.BeginArea(body);
-            scroll = GUILayout.BeginScrollView(scroll);
-
-            // Instruction inside the scroll view, so a long consent text scrolls rather
-            // than crowding the questions out.
-            if (!string.IsNullOrEmpty(current.instruction))
-            {
-                GUILayout.Label(current.instruction, Body());
-                GUILayout.Space(10f);
-            }
-            foreach (var item in current.items) DrawItem(current, item);
-            GUILayout.Space(12f);
-
-            GUILayout.EndScrollView();
-            GUILayout.EndArea();
-
-            GUILayout.BeginArea(footerRect);
-            GUILayout.BeginHorizontal();
-
-            if (GUILayout.Button("Skip this form", GUILayout.Height(30f), GUILayout.Width(160f)))
-                Finish(true);
-
-            GUILayout.FlexibleSpace();
-            GUILayout.BeginVertical();
-            GUILayout.Space(6f);
-            GUILayout.Label(Progress(), Fine());
-            GUILayout.EndVertical();
-            GUILayout.FlexibleSpace();
-
-            if (GUILayout.Button("Continue", GUILayout.Height(30f), GUILayout.Width(160f)))
-                Finish(false);
-
-            GUILayout.EndHorizontal();
-            GUILayout.EndArea();
-        }
-
-        string Progress()
-        {
-            int answered = 0;
-            foreach (var item in current.items)
-                if (answers.ContainsKey(Key(current, item))) answered++;
-            return answered + " of " + current.items.Length + " answered" +
-                   (pending.Count > 0 ? "   ·   " + pending.Count + " more forms" : "");
-        }
-
-        static Texture2D backdrop;
-
-        static Texture2D Backdrop()
-        {
-            if (backdrop != null) return backdrop;
-            backdrop = new Texture2D(1, 1);
-            backdrop.SetPixel(0, 0, new Color(0.11f, 0.11f, 0.13f, 0.97f));
-            backdrop.Apply();
-            backdrop.hideFlags = HideFlags.HideAndDontSave;
-            return backdrop;
-        }
-
-        void DrawItem(QuestionForm form, QuestionItem item)
-        {
-            string key = Key(form, item);
-            string value;
-            answers.TryGetValue(key, out value);
-
-            GUILayout.Space(10f);
-            if (!string.IsNullOrEmpty(item.text)) GUILayout.Label(item.text, Body());
-            if (!string.IsNullOrEmpty(item.help)) GUILayout.Label(item.help, Fine());
-
-            switch (item.type)
-            {
-                case "choice":
-                    GUILayout.BeginHorizontal();
-                    foreach (var option in item.options)
-                    {
-                        bool on = value == option;
-                        // A button rather than a tick box: on a dark backdrop the default
-                        // toggle glyph and its label are nearly invisible, and a chosen
-                        // answer has to be obvious to the person who chose it.
-                        var style = on ? Chosen() : GUI.skin.button;
-                        if (GUILayout.Button((on ? "● " : "○ ") + option, style,
-                                             GUILayout.Width(160f), GUILayout.Height(26f)))
-                            answers[key] = option;
-                    }
-                    GUILayout.FlexibleSpace();
-                    GUILayout.EndHorizontal();
-                    break;
-
-                case "scale":
-                {
-                    GUILayout.BeginHorizontal();
-                    GUILayout.Label(item.min_label ?? "", Fine(), GUILayout.Width(120f));
-                    for (int v = item.min; v <= item.max; v += item.Step)
-                    {
-                        string label = v.ToString(CultureInfo.InvariantCulture);
-                        bool on = value == label;
-                        // Narrow buttons so a 21-point TLX scale fits on one line.
-                        float width = (item.max - item.min) / item.Step > 10 ? 26f : 36f;
-                        if (GUILayout.Button(label, on ? Chosen() : GUI.skin.button,
-                                             GUILayout.Width(width), GUILayout.Height(24f)))
-                            answers[key] = label;
-                    }
-                    GUILayout.Label(item.max_label ?? "", Fine(), GUILayout.Width(120f));
-                    GUILayout.EndHorizontal();
-                    break;
-                }
-
-                case "paragraph":
-                    answers[key] = GUILayout.TextArea(value ?? "", GUILayout.Height(56f));
-                    break;
-
-                default:
-                    answers[key] = GUILayout.TextField(value ?? "", GUILayout.Height(20f));
-                    break;
-            }
+            // Only the end-of-session summary is drawn in the app now. The forms
+            // themselves are browser pages served by FormServer, so nothing is answered
+            // through the headset.
+            if (summaryVisible) DrawSummary();
         }
 
         void DrawSummary()
@@ -480,6 +341,20 @@ namespace EmotionRooms
             GUILayout.Space(14f);
             GUILayout.Label("Thank you. Please take the headset off.", Body());
             GUILayout.EndArea();
+        }
+
+        static Texture2D backdrop;
+
+        /// <summary>Opaque panel behind the end screen, so room geometry cannot show
+        /// through the text.</summary>
+        static Texture2D Backdrop()
+        {
+            if (backdrop != null) return backdrop;
+            backdrop = new Texture2D(1, 1);
+            backdrop.SetPixel(0, 0, new Color(0.11f, 0.11f, 0.13f, 0.97f));
+            backdrop.Apply();
+            backdrop.hideFlags = HideFlags.HideAndDontSave;
+            return backdrop;
         }
 
         static GUIStyle heading, body, fine, chosen;

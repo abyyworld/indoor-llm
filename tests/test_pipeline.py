@@ -1053,6 +1053,40 @@ class TestInstruments(unittest.TestCase):
             ids = [i["id"] for i in form["items"]]
             self.assertEqual(len(set(ids)), len(ids), f"{form['id']} repeats an item id")
 
+    def test_awareness_asks_openly_before_it_prompts(self):
+        # The checklist names the manipulated variables, so a free-text answer collected
+        # after it is worthless. The open questions have to come first in item order.
+        from pipeline.instruments import AWARENESS
+
+        ids = [i["id"] for i in AWARENESS["items"]]
+        self.assertLess(ids.index("guessed_purpose"), ids.index("noticed_colour"))
+        self.assertLess(ids.index("noticed_varying"), ids.index("noticed_colour"))
+
+    def test_attention_check_names_a_real_item(self):
+        from pipeline.instruments import ATTENTION_CHECK, FORMS
+
+        form_id, item_id, expected = ATTENTION_CHECK
+        form = next(f for f in FORMS if f["id"] == form_id)
+        item = next(i for i in form["items"] if i["id"] == item_id)
+        self.assertIn(expected, item["options"])
+
+    def test_unanswered_attention_check_is_not_a_failure(self):
+        from pipeline.instruments import passed_attention_check
+
+        self.assertIsNone(passed_attention_check({}))
+        self.assertIsNone(passed_attention_check({"attention_check": ""}))
+        self.assertTrue(passed_attention_check({"attention_check": "Disagree"}))
+        self.assertFalse(passed_attention_check({"attention_check": "Agree"}))
+
+    def test_baseline_mood_is_collected_before_any_room(self):
+        from pipeline.instruments import FORMS
+
+        when = {f["id"]: f["when"] for f in FORMS}
+        self.assertEqual(when["baseline_mood"], "before")
+        # Awareness must not be: naming the manipulated variables beforehand would
+        # create the demand characteristics it exists to detect.
+        self.assertEqual(when["awareness"], "after")
+
     def test_generated_json_carries_every_form(self):
         from pipeline.instruments import FORMS, as_dict
 
