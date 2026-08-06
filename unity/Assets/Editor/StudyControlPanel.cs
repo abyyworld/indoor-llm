@@ -29,7 +29,6 @@ namespace EmotionRooms.EditorTools
         string lastOutput = "";
         bool showScript;
         bool showTrouble;
-        Action pending;
 
         [MenuItem("Emotion Rooms/Study Control Panel _%#e", priority = -100)]
         public static void Open()
@@ -63,16 +62,28 @@ namespace EmotionRooms.EditorTools
             DrawSession(bootstrap, forms);
             DrawAfter();
             DrawHeadset();
+            DrawWebStudy();
             DrawHandoff();
             DrawScript();
             DrawTroubleshooting();
 
             EditorGUILayout.EndScrollView();
+        }
 
-            if (pending != null && Event.current.type == EventType.Repaint)
+        /// <summary>
+        /// Run a button's work outside the GUI callback entirely.
+        ///
+        /// The previous version ran it during Repaint, still inside OnGUI. That is fine
+        /// for a one-line action and quietly fatal for anything real: Set Up Study Scene
+        /// opens a modal dialog, destroys and recreates GameObjects and writes assets, and
+        /// doing that from inside a repaint aborts partway with nothing in the console.
+        /// The symptom was a Rebuild button that did nothing while the identical menu item
+        /// worked. delayCall runs on the next editor tick, with no GUI in progress.
+        /// </summary>
+        void Later(Action action)
+        {
+            EditorApplication.delayCall += () =>
             {
-                var action = pending;
-                pending = null;
                 try { action(); }
                 catch (Exception e)
                 {
@@ -80,7 +91,7 @@ namespace EmotionRooms.EditorTools
                     Debug.LogError("Study Control: " + e.Message + "\n" + e.StackTrace);
                 }
                 Repaint();
-            }
+            };
         }
 
         // ------------------------------------------------------------------- header
@@ -152,9 +163,9 @@ namespace EmotionRooms.EditorTools
                 EditorGUILayout.BeginHorizontal();
                 if (GUILayout.Button(sceneBuilt ? "Rebuild scene" : "Build scene",
                                      GUILayout.Height(24f)))
-                    pending = StudySceneSetup.SetUp;
+                    Later(StudySceneSetup.SetUp);
                 if (GUILayout.Button("Check", GUILayout.Height(24f), GUILayout.Width(70f)))
-                    pending = StudySceneSetup.CheckScene;
+                    Later(StudySceneSetup.CheckScene);
                 EditorGUILayout.EndHorizontal();
             }
 
@@ -164,7 +175,7 @@ namespace EmotionRooms.EditorTools
                 ? "Questionnaires loaded (consent, demographics, SSQ, NASA-TLX, trust, presence, debrief)"
                 : "questionnaires.json missing — no forms will appear");
             if (!haveForms && GUILayout.Button("Build questionnaires"))
-                pending = () => RunPython("emit-questionnaires");
+                Later(() => RunPython("emit-questionnaires"));
 
             var models = StudySceneSetup.FindFurnitureSet();
             int missing = models == null ? 7 : models.MissingCount();
@@ -196,11 +207,31 @@ namespace EmotionRooms.EditorTools
             if (!desktop || !quest)
             {
                 if (GUILayout.Button("Set up XR on this machine", GUILayout.Height(26f)))
-                    pending = XRSetup.Run;
+                    Later(XRSetup.Run);
                 EditorGUILayout.LabelField(
                     "Enables the OpenXR loader and the Quest controller profile. If any " +
                     "part cannot be done automatically the console says which click " +
                     "replaces it.", EditorStyles.wordWrappedMiniLabel);
+            }
+
+            var devices = StudyBuild.ConnectedDevices();
+            Row(devices.Length > 0, devices.Length > 0
+                ? "Headset visible over USB: " + string.Join(", ", devices)
+                : "adb cannot see a headset over USB");
+
+            if (devices.Length == 0)
+                EditorGUILayout.HelpBox(
+                    "Nothing can be installed on the headset until adb sees it. Check the " +
+                    "cable carries data rather than only power, that Developer Mode is on " +
+                    "(the account owner sets this in the Meta Horizon phone app), and that " +
+                    "you accepted Allow USB Debugging inside the headset.\n\n" +
+                    "The browser version needs none of this — see the section below.",
+                    MessageType.Info);
+
+            using (new EditorGUI.DisabledScope(devices.Length == 0))
+            {
+                if (GUILayout.Button("Build and put it on the headset", GUILayout.Height(26f)))
+                    Later(StudyBuild.BuildAndDeploy);
             }
 
             if (Application.isPlaying)
@@ -221,6 +252,43 @@ namespace EmotionRooms.EditorTools
             EndSection();
         }
 
+        void DrawWebStudy()
+        {
+            Section("Run on the headset through its browser",
+                    "No Developer Mode, no cable, no install. This is the route that works " +
+                    "on a headset you do not own.");
+
+            bool up = WebServer.IsRunning;
+            Row(up, up ? "Study server running at " + WebServer.HeadsetUrl
+                       : "Study server stopped");
+
+            EditorGUILayout.BeginHorizontal();
+            if (GUILayout.Button(up ? "Stop server" : "Start server", GUILayout.Height(26f)))
+                Later(() => { if (up) WebServer.Stop(); else WebServer.Start(repoPath); });
+
+            using (new EditorGUI.DisabledScope(!up))
+            {
+                if (GUILayout.Button("Open researcher panel", GUILayout.Height(26f)))
+                    Later(() => Application.OpenURL(WebServer.PanelUrl));
+            }
+            EditorGUILayout.EndHorizontal();
+
+            if (up)
+            {
+                EditorGUILayout.LabelField(
+                    "In the headset's Browser, once, before the participant arrives:",
+                    EditorStyles.wordWrappedMiniLabel);
+                EditorGUILayout.SelectableLabel(WebServer.HeadsetUrl,
+                    EditorStyles.textField, GUILayout.Height(18f));
+                EditorGUILayout.LabelField(
+                    "Accept the certificate warning, press Enter VR, and put it down. " +
+                    "Everything after that is on this laptop.",
+                    EditorStyles.wordWrappedMiniLabel);
+            }
+
+            EndSection();
+        }
+
         void DrawHandoff()
         {
             Section("Give it to someone else", "They need no Unity, no Python and no repo.");
@@ -232,12 +300,12 @@ namespace EmotionRooms.EditorTools
                 : "No participant packs — the build would have no rooms");
 
             if (count == 0 && GUILayout.Button("Build participant packs"))
-                pending = () => RunPython("build-participants --count 30");
+                Later(() => RunPython("build-participants --count 30"));
 
             using (new EditorGUI.DisabledScope(Application.isPlaying || count == 0))
             {
                 if (GUILayout.Button("Build the Windows app", GUILayout.Height(26f)))
-                    pending = StudyBuild.BuildWindows;
+                    Later(StudyBuild.BuildWindows);
             }
             EditorGUILayout.LabelField(
                 "Send them the whole output folder, not just the .exe. In the app, F9 " +
@@ -264,7 +332,7 @@ namespace EmotionRooms.EditorTools
             using (new EditorGUI.DisabledScope(Application.isPlaying))
             {
                 if (GUILayout.Button("Prepare " + participant, GUILayout.Height(26f)))
-                    pending = () => PrepareParticipant(bootstrap);
+                    Later(() => PrepareParticipant(bootstrap));
             }
             EditorGUILayout.LabelField(
                 "Each participant gets a different room order. Never reuse an id: a second " +
@@ -318,12 +386,12 @@ namespace EmotionRooms.EditorTools
                                          noId ? "Type a participant id first" :
                                          stale ? "Scene out of date" : "Begin " + participant,
                                          GUILayout.Height(30f)))
-                        pending = () =>
+                        Later(() =>
                         {
                             bootstrap.participantId = participant;
                             bootstrap.ApplyParticipantId();
                             bootstrap.BeginStudy();
-                        };
+                        });
                 }
             }
             EditorGUILayout.EndHorizontal();
@@ -396,7 +464,7 @@ namespace EmotionRooms.EditorTools
                 if (GUILayout.Button(form.title, GUILayout.Height(22f)))
                 {
                     string url = server.Root + "form?id=" + form.id;
-                    pending = () => Application.OpenURL(url);
+                    Later(() => Application.OpenURL(url));
                 }
                 EditorGUILayout.LabelField(
                     state == FormState.Completed ? "done" :

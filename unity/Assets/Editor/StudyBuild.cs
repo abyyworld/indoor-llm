@@ -9,8 +9,10 @@
 using System;
 using System.IO;
 using UnityEditor;
+using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace EmotionRooms.EditorTools
 {
@@ -52,8 +54,179 @@ namespace EmotionRooms.EditorTools
 
             EditorUserBuildSettings.SwitchActiveBuildTarget(
                 BuildTargetGroup.Android, BuildTarget.Android);
+            ConfigureForQuest();
             Build(BuildTarget.Android, "Android", "EmotionRooms.apk");
         }
+
+        /// <summary>
+        /// The player settings a Quest build needs, none of which are Unity's defaults.
+        ///
+        /// Left unset, the build fails on OpenXR's own validation with messages that name
+        /// the symptom rather than the setting -- "Gamma Color Space is not supported when
+        /// using OpenGLES" is really "you are on the wrong graphics API and the wrong
+        /// colour space", and neither is discoverable from the text. Set here so the build
+        /// button produces a build rather than a puzzle.
+        /// </summary>
+        static void ConfigureForQuest()
+        {
+            var android = NamedBuildTarget.Android;
+
+            // Vulkan only. The Quest runtime prefers it, and OpenGLES cannot do the
+            // linear colour space that the lighting in this study depends on -- a gamma
+            // pipeline would change how every room looks, which is the manipulation.
+            PlayerSettings.SetGraphicsAPIs(BuildTarget.Android,
+                new[] { GraphicsDeviceType.Vulkan });
+            PlayerSettings.colorSpace = ColorSpace.Linear;
+
+            // The headset is 64-bit and IL2CPP is the only supported backend for it.
+            PlayerSettings.SetScriptingBackend(android, ScriptingImplementation.IL2CPP);
+            PlayerSettings.Android.targetArchitectures = AndroidArchitecture.ARM64;
+
+            PlayerSettings.Android.minSdkVersion = AndroidSdkVersions.AndroidApiLevel32;
+            PlayerSettings.Android.targetSdkVersion = AndroidSdkVersions.AndroidApiLevelAuto;
+            EditorUserBuildSettings.androidBuildSubtarget = MobileTextureSubtarget.ASTC;
+
+            // Landscape and no auto-rotation: the headset composites its own view, and a
+            // rotating player window fights it.
+            PlayerSettings.defaultInterfaceOrientation = UIOrientation.LandscapeLeft;
+
+            PlayerSettings.SetApplicationIdentifier(android, "com.emotionrooms.study");
+            PlayerSettings.productName = "Emotion Rooms";
+
+            // Multi-threaded rendering off: it interacts badly with some OpenXR runtimes
+            // and this scene is nowhere near needing it.
+            PlayerSettings.SetMobileMTRendering(android, false);
+
+            AssetDatabase.SaveAssets();
+            Debug.Log("Study build: Quest player settings applied (Vulkan, linear, " +
+                      "IL2CPP, ARM64, API 32, ASTC).");
+        }
+
+        /// <summary>Path to adb inside the installed Android build support.</summary>
+        public static string AdbPath()
+        {
+            string root = Path.GetDirectoryName(EditorApplication.applicationPath);
+            string[] candidates =
+            {
+                Path.Combine(root ?? "", "PlaybackEngines/AndroidPlayer/SDK/platform-tools/adb"),
+                Path.Combine(EditorPrefs.GetString("AndroidSdkRoot", ""), "platform-tools/adb"),
+            };
+            foreach (var path in candidates)
+                if (!string.IsNullOrEmpty(path) && File.Exists(path)) return path;
+            return null;
+        }
+
+        /// <summary>Serial numbers of headsets adb can see. Empty means none.</summary>
+        public static string[] ConnectedDevices()
+        {
+            string adb = AdbPath();
+            if (adb == null) return new string[0];
+
+            try
+            {
+                var info = new System.Diagnostics.ProcessStartInfo(adb, "devices")
+                {
+                    UseShellExecute = false, RedirectStandardOutput = true, CreateNoWindow = true,
+                };
+                using (var process = System.Diagnostics.Process.Start(info))
+                {
+                    string output = process.StandardOutput.ReadToEnd();
+                    process.WaitForExit();
+
+                    var devices = new System.Collections.Generic.List<string>();
+                    foreach (var line in output.Split('\n'))
+                    {
+                        var parts = line.Trim().Split('\t');
+                        // "unauthorized" means the headset is plugged in but the Allow USB
+                        // Debugging prompt has not been accepted inside it -- a different
+                        // problem from not being plugged in, and worth saying so.
+                        if (parts.Length == 2 && parts[1].Trim() == "device") devices.Add(parts[0]);
+                        else if (parts.Length == 2 && parts[1].Trim() == "unauthorized")
+                            devices.Add(parts[0] + " (not authorised — put the headset on " +
+                                        "and accept Allow USB Debugging)");
+                    }
+                    return devices.ToArray();
+                }
+            }
+            catch (Exception)
+            {
+                return new string[0];
+            }
+        }
+
+        [MenuItem("Emotion Rooms/Build and put it on the headset", priority = 4)]
+        public static void BuildAndDeploy()
+        {
+            var devices = ConnectedDevices();
+            if (devices.Length == 0)
+            {
+                EditorUtility.DisplayDialog("No headset",
+                    "adb cannot see a headset, so there is nowhere to install to.\n\n" +
+                    "Check, in order:\n" +
+                    "  1. The cable carries data, not just power. A charging cable will\n" +
+                    "     not work and looks identical.\n" +
+                    "  2. Developer Mode is on for the headset. This is set by whoever\n" +
+                    "     owns the Meta account, in the Meta Horizon phone app.\n" +
+                    "  3. Put the headset on. Accept 'Allow USB Debugging'.\n\n" +
+                    "Without Developer Mode there is no way to install a build. The " +
+                    "browser version needs none of this.", "OK");
+                return;
+            }
+
+            EditorUserBuildSettings.SwitchActiveBuildTarget(
+                BuildTargetGroup.Android, BuildTarget.Android);
+            ConfigureForQuest();
+
+            string apk = Path.Combine(Path.GetTempPath(), "EmotionRooms.apk");
+            string scene = EditorSceneManagerScenePath();
+            if (scene == null)
+            {
+                EditorUtility.DisplayDialog("Save the scene first",
+                    "The open scene has never been saved.", "OK");
+                return;
+            }
+
+            var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
+            {
+                scenes = new[] { scene },
+                locationPathName = apk,
+                target = BuildTarget.Android,
+                options = BuildOptions.None,
+            });
+
+            if (report.summary.result != BuildResult.Succeeded)
+            {
+                Debug.LogError("Study build: APK build failed, nothing installed.");
+                return;
+            }
+
+            Install(apk);
+        }
+
+        static void Install(string apk)
+        {
+            string adb = AdbPath();
+            var info = new System.Diagnostics.ProcessStartInfo(adb, "install -r \"" + apk + "\"")
+            {
+                UseShellExecute = false, RedirectStandardOutput = true,
+                RedirectStandardError = true, CreateNoWindow = true,
+            };
+            using (var process = System.Diagnostics.Process.Start(info))
+            {
+                string output = process.StandardOutput.ReadToEnd() +
+                                process.StandardError.ReadToEnd();
+                process.WaitForExit();
+
+                if (output.Contains("Success"))
+                    Debug.Log("Study build: installed on the headset.\n" +
+                              "Put it on, then Library > Unknown Sources > Emotion Rooms.");
+                else
+                    Debug.LogError("Study build: adb install failed.\n" + output);
+            }
+        }
+
+        [MenuItem("Emotion Rooms/Advanced/Apply Quest Player Settings", priority = 113)]
+        static void ApplyQuestSettingsOnly() { ConfigureForQuest(); }
 
         static void Build(BuildTarget target, string label, string executable)
         {
