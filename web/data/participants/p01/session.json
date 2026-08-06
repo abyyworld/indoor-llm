@@ -1,0 +1,100 @@
+{
+  "rooms": [
+    {
+      "id": "tense_pilot_cur_curved",
+      "target_emotion": "tense",
+      "source": "handwritten",
+      "hue": 300,
+      "saturation": 0.4,
+      "brightness": 750,
+      "texture": "concrete",
+      "rationale": "Saturated purple-red, rough concrete, harsh bright light.",
+      "shape": "curved",
+      "roughness": "rough"
+    },
+    {
+      "id": "excited_pilot_lin_curved",
+      "target_emotion": "excited",
+      "source": "handwritten",
+      "hue": 30,
+      "saturation": 0.4,
+      "brightness": 750,
+      "texture": "plaster",
+      "rationale": "Warm orange at higher saturation under bright light.",
+      "shape": "curved",
+      "roughness": "smooth"
+    },
+    {
+      "id": "calm_pilot_cur_curved",
+      "target_emotion": "calm",
+      "source": "handwritten",
+      "hue": 270,
+      "saturation": 0.2,
+      "brightness": 300,
+      "texture": "plaster",
+      "rationale": "Cool violet-blue, low saturation, gentle light on smooth plaster.",
+      "shape": "curved",
+      "roughness": "smooth"
+    },
+    {
+      "id": "tense_pilot_cur_linear",
+      "target_emotion": "tense",
+      "source": "handwritten",
+      "hue": 300,
+      "saturation": 0.4,
+      "brightness": 750,
+      "texture": "concrete",
+      "rationale": "Saturated purple-red, rough concrete, harsh bright light.",
+      "shape": "linear",
+      "roughness": "rough"
+    },
+    {
+      "id": "excited_pilot_lin_linear",
+      "target_emotion": "excited",
+      "source": "handwritten",
+      "hue": 30,
+      "saturation": 0.4,
+      "brightness": 750,
+      "texture": "plaster",
+      "rationale": "Warm orange at higher saturation under bright light.",
+      "shape": "linear",
+      "roughness": "smooth"
+    },
+    {
+      "id": "depressed_pilot_lin_curved",
+      "target_emotion": "depressed",
+      "source": "handwritten",
+      "hue": 180,
+      "saturation": 0.2,
+      "brightness": 150,
+      "texture": "textile",
+      "rationale": "Desaturated cyan, very dim, rough absorbent textile.",
+      "shape": "curved",
+      "roughness": "rough"
+    },
+    {
+      "id": "calm_pilot_cur_linear",
+      "target_emotion": "calm",
+      "source": "handwritten",
+      "hue": 270,
+      "saturation": 0.2,
+      "brightness": 300,
+      "texture": "plaster",
+      "rationale": "Cool violet-blue, low saturation, gentle light on smooth plaster.",
+      "shape": "linear",
+      "roughness": "smooth"
+    },
+    {
+      "id": "depressed_pilot_lin_linear",
+      "target_emotion": "depressed",
+      "source": "handwritten",
+      "hue": 180,
+      "saturation": 0.2,
+      "brightness": 150,
+      "texture": "textile",
+      "rationale": "Desaturated cyan, very dim, rough absorbent textile.",
+      "shape": "linear",
+      "roughness": "rough"
+    }
+  ]
+}

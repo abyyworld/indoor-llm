@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Emotion Rooms</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { font: 17px/1.6 -apple-system, system-ui, sans-serif; max-width: 46rem;
+         margin: 0 auto; padding: 2rem 1.25rem 6rem; }
+  h1 { font-size: 1.6rem; margin: 0 0 .4rem; }
+  .intro { white-space: pre-wrap; opacity: .85; margin-bottom: 2rem; }
+  .q { margin: 0 0 1.9rem; padding-bottom: 1.4rem; border-bottom: 1px solid #8884; }
+  .t { font-weight: 600; margin-bottom: .15rem; }
+  .help { opacity: .7; font-size: .92rem; margin-bottom: .6rem; }
+  .opts { display: flex; flex-wrap: wrap; gap: .45rem; }
+  label.opt { border: 1px solid #8886; border-radius: .5rem; padding: .45rem .85rem;
+              cursor: pointer; user-select: none; }
+  label.opt:has(input:checked) { border-color: #3b82f6; background: #3b82f622;
+                                 font-weight: 600; }
+  .ends { display: flex; justify-content: space-between; font-size: .85rem;
+          opacity: .7; margin-top: .3rem; }
+  textarea, input[type=text] { width: 100%; font: inherit; padding: .6rem;
+          border-radius: .5rem; border: 1px solid #8886; background: transparent;
+          color: inherit; }
+  textarea { min-height: 5.5rem; }
+  .bar { position: fixed; left: 0; right: 0; bottom: 0; padding: .9rem 1.25rem;
+         background: Canvas; border-top: 1px solid #8884; text-align: center; }
+  button { font: inherit; font-weight: 600; padding: .65rem 2rem; border-radius: .5rem;
+           border: 0; background: #3b82f6; color: #fff; cursor: pointer; }
+  .cite { font-size: .8rem; opacity: .55; margin-top: 2rem; }
+</style>
+</head>
+<body>
+<div id="page">Loading…</div>
+<script type="module">
+const params = new URLSearchParams(location.search);
+const formId = params.get('id');
+const participant = params.get('participant') || 'unknown';
+const escape = s => String(s ?? '').replace(/[&<>"']/g,
+  c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+const data = await fetch('data/questionnaires.json').then(r => r.json());
+const form = data.forms.find(f => f.id === formId);
+
+if (!form) {
+  document.getElementById('page').textContent = 'No form called ' + formId;
+} else {
+  let html = `<h1>${escape(form.title)}</h1>`;
+  if (form.instruction) html += `<div class="intro">${escape(form.instruction)}</div>`;
+  html += '<form id="f">';
+
+  for (const item of form.items) {
+    html += '<div class="q">';
+    if (item.text) html += `<div class="t">${escape(item.text)}</div>`;
+    if (item.help) html += `<div class="help">${escape(item.help)}</div>`;
+
+    if (item.type === 'choice') {
+      html += '<div class="opts">';
+      for (const o of item.options)
+        html += `<label class="opt"><input type="radio" name="${escape(item.id)}" value="${escape(o)}"> ${escape(o)}</label>`;
+      html += '</div>';
+    } else if (item.type === 'scale') {
+      html += '<div class="opts">';
+      for (let v = item.min; v <= item.max; v += (item.step || 1))
+        html += `<label class="opt"><input type="radio" name="${escape(item.id)}" value="${v}"> ${v}</label>`;
+      html += `</div><div class="ends"><span>${escape(item.min_label)}</span><span>${escape(item.max_label)}</span></div>`;
+    } else if (item.type === 'paragraph') {
+      html += `<textarea name="${escape(item.id)}"></textarea>`;
+    } else {
+      html += `<input type="text" name="${escape(item.id)}">`;
+    }
+    html += '</div>';
+  }
+
+  if (form.citation) html += `<div class="cite">${escape(form.citation)}</div>`;
+  // Nothing is required. A participant declining to answer is data; a form that will not
+  // submit until it is full produces compliance, not answers.
+  html += '<div class="bar"><button type="submit">Submit</button></div></form>';
+  document.getElementById('page').innerHTML = html;
+
+  document.getElementById('f').addEventListener('submit', async e => {
+    e.preventDefault();
+    const answers = {};
+    for (const item of form.items) {
+      const field = e.target.elements[item.id];
+      answers[item.id] = field ? (field.value ?? '') : '';
+    }
+    await fetch('/form-submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ participant, form: form.id, answers,
+                             items: form.items.map(i => i.id) }),
+    });
+    document.getElementById('page').innerHTML =
+      '<h1>Thank you</h1><div class="intro">Your answers have been saved. ' +
+      'Please let the researcher know you have finished.</div>';
+  });
+}
+</script>
+</body>
+</html>

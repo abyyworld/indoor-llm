@@ -42,6 +42,8 @@ INCLUDE=(
   sync-to-mine.sh
   demo.sh
   test-participant.sh
+  serve-study.py
+  web
 
   demo-plan.md
 )

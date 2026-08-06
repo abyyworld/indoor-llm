@@ -1,0 +1,28 @@
+{
+  "rooms": [
+    {
+      "id": "practice_linear",
+      "target_emotion": "practice",
+      "source": "practice",
+      "hue": 60,
+      "saturation": 0.2,
+      "brightness": 300.0,
+      "texture": "plaster",
+      "roughness": "smooth",
+      "shape": "linear",
+      "rationale": "Practice room. Not a study stimulus."
+    },
+    {
+      "id": "practice_curved",
+      "target_emotion": "practice",
+      "source": "practice",
+      "hue": 90,
+      "saturation": 0.2,
+      "brightness": 500.0,
+      "texture": "textile",
+      "roughness": "rough",
+      "shape": "curved",
+      "rationale": "Practice room. Not a study stimulus."
+    }
+  ]
+}

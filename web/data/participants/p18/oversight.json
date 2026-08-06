@@ -1,0 +1,247 @@
+{
+  "participant": "p18",
+  "seed": 57,
+  "phase": "B",
+  "conditions": [
+    "faithful",
+    "swapped",
+    "rationale_mismatched"
+  ],
+  "per_condition": 3,
+  "trials": [
+    {
+      "condition": "rationale_mismatched",
+      "target_emotion_shown": "tense",
+      "stimulus": {
+        "id": "tense_pilot_cur",
+        "target_emotion": "tense",
+        "source": "handwritten",
+        "shape": "curved",
+        "hue": 300,
+        "saturation": 0.4,
+        "brightness": 750,
+        "texture": "concrete",
+        "roughness": "rough",
+        "rationale": "Saturated purple-red, rough concrete, harsh bright light."
+      },
+      "rationale_shown": "Desaturated cyan, very dim, rough absorbent textile.",
+      "ground_truth": {
+        "swapped_field": null,
+        "original_value": null,
+        "swapped_in_value": null,
+        "donor_emotion": "depressed",
+        "rationale_is_wrong": true
+      },
+      "trial_index": 1,
+      "trial_id": "p18_b001"
+    },
+    {
+      "condition": "faithful",
+      "target_emotion_shown": "depressed",
+      "stimulus": {
+        "id": "depressed_pilot_lin",
+        "target_emotion": "depressed",
+        "source": "handwritten",
+        "shape": "linear",
+        "hue": 180,
+        "saturation": 0.2,
+        "brightness": 150,
+        "texture": "textile",
+        "roughness": "rough",
+        "rationale": "Desaturated cyan, very dim, rough absorbent textile."
+      },
+      "rationale_shown": "Desaturated cyan, very dim, rough absorbent textile.",
+      "ground_truth": {
+        "swapped_field": null,
+        "original_value": null,
+        "swapped_in_value": null,
+        "donor_emotion": null,
+        "rationale_is_wrong": false
+      },
+      "trial_index": 2,
+      "trial_id": "p18_b002"
+    },
+    {
+      "condition": "swapped",
+      "target_emotion_shown": "depressed",
+      "stimulus": {
+        "id": "depressed_pilot_lin",
+        "target_emotion": "depressed",
+        "source": "handwritten",
+        "shape": "linear",
+        "hue": 180,
+        "saturation": 0.2,
+        "brightness": 150,
+        "texture": "textile",
+        "roughness": "smooth",
+        "rationale": "Desaturated cyan, very dim, rough absorbent textile."
+      },
+      "rationale_shown": "Desaturated cyan, very dim, rough absorbent textile.",
+      "ground_truth": {
+        "swapped_field": "roughness",
+        "original_value": "rough",
+        "swapped_in_value": "smooth",
+        "donor_emotion": "calm",
+        "rationale_is_wrong": false
+      },
+      "trial_index": 3,
+      "trial_id": "p18_b003"
+    },
+    {
+      "condition": "swapped",
+      "target_emotion_shown": "calm",
+      "stimulus": {
+        "id": "calm_pilot_cur",
+        "target_emotion": "calm",
+        "source": "handwritten",
+        "shape": "curved",
+        "hue": 270,
+        "saturation": 0.2,
+        "brightness": 300,
+        "texture": "plaster",
+        "roughness": "rough",
+        "rationale": "Cool violet-blue, low saturation, gentle light on smooth plaster."
+      },
+      "rationale_shown": "Cool violet-blue, low saturation, gentle light on smooth plaster.",
+      "ground_truth": {
+        "swapped_field": "roughness",
+        "original_value": "smooth",
+        "swapped_in_value": "rough",
+        "donor_emotion": "depressed",
+        "rationale_is_wrong": false
+      },
+      "trial_index": 4,
+      "trial_id": "p18_b004"
+    },
+    {
+      "condition": "rationale_mismatched",
+      "target_emotion_shown": "calm",
+      "stimulus": {
+        "id": "calm_pilot_lin",
+        "target_emotion": "calm",
+        "source": "handwritten",
+        "shape": "linear",
+        "hue": 240,
+        "saturation": 0.2,
+        "brightness": 150,
+        "texture": "plaster",
+        "roughness": "smooth",
+        "rationale": "Cool blue at low saturation, soft residential light, smooth plaster."
+      },
+      "rationale_shown": "Saturated purple-red, rough concrete, harsh bright light.",
+      "ground_truth": {
+        "swapped_field": null,
+        "original_value": null,
+        "swapped_in_value": null,
+        "donor_emotion": "tense",
+        "rationale_is_wrong": true
+      },
+      "trial_index": 5,
+      "trial_id": "p18_b005"
+    },
+    {
+      "condition": "faithful",
+      "target_emotion_shown": "calm",
+      "stimulus": {
+        "id": "calm_pilot_cur",
+        "target_emotion": "calm",
+        "source": "handwritten",
+        "shape": "curved",
+        "hue": 270,
+        "saturation": 0.2,
+        "brightness": 300,
+        "texture": "plaster",
+        "roughness": "smooth",
+        "rationale": "Cool violet-blue, low saturation, gentle light on smooth plaster."
+      },
+      "rationale_shown": "Cool violet-blue, low saturation, gentle light on smooth plaster.",
+      "ground_truth": {
+        "swapped_field": null,
+        "original_value": null,
+        "swapped_in_value": null,
+        "donor_emotion": null,
+        "rationale_is_wrong": false
+      },
+      "trial_index": 6,
+      "trial_id": "p18_b006"
+    },
+    {
+      "condition": "swapped",
+      "target_emotion_shown": "tense",
+      "stimulus": {
+        "id": "tense_pilot_lin",
+        "target_emotion": "tense",
+        "source": "handwritten",
+        "shape": "linear",
+        "hue": 0,
+        "saturation": 0.4,
+        "brightness": 750,
+        "texture": "concrete",
+        "roughness": "rough",
+        "rationale": "Saturated red on rough concrete at hard mid-high light."
+      },
+      "rationale_shown": "Saturated red on rough concrete at hard mid-high light.",
+      "ground_truth": {
+        "swapped_field": "brightness",
+        "original_value": 500,
+        "swapped_in_value": 750,
+        "donor_emotion": "excited",
+        "rationale_is_wrong": false
+      },
+      "trial_index": 7,
+      "trial_id": "p18_b007"
+    },
+    {
+      "condition": "rationale_mismatched",
+      "target_emotion_shown": "excited",
+      "stimulus": {
+        "id": "excited_pilot_cur",
+        "target_emotion": "excited",
+        "source": "handwritten",
+        "shape": "curved",
+        "hue": 60,
+        "saturation": 0.4,
+        "brightness": 750,
+        "texture": "textile",
+        "roughness": "smooth",
+        "rationale": "Warm yellow, saturated, bright, soft smooth textile."
+      },
+      "rationale_shown": "Cool violet-blue, low saturation, gentle light on smooth plaster.",
+      "ground_truth": {
+        "swapped_field": null,
+        "original_value": null,
+        "swapped_in_value": null,
+        "donor_emotion": "calm",
+        "rationale_is_wrong": true
+      },
+      "trial_index": 8,
+      "trial_id": "p18_b008"
+    },
+    {
+      "condition": "faithful",
+      "target_emotion_shown": "excited",
+      "stimulus": {
+        "id": "excited_pilot_cur",
+        "target_emotion": "excited",
+        "source": "handwritten",
+        "shape": "curved",
+        "hue": 60,
+        "saturation": 0.4,
+        "brightness": 750,
+        "texture": "textile",
+        "roughness": "smooth",
+        "rationale": "Warm yellow, saturated, bright, soft smooth textile."
+      },
+      "rationale_shown": "Warm yellow, saturated, bright, soft smooth textile.",
+      "ground_truth": {
+        "swapped_field": null,
+        "original_value": null,
+        "swapped_in_value": null,
+        "donor_emotion": null,
+        "rationale_is_wrong": false
+      },
+      "trial_index": 9,
+      "trial_id": "p18_b009"
+    }
+  ]
+}

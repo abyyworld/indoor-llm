@@ -23,3 +23,8 @@ unity/*.sln
 # Raw asset-pack download. The five models actually used are committed under
 # unity/Assets/Furniture/Models; this 20 MB folder is not needed to run the study.
 kenney_furniture-kit/
+
+# Generated at runtime by serve-study.py
+runs/web-data/
+runs/study-cert.pem
+runs/study-key.pem
