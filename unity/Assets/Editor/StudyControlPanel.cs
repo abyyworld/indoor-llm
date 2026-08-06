@@ -180,38 +180,42 @@ namespace EmotionRooms.EditorTools
 
         void DrawHeadset()
         {
-            Section("Headset", "Only needed for real participants. Piloting works on the " +
-                               "laptop with a mouse.");
+            Section("Headset", "Only for real participants. Piloting works on the laptop " +
+                               "with a mouse.");
 
-            bool packagesIn = Directory.Exists(Path.Combine(
-                Directory.GetParent(Application.dataPath).FullName, "Library/PackageCache"))
-                && File.ReadAllText(Path.Combine(
-                    Directory.GetParent(Application.dataPath).FullName,
-                    "Packages/manifest.json")).Contains("com.unity.xr.openxr");
+            bool desktop = XRSetup.IsConfigured(BuildTargetGroup.Standalone);
+            bool quest = XRSetup.IsConfigured(BuildTargetGroup.Android);
 
-            Row(packagesIn, packagesIn
-                ? "OpenXR package requested"
-                : "OpenXR not in the manifest");
+            Row(desktop, desktop
+                ? "OpenXR on for desktop (Quest Link, and Mengkai's Windows build)"
+                : "OpenXR not enabled for desktop");
+            Row(quest, quest
+                ? "OpenXR on for Android (standalone Quest app)"
+                : "OpenXR not enabled for Android");
 
-            EditorGUILayout.LabelField(
-                "Tracking and the trigger come from Unity's built-in XR module, so there " +
-                "is nothing to wire. The one step that cannot be scripted is turning the " +
-                "OpenXR loader on:", EditorStyles.wordWrappedMiniLabel);
-            EditorGUILayout.LabelField(
-                "   1.  Project Settings > XR Plug-in Management\n" +
-                "   2.  Tick OpenXR, on the platform tab you will run\n" +
-                "   3.  Under OpenXR, add the interaction profile for your controllers\n" +
-                "        (Oculus Touch for a Quest)",
-                EditorStyles.wordWrappedMiniLabel);
-
-            if (GUILayout.Button("Open XR settings"))
-                pending = () => SettingsService.OpenProjectSettings("Project/XR Plug-in Management");
+            if (!desktop || !quest)
+            {
+                if (GUILayout.Button("Set up XR on this machine", GUILayout.Height(26f)))
+                    pending = XRSetup.Run;
+                EditorGUILayout.LabelField(
+                    "Enables the OpenXR loader and the Quest controller profile. If any " +
+                    "part cannot be done automatically the console says which click " +
+                    "replaces it.", EditorStyles.wordWrappedMiniLabel);
+            }
 
             if (Application.isPlaying)
             {
                 bool live = XRRig.IsHeadsetRunning();
-                Row(live, live ? "Headset detected and tracking"
-                               : "No headset — pointer falls back to the mouse");
+                Row(live, live
+                    ? "Headset tracking — the controller drives the pointer"
+                    : "No headset detected — the mouse drives the pointer");
+            }
+            else
+            {
+                EditorGUILayout.LabelField(
+                    "Plug the Quest in, open the Link app on it, then press Play. This " +
+                    "line will say whether it is tracking.",
+                    EditorStyles.wordWrappedMiniLabel);
             }
 
             EndSection();

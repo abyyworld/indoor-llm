@@ -23,17 +23,25 @@ no interaction toolkit to learn. `XRRig` adds head and controller tracking at ru
 is inert when no headset is connected, so the same scene runs on a laptop with a mouse --
 which is what piloting should use.
 
-One step cannot be scripted, and has to be done once per machine:
+Setup is one button: **Set up XR on this machine**, in the control panel's Headset
+section. It enables the OpenXR loader for desktop and Android and turns on the Quest
+controller profile. If any part of that cannot be done automatically it says which manual
+click replaces it, rather than failing quietly:
 
 ```
 Project Settings > XR Plug-in Management
   tick OpenXR on the platform tab you will run
-  under OpenXR, add the interaction profile for your controllers
-    (Oculus Touch Controller Profile for a Quest)
+  under OpenXR, add Oculus Touch Controller Profile
 ```
 
-The control panel has a button that opens that page, and tells you whether a headset is
-actually tracking once you press Play.
+**Use Quest Link, not a standalone APK.** Link keeps the app on the laptop, which is
+where the researcher panel and the questionnaire pages need to be. A standalone APK is
+available under `Emotion Rooms > Build for the Quest`, but the forms are served over
+localhost and reaching them from inside the headset is awkward.
+
+Plug the Quest in, open the Link app on the headset, then press Play. The panel says
+whether it is tracking; if it is not, the pointer stays on the mouse and the session
+still runs.
 
 **The camera keeps its researcher-set standing position.** Tracking is applied relative
 to an anchor rather than by moving the camera in world space, so a participant's height

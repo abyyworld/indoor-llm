@@ -28,6 +28,29 @@ namespace EmotionRooms.EditorTools
             Build(BuildTarget.StandaloneOSX, "Mac", "EmotionRooms.app");
         }
 
+        [MenuItem("Emotion Rooms/Build for the Quest (standalone APK)", priority = 5)]
+        public static void BuildQuest()
+        {
+            // A standalone APK runs on the headset with no PC, which is the better
+            // arrangement for a study run in a room without a desk. It costs the
+            // researcher panel, though: the forms are served over localhost and a Quest
+            // has no browser the researcher can reach easily, so the questionnaires have
+            // to be filled on a laptop pointed at the headset's address, or on paper.
+            //
+            // Quest Link is the simpler path and the one the runbook recommends.
+            if (!EditorUtility.DisplayDialog("Standalone Quest build",
+                "This runs on the headset with no PC attached.\n\n" +
+                "The catch: the questionnaires are served from the app, and reaching them " +
+                "from the headset is awkward. Quest Link keeps everything on the laptop " +
+                "and is what the runbook recommends.\n\nBuild the APK anyway?",
+                "Build APK", "Cancel"))
+                return;
+
+            EditorUserBuildSettings.SwitchActiveBuildTarget(
+                BuildTargetGroup.Android, BuildTarget.Android);
+            Build(BuildTarget.Android, "Android", "EmotionRooms.apk");
+        }
+
         static void Build(BuildTarget target, string label, string executable)
         {
             if (!BuildPipeline.IsBuildTargetSupported(BuildTargetGroup.Standalone, target))
