@@ -78,8 +78,11 @@ never written to disk.
 - `build-participants` pre-builds the whole sample into StreamingAssets;
   `Emotion Rooms > Build for Windows` produces an app needing no Unity, Python or repo.
   In a build, F9 shows the same panel.
-- XR uses the built-in module only, no Interaction Toolkit and no Input System. The one
-  manual step is ticking the OpenXR loader in Project Settings, once per machine.
+- XR uses the built-in module only, no Interaction Toolkit and no Input System. One
+  button in the panel sets up the OpenXR loader per machine.
+- **Sessions run on Windows.** Quest Link has no Mac build, and sideloading an APK needs
+  Developer Mode, which belongs to the headset's owner. The Mac is for development and
+  mouse piloting; VR sessions need the Windows machine.
 - The combined per-participant CSV is written by the app itself at every end point.
 [unity/RUNBOOK.md](unity/RUNBOOK.md) is the procedure.
 

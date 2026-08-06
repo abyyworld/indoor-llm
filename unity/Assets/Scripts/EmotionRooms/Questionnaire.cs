@@ -280,6 +280,12 @@ namespace EmotionRooms
                       form.items.Length + " answered).");
         }
 
+        /// <summary>How many forms loaded. Zero means the file never arrived.</summary>
+        public int FormCount
+        {
+            get { return set == null || set.forms == null ? 0 : set.forms.Length; }
+        }
+
         public FormState StateOf(string formId)
         {
             FormState state;

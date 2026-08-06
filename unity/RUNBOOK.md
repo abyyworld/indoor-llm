@@ -18,15 +18,32 @@ Two parts below: a one-time project setup, then the per-participant routine.
 
 ## Running it on a headset
 
-Tracking and the trigger use Unity's built-in XR module, so there is nothing to wire and
-no interaction toolkit to learn. `XRRig` adds head and controller tracking at runtime and
-is inert when no headset is connected, so the same scene runs on a laptop with a mouse --
-which is what piloting should use.
+**Sessions run on Windows.** Not a preference: Meta Quest Link is Windows-only, there is
+no Mac build of it, and the alternative -- sideloading a standalone APK -- needs Developer
+Mode on the headset, which is tied to the Meta account that owns it. On a borrowed headset
+neither is available from a Mac.
 
-Setup is one button: **Set up XR on this machine**, in the control panel's Headset
-section. It enables the OpenXR loader for desktop and Android and turns on the Quest
-controller profile. If any part of that cannot be done automatically it says which manual
-click replaces it, rather than failing quietly:
+So the division is:
+
+| Machine | What it is for |
+|---|---|
+| Mac | Development, and piloting with the mouse. Everything except VR works. |
+| Windows PC + Quest | Every real session. |
+
+That is not a limitation of this software; a Mac cannot drive a Quest as a tethered
+headset at all.
+
+If you only have a Mac, the options are, in order of how well they work: use the Windows
+machine the study already has access to; borrow one for session days; or ask the headset's
+owner to enable Developer Mode, which is reversible and costs them nothing, and sideload
+the APK under `Emotion Rooms > Build for the Quest`.
+
+### XR setup, on whichever machine runs sessions
+
+One button: **Set up XR on this machine**, in the control panel's Headset section. It
+enables the OpenXR loader for desktop and Android and turns on the Quest controller
+profile. Anything it cannot do automatically it reports, with the manual click that
+replaces it:
 
 ```
 Project Settings > XR Plug-in Management
@@ -34,18 +51,13 @@ Project Settings > XR Plug-in Management
   under OpenXR, add Oculus Touch Controller Profile
 ```
 
-**Use Quest Link, not a standalone APK.** Link keeps the app on the laptop, which is
-where the researcher panel and the questionnaire pages need to be. A standalone APK is
-available under `Emotion Rooms > Build for the Quest`, but the forms are served over
-localhost and reaching them from inside the headset is awkward.
+**The camera keeps its researcher-set standing position.** Tracking is applied relative to
+an anchor rather than by moving the camera in world space, so a participant's height and
+posture never change where the study says they are standing, and the matched sightlines
+between the two shapes survive.
 
-Plug the Quest in, open the Link app on the headset, then press Play. The panel says
-whether it is tracking; if it is not, the pointer stays on the mouse and the session
-still runs.
-
-**The camera keeps its researcher-set standing position.** Tracking is applied relative
-to an anchor rather than by moving the camera in world space, so a participant's height
-and posture never change where the study says they are standing.
+With no headset connected the pointer falls back to the mouse and the session still runs,
+which is what makes desk piloting possible.
 
 ## Running it on someone else's machine
 
@@ -56,8 +68,9 @@ python3 -m pipeline.cli build-participants --count 30
 python3 -m pipeline.cli emit-questionnaires
 ```
 
-Then **Emotion Rooms > Build for Windows (for Mengkai)**. Send the whole output folder,
-not just the .exe.
+Then **Emotion Rooms > Build for Windows**. Send the whole output folder, not just the
+.exe. A `READ ME FIRST.txt` is written into it with the full procedure, so the person
+running sessions does not depend on a chat message they will have lost by then.
 
 In the build, **F9** shows the same panel: pick a participant, open the forms, Begin. The
 stimuli for all 30 participants travel inside the app, and the counterbalancing comes from
@@ -65,6 +78,9 @@ the participant number, so participant 7 gets the same trial order whoever runs 
 
 Their data lands in their own app data folder as `bundles/pNN_all.csv`, which is the one
 file to send back.
+
+Section 0 of the in-app panel is a preflight: participants loaded, questionnaires loaded,
+form server up, data folder writable, headset tracking. All green before anyone sits down.
 
 Two things to warn them about:
 

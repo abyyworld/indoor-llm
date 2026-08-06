@@ -40,9 +40,13 @@ namespace EmotionRooms.EditorTools
             // Quest Link is the simpler path and the one the runbook recommends.
             if (!EditorUtility.DisplayDialog("Standalone Quest build",
                 "This runs on the headset with no PC attached.\n\n" +
-                "The catch: the questionnaires are served from the app, and reaching them " +
-                "from the headset is awkward. Quest Link keeps everything on the laptop " +
-                "and is what the runbook recommends.\n\nBuild the APK anyway?",
+                "Installing it needs DEVELOPER MODE on the headset, which is tied to the " +
+                "Meta account that owns it. On a borrowed headset you cannot enable that " +
+                "yourself -- the owner has to.\n\n" +
+                "The questionnaires are also served from the app, so they have to be " +
+                "answered from a laptop pointed at the headset's address on the same " +
+                "Wi-Fi.\n\nQuest Link on a Windows PC avoids both problems.\n\n" +
+                "Build the APK anyway?",
                 "Build APK", "Cancel"))
                 return;
 
@@ -107,8 +111,10 @@ namespace EmotionRooms.EditorTools
 
             if (summary.result == BuildResult.Succeeded)
             {
+                WriteReadme(folder, executable);
                 Debug.Log(string.Format(
-                    "Study build: {0} build succeeded, {1:0.0} MB, at\n  {2}",
+                    "Study build: {0} build succeeded, {1:0.0} MB, at\n  {2}\n" +
+                    "Send the whole folder. READ ME FIRST.txt is inside it.",
                     label, summary.totalSize / (1024f * 1024f), options.locationPathName));
                 EditorUtility.RevealInFinder(options.locationPathName);
             }
@@ -116,6 +122,67 @@ namespace EmotionRooms.EditorTools
             {
                 Debug.LogError("Study build: " + label + " build " + summary.result +
                                " with " + summary.totalErrors + " error(s). See above.");
+            }
+        }
+
+        /// <summary>
+        /// Instructions in the folder, for the person who did not build it.
+        ///
+        /// A build handed over with the procedure living in a chat message is a build
+        /// that gets run wrong once and then trusted. This travels with it.
+        /// </summary>
+        static void WriteReadme(string folder, string executable)
+        {
+            string text =
+"EMOTION ROOMS -- running a session\n" +
+"==================================\n\n" +
+"You need: this folder, a Meta Quest, and a Windows PC. No Unity, no Python,\n" +
+"nothing to install except Quest Link.\n\n" +
+"ONE-TIME SETUP\n" +
+"--------------\n" +
+"1. Install Meta Quest Link from meta.com/quest/setup and sign in.\n" +
+"2. Plug the Quest in with its cable. Put it on, and accept 'Enable Quest Link'.\n" +
+"   The headset should show a flat desktop-style room, not the normal Quest home.\n\n" +
+"RUNNING ONE PARTICIPANT\n" +
+"-----------------------\n" +
+"1. Start " + executable + ". If Windows Firewall asks, allow it on PRIVATE networks.\n" +
+"   That is the questionnaire page; nothing leaves this computer.\n" +
+"2. Press F9 to show the control panel. Check section 0 is all green before\n" +
+"   anyone sits down.\n" +
+"3. Pick the participant number you have been allocated. Never reuse one --\n" +
+"   a repeat writes two people into one file and neither can be separated later.\n" +
+"4. Headset OFF. Open the four 'before' forms from the panel; they open in your\n" +
+"   browser. Let the participant fill them in themselves.\n" +
+"5. Fit the headset. Press Begin. About 27 minutes: two practice rooms, eight\n" +
+"   real ones, then a review block. You do nothing during this.\n" +
+"6. Headset off. Open the 'after' forms. The debrief is the last one and\n" +
+"   explains the study -- do not skip it.\n" +
+"7. Press 'Save and finish'. Note on paper anything the panel still lists as\n" +
+"   outstanding.\n\n" +
+"IF THE PARTICIPANT WANTS TO STOP\n" +
+"--------------------------------\n" +
+"Close the app, or they hold F12 for 1.5 seconds. Everything recorded so far is\n" +
+"kept and marked as a withdrawal. Stopping midway costs nothing and is always\n" +
+"the right call if someone feels unwell.\n\n" +
+"THE DATA\n" +
+"--------\n" +
+"One file per participant, written automatically:\n\n" +
+"  %USERPROFILE%\\AppData\\LocalLow\\DefaultCompany\\unity\\bundles\\pNN_all.csv\n\n" +
+"Paste that path into Explorer. Send that file back. It contains every rating,\n" +
+"every questionnaire answer, every event and 20 Hz head tracking.\n\n" +
+"IF SOMETHING IS WRONG\n" +
+"---------------------\n" +
+"Section 0 of the panel names it. 'No headset' means Quest Link is not running:\n" +
+"put the headset on and accept the Link prompt. Everything else there means the\n" +
+"build is incomplete -- do not run a participant, ask for a new build.\n";
+
+            try
+            {
+                File.WriteAllText(Path.Combine(folder, "READ ME FIRST.txt"), text);
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning("Study build: could not write the readme. " + e.Message);
             }
         }
 

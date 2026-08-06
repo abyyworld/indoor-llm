@@ -75,6 +75,7 @@ namespace EmotionRooms
             GUILayout.Label("F9 hides this. The participant should not see it.", Fine());
             GUILayout.Space(8f);
 
+            DrawPreflight();
             DrawParticipant();
             DrawForms("Before the headset goes on", "before");
             DrawRun();
@@ -83,6 +84,71 @@ namespace EmotionRooms
 
             GUILayout.EndScrollView();
             GUILayout.EndArea();
+        }
+
+        /// <summary>
+        /// Everything that has to be true before a participant sits down, checked here
+        /// rather than discovered during a session.
+        ///
+        /// This is the only screen the person running the study can see, and they may not
+        /// be the person who built the app. A missing headset or an empty pack folder has
+        /// to be visible in the ten seconds before someone arrives, not inferred from a
+        /// room that never appears.
+        /// </summary>
+        void DrawPreflight()
+        {
+            GUILayout.Label("0. Before anyone sits down", Sub());
+
+            bool packs = participants.Count > 0;
+            bool forms = questionnaires != null && questionnaires.FormCount > 0;
+            bool serving = server != null && server.IsRunning;
+            bool headset = XRRig.IsHeadsetRunning();
+            bool writable = CanWriteData();
+
+            Check(packs, packs ? participants.Count + " participants loaded"
+                               : "NO participant rooms in this build");
+            Check(forms, forms ? "questionnaires loaded" : "NO questionnaires in this build");
+            Check(serving, serving ? "forms reachable at " + server.Root
+                                   : "form server not running");
+            Check(writable, writable ? "data folder writable" : "CANNOT WRITE DATA");
+            Check(headset, headset
+                ? "headset tracking"
+                : "no headset — the mouse works, but this is not a VR session");
+
+            if (!headset)
+                GUILayout.Label("If a headset should be connected: check it is plugged in, " +
+                                "worn, and that Quest Link is running on it.", Fine());
+
+            GUILayout.Space(10f);
+        }
+
+        static bool CanWriteData()
+        {
+            try
+            {
+                string probe = System.IO.Path.Combine(Application.persistentDataPath, ".probe");
+                System.IO.File.WriteAllText(probe, "ok");
+                System.IO.File.Delete(probe);
+                return true;
+            }
+            catch (System.Exception)
+            {
+                return false;
+            }
+        }
+
+        void Check(bool good, string text)
+        {
+            GUILayout.BeginHorizontal();
+            var style = new GUIStyle(GUI.skin.label)
+            {
+                fontStyle = FontStyle.Bold,
+                normal = { textColor = good ? new Color(0.35f, 0.8f, 0.45f)
+                                            : new Color(0.95f, 0.65f, 0.25f) },
+            };
+            GUILayout.Label(good ? "OK" : "!!", style, GUILayout.Width(24f));
+            GUILayout.Label(text, Fine());
+            GUILayout.EndHorizontal();
         }
 
         void DrawParticipant()
