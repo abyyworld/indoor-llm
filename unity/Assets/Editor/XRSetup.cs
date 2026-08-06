@@ -197,6 +197,85 @@ namespace EmotionRooms.EditorTools
             return info == null ? null : info.GetValue(target);
         }
 
+        /// <summary>
+        /// The OpenXR runtime actually in use, or "" if none.
+        ///
+        /// Worth reporting because a display subsystem being "running" does not mean a
+        /// headset is on someone's face. macOS has no OpenXR runtime, so Unity falls back
+        /// to a mock one that reports as tracking and renders an empty preview -- which
+        /// looks exactly like a headset that is connected but showing nothing.
+        /// </summary>
+        public static string RuntimeName()
+        {
+            try
+            {
+                var type = FindType("UnityEngine.XR.OpenXR.OpenXRRuntime");
+                if (type == null) return "";
+                var name = type.GetProperty("name",
+                    BindingFlags.Public | BindingFlags.Static);
+                return name == null ? "" : (name.GetValue(null) as string) ?? "";
+            }
+            catch (Exception)
+            {
+                return "";
+            }
+        }
+
+        /// <summary>False for the mock and the simulator, which are not a headset.</summary>
+        public static bool IsRealRuntime(string runtime)
+        {
+            if (string.IsNullOrEmpty(runtime)) return false;
+            string lower = runtime.ToLowerInvariant();
+            return !lower.Contains("mock") && !lower.Contains("simulator") &&
+                   !lower.Contains("unity");
+        }
+
+        /// <summary>
+        /// Take OpenXR off the desktop target.
+        ///
+        /// On a Mac it can only ever load a mock runtime, and having it enabled means
+        /// pressing Play opens an empty preview window that looks like a broken study.
+        /// The Android setting is left alone: that is what a Quest build needs.
+        /// </summary>
+        [MenuItem("Emotion Rooms/Advanced/Turn OpenXR off for desktop", priority = 114)]
+        public static void DisableDesktop()
+        {
+            try
+            {
+                UnityEngine.Object existing;
+                if (!EditorBuildSettings.TryGetConfigObject(SettingsKey, out existing) ||
+                    existing == null)
+                    return;
+
+                var settings = Invoke(existing, "SettingsForBuildTarget",
+                                      BuildTargetGroup.Standalone);
+                if (settings == null) return;
+
+                var manager = GetProperty(settings, "Manager");
+                if (manager == null) return;
+
+                var store = FindType("UnityEditor.XR.Management.Metadata.XRPackageMetadataStore");
+                var remove = store?.GetMethods(BindingFlags.Public | BindingFlags.Static)
+                    .FirstOrDefault(m => m.Name == "RemoveLoader" && m.GetParameters().Length == 3);
+                if (remove == null)
+                {
+                    Debug.LogWarning("Could not remove the loader automatically. Untick " +
+                                     "OpenXR under Project Settings > XR Plug-in " +
+                                     "Management, on the desktop tab.");
+                    return;
+                }
+
+                remove.Invoke(null, new[] { manager, LoaderType, (object)BuildTargetGroup.Standalone });
+                AssetDatabase.SaveAssets();
+                Debug.Log("OpenXR is off for desktop. Play mode will no longer open a mock " +
+                          "headset window. Android is untouched, so a Quest build still works.");
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning("Could not turn OpenXR off for desktop: " + e.Message);
+            }
+        }
+
         /// <summary>True when the OpenXR loader is assigned for this platform.</summary>
         public static bool IsConfigured(BuildTargetGroup group)
         {

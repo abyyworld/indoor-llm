@@ -43,14 +43,39 @@ namespace EmotionRooms.EditorTools
             repoPath = EditorPrefs.GetString(RepoKey, GuessRepoPath());
         }
 
+        // Cached probes.
+        //
+        // The panel was calling adb, reading the manifest and walking the XR settings on
+        // every repaint, and OnInspectorUpdate repaints ten times a second in play mode.
+        // Spawning a process per frame is what made the window lag. None of these answers
+        // change faster than a person can act on them, so they are refreshed on a timer.
+        double probedAt;
+        string[] cachedDevices = new string[0];
+        bool cachedDesktopXR, cachedAndroidXR;
+        string cachedRuntime = "";
+
+        void Probe(bool force = false)
+        {
+            if (!force && EditorApplication.timeSinceStartup - probedAt < 3.0) return;
+            probedAt = EditorApplication.timeSinceStartup;
+
+            cachedDevices = StudyBuild.ConnectedDevices();
+            cachedDesktopXR = XRSetup.IsConfigured(BuildTargetGroup.Standalone);
+            cachedAndroidXR = XRSetup.IsConfigured(BuildTargetGroup.Android);
+            cachedRuntime = XRSetup.RuntimeName();
+        }
+
         void OnInspectorUpdate()
         {
-            // The panel reports live session state, which changes without a mouse event.
+            // Once a second, not ten times. The only thing that needs to be live is
+            // whether a session is running, and a second is fast enough to act on.
             if (Application.isPlaying) Repaint();
         }
 
         void OnGUI()
         {
+            Probe();
+
             var bootstrap = UnityEngine.Object.FindFirstObjectByType<StudyBootstrap>();
             var forms = UnityEngine.Object.FindFirstObjectByType<QuestionnaireRunner>();
 
@@ -194,8 +219,8 @@ namespace EmotionRooms.EditorTools
             Section("Headset", "Only for real participants. Piloting works on the laptop " +
                                "with a mouse.");
 
-            bool desktop = XRSetup.IsConfigured(BuildTargetGroup.Standalone);
-            bool quest = XRSetup.IsConfigured(BuildTargetGroup.Android);
+            bool desktop = cachedDesktopXR;
+            bool quest = cachedAndroidXR;
 
             Row(desktop, desktop
                 ? "OpenXR on for desktop (Quest Link, and Mengkai's Windows build)"
@@ -214,7 +239,7 @@ namespace EmotionRooms.EditorTools
                     "replaces it.", EditorStyles.wordWrappedMiniLabel);
             }
 
-            var devices = StudyBuild.ConnectedDevices();
+            var devices = cachedDevices;
             Row(devices.Length > 0, devices.Length > 0
                 ? "Headset visible over USB: " + string.Join(", ", devices)
                 : "adb cannot see a headset over USB");
@@ -237,9 +262,27 @@ namespace EmotionRooms.EditorTools
             if (Application.isPlaying)
             {
                 bool live = XRRig.IsHeadsetRunning();
-                Row(live, live
-                    ? "Headset tracking — the controller drives the pointer"
-                    : "No headset detected — the mouse drives the pointer");
+                bool real = live && XRSetup.IsRealRuntime(cachedRuntime);
+
+                Row(real, !live ? "No XR running — the mouse drives the pointer"
+                         : real ? "Headset tracking (" + cachedRuntime + ")"
+                                : "A MOCK runtime is running, not a headset" +
+                                  (string.IsNullOrEmpty(cachedRuntime) ? "" : " (" + cachedRuntime + ")"));
+
+                if (live && !real)
+                    EditorGUILayout.HelpBox(
+                        "This is not your Quest. macOS has no OpenXR runtime, so Unity " +
+                        "falls back to a mock one: it reports as tracking and renders an " +
+                        "empty preview window, which is what you are seeing.\n\n" +
+                        "Turn OpenXR off for desktop on this machine — it cannot drive a " +
+                        "headset here — and use the browser route below.",
+                        MessageType.Warning);
+            }
+
+            if (desktop && Application.platform == RuntimePlatform.OSXEditor)
+            {
+                if (GUILayout.Button("Turn OpenXR off for desktop (it does nothing on a Mac)"))
+                    Later(() => { XRSetup.DisableDesktop(); Probe(true); });
             }
             else
             {
@@ -264,7 +307,15 @@ namespace EmotionRooms.EditorTools
 
             EditorGUILayout.BeginHorizontal();
             if (GUILayout.Button(up ? "Stop server" : "Start server", GUILayout.Height(26f)))
-                Later(() => { if (up) WebServer.Stop(); else WebServer.Start(repoPath); });
+                Later(() =>
+                {
+                    if (up) { WebServer.Stop(); return; }
+                    // Fall back to the guessed repo rather than refusing over a field
+                    // nobody was told to fill in.
+                    string path = Directory.Exists(repoPath) ? repoPath : GuessRepoPath();
+                    if (!Directory.Exists(repoPath)) { repoPath = path; EditorPrefs.SetString(RepoKey, path); }
+                    WebServer.Start(path);
+                });
 
             using (new EditorGUI.DisabledScope(!up))
             {
