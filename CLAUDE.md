@@ -70,8 +70,17 @@ never written to disk.
 
 ## Status
 
-**The study runs end to end.** `Emotion Rooms > Study Control Panel` (Cmd-Shift-E) is
-the whole researcher interface: five steps from building the scene to bundling the logs.
+**The study runs end to end, on a headset, and on a second researcher's machine.**
+`Emotion Rooms > Study Control Panel` (Cmd-Shift-E) is the whole researcher interface.
+
+- Questionnaires are browser pages served by the app over localhost. Nothing is
+  answered while wearing a headset, and nothing blocks a session.
+- `build-participants` pre-builds the whole sample into StreamingAssets;
+  `Emotion Rooms > Build for Windows` produces an app needing no Unity, Python or repo.
+  In a build, F9 shows the same panel.
+- XR uses the built-in module only, no Interaction Toolkit and no Input System. The one
+  manual step is ticking the OpenXR loader in Project Settings, once per machine.
+- The combined per-participant CSV is written by the app itself at every end point.
 [unity/RUNBOOK.md](unity/RUNBOOK.md) is the procedure.
 
 Built and tested: pools, schemas, validator, generation with reject-and-re-ask, the
