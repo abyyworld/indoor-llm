@@ -1158,6 +1158,52 @@ class TestParticipantBundle(unittest.TestCase):
         for column in ("source", "trial_index", "valence", "event", "lux", "t_session"):
             self.assertIn(column, header)
 
+    def test_questionnaire_rows_are_scored_into_the_summary(self):
+        import tempfile
+        from pathlib import Path
+
+        from pipeline.bundle import collect, summarise
+
+        with tempfile.TemporaryDirectory() as name:
+            tmp = Path(name)
+            self._fixture(tmp)
+            self._write(tmp, "questionnaire_responses.csv",
+                        ["participant", "form", "item", "answer", "state"],
+                        [["p01", "nasa_tlx", "mental_demand", 60, "Completed"],
+                         ["p01", "nasa_tlx", "effort", 40, "Completed"],
+                         ["p01", "awareness", "noticed_colour", "Yes", "Completed"],
+                         ["p01", "awareness", "noticed_shape", "Yes", "Completed"],
+                         ["p01", "preference", "shape_preference",
+                          "The curved rooms", "Completed"],
+                         ["p01", "baseline_mood", "valence", 7, "Completed"]])
+            report = summarise(collect(tmp, "p01"), "p01")
+
+        scores = report["scores"]
+        self.assertAlmostEqual(scores["nasa_tlx"]["raw_tlx"], 50.0)
+        self.assertEqual(scores["awareness"]["noticed_count"], 2)
+        self.assertTrue(scores["preference"]["prefers_curved"])
+        self.assertEqual(scores["baseline_mood"]["baseline_valence"], 7.0)
+
+    def test_ssq_change_needs_both_administrations(self):
+        # A post-exposure score on its own cannot separate sickness the study caused
+        # from a headache someone arrived with, so the change is only reported when
+        # there is a baseline to change from.
+        import tempfile
+        from pathlib import Path
+
+        from pipeline.bundle import collect, summarise
+
+        with tempfile.TemporaryDirectory() as name:
+            tmp = Path(name)
+            self._fixture(tmp)
+            self._write(tmp, "questionnaire_responses.csv",
+                        ["participant", "form", "item", "answer", "state"],
+                        [["p01", "ssq_after", "nausea", "Severe", "Completed"]])
+            report = summarise(collect(tmp, "p01"), "p01")
+
+        self.assertIn("ssq_after", report["scores"])
+        self.assertNotIn("ssq_change", report["scores"])
+
     def test_a_withdrawn_session_is_flagged_not_silently_partial(self):
         import tempfile
         from pathlib import Path

@@ -559,6 +559,64 @@ def passed_attention_check(answers: dict[str, str]) -> bool | None:
     return answers[item] == expected
 
 
+def score_baseline_mood(answers: dict[str, str]) -> dict[str, float]:
+    """Starting valence and arousal on 1-9, on the same axes as the affect grid.
+
+    Same scale on purpose: it makes "did they start where they ended up" a subtraction
+    rather than a modelling decision.
+    """
+    out: dict[str, float] = {}
+    for key in ("valence", "arousal"):
+        if answers.get(key):
+            try:
+                out["baseline_" + key] = float(answers[key])
+            except ValueError:
+                pass
+    return out
+
+
+def score_awareness(answers: dict[str, str]) -> dict[str, Any]:
+    """How much of the manipulation the participant worked out.
+
+    `noticed_count` is the headline: 0 means the manipulation was invisible to them, 4
+    means they saw all of it. Reported per participant rather than aggregated away,
+    because the interesting analysis is whether ratings differ between the people who
+    noticed and the people who did not -- and if they do not, that is the strongest
+    single answer to a demand-characteristics objection.
+    """
+    checks = ("noticed_colour", "noticed_brightness", "noticed_material", "noticed_shape")
+    noticed = {c: answers.get(c, "") for c in checks}
+    out: dict[str, Any] = dict(noticed)
+    out["noticed_count"] = sum(1 for c in checks if noticed[c] == "Yes")
+    out["noticed_any"] = out["noticed_count"] > 0
+
+    if answers.get("tried_to_please"):
+        try:
+            out["demand_pressure"] = float(answers["tried_to_please"])
+        except ValueError:
+            pass
+
+    # Free text is kept verbatim. Coding it is a human judgement and belongs in the
+    # write-up, not in a scoring function that would quietly decide what counts as
+    # "guessed the hypothesis".
+    out["guessed_purpose"] = answers.get("guessed_purpose", "")
+    out["noticed_varying"] = answers.get("noticed_varying", "")
+    return out
+
+
+def score_preference(answers: dict[str, str]) -> dict[str, Any]:
+    """Which shape they liked, separately from how it made them feel."""
+    choice = answers.get("shape_preference", "")
+    return {
+        "shape_preference": choice,
+        # Coded so a preference-vs-affect comparison is a join rather than a lookup.
+        "prefers_curved": choice == "The curved rooms",
+        "prefers_linear": choice == "The square rooms",
+        "shape_reason": answers.get("shape_reason", ""),
+        "attention_check_passed": passed_attention_check(answers),
+    }
+
+
 def score_presence(answers: dict[str, int]) -> dict[str, float]:
     """IPQ subscale means on 1-7, reverse-keyed items flipped."""
     sums: dict[str, list[float]] = {}

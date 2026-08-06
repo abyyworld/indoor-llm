@@ -131,6 +131,10 @@ namespace EmotionRooms.EditorTools
             PersistMaterials(rooms);
             PersistMaterials(root);
 
+            var stamp = root.AddComponent<StudySceneStamp>();
+            stamp.version = StudySceneStamp.Current;
+            stamp.note = "form server, self-positioning grid, saved materials";
+
             Undo.RegisterCreatedObjectUndo(root, "Set Up Study Scene");
             Selection.activeGameObject = root;
             EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());

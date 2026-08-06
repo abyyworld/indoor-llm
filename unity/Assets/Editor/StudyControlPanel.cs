@@ -130,8 +130,20 @@ namespace EmotionRooms.EditorTools
         {
             Section("Setup", "Once per machine, and again after any code change.");
 
+            var stamp = UnityEngine.Object.FindFirstObjectByType<StudySceneStamp>();
             bool sceneBuilt = bootstrap != null;
-            Row(sceneBuilt, sceneBuilt ? "Scene built" : "Scene not built yet");
+            bool current = sceneBuilt && stamp != null && stamp.IsCurrent;
+
+            Row(current, !sceneBuilt ? "Scene not built yet"
+                       : current ? "Scene built and up to date"
+                                 : "Scene is OUT OF DATE");
+
+            if (sceneBuilt && !current)
+                EditorGUILayout.HelpBox(
+                    "This scene was built by an older version of the setup code, so it is " +
+                    "missing pieces the study now needs — that is why forms and buttons " +
+                    "are not appearing.\n\nRebuild it. Nothing is lost: the rooms, grid " +
+                    "and wiring are all generated.", MessageType.Error);
 
             using (new EditorGUI.DisabledScope(Application.isPlaying))
             {
@@ -220,9 +232,20 @@ namespace EmotionRooms.EditorTools
             }
             else
             {
-                using (new EditorGUI.DisabledScope(bootstrap == null || running))
+                var stamp = UnityEngine.Object.FindFirstObjectByType<StudySceneStamp>();
+                bool stale = stamp == null || !stamp.IsCurrent;
+                bool noId = string.IsNullOrEmpty(participant);
+
+                if (stale)
+                    EditorGUILayout.HelpBox(
+                        "Rebuild the scene first — it is out of date and the session will " +
+                        "not behave.", MessageType.Error);
+
+                using (new EditorGUI.DisabledScope(bootstrap == null || running || stale || noId))
                 {
-                    if (GUILayout.Button(running ? "Running…" : "Begin " + participant,
+                    if (GUILayout.Button(running ? "Running…" :
+                                         noId ? "Type a participant id first" :
+                                         stale ? "Scene out of date" : "Begin " + participant,
                                          GUILayout.Height(30f)))
                         pending = () =>
                         {
@@ -420,9 +443,19 @@ namespace EmotionRooms.EditorTools
             }
 
             int index = IndexOf(participant);
+            if (string.IsNullOrEmpty(participant))
+            {
+                EditorUtility.DisplayDialog("Emotion Rooms",
+                    "Type a participant id first.", "OK");
+                return;
+            }
+
             if (!RunShell(string.Format("./test-participant.sh {0} {1} {2}",
                                         participant, 40 + index, index)))
                 return;
+
+            Debug.Log("Study Control: " + participant + " is ready. Rooms, review block " +
+                      "and warm-up written to the data folder.");
 
             if (bootstrap != null)
             {

@@ -299,6 +299,23 @@ def cmd_bundle_participant(args: argparse.Namespace) -> int:
         print(f"  questionnaires: {len(report['forms'])} returned")
     if report["incomplete_forms"]:
         print("  NOT COMPLETED: " + ", ".join(report["incomplete_forms"]))
+
+    scores = report.get("scores") or {}
+    if scores.get("ssq_change"):
+        print(f"  SSQ total change: {scores['ssq_change'].get('total', 0):+.1f}")
+    if scores.get("nasa_tlx"):
+        print(f"  raw NASA-TLX:     {scores['nasa_tlx'].get('raw_tlx', 0):.1f}")
+    if scores.get("trust"):
+        print(f"  trust (1-7):      {scores['trust'].get('trust_mean', 0):.2f}")
+    if scores.get("presence"):
+        print(f"  presence (1-7):   {scores['presence'].get('presence_mean', 0):.2f}")
+    if scores.get("awareness"):
+        aware = scores["awareness"]
+        print(f"  noticed {aware.get('noticed_count', 0)} of 4 manipulated variables")
+    if scores.get("preference"):
+        check = scores["preference"].get("attention_check_passed")
+        if check is False:
+            print("  ATTENTION CHECK FAILED -- decide whether to keep this participant")
     if report["withdrew"]:
         print("  WITHDREW -- partial session, decide whether to keep it")
     if not report["complete"]:

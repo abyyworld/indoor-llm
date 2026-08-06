@@ -144,6 +144,10 @@ def summarise(rows: list[dict[str, str]], participant: str) -> dict[str, Any]:
         if name:
             forms[name] = row.get("state", "")
     incomplete_forms = sorted(k for k, v in forms.items() if v != "Completed")
+
+    # Score the questionnaires into the summary, so the derived numbers a write-up
+    # actually uses sit next to the raw rows rather than being recomputed by hand.
+    scored = _score_questionnaires(rows)
     return {
         "participant": participant,
         "rows": len(rows),
@@ -154,10 +158,70 @@ def summarise(rows: list[dict[str, str]], participant: str) -> dict[str, Any]:
         "review_trials": counts.get("review", 0),
         "forms": forms,
         "incomplete_forms": incomplete_forms,
+        "scores": scored,
         # Stated rather than inferred. A bundle whose completeness has to be guessed at
         # is one somebody will guess wrong about.
         "complete": consented and not withdrew and counts.get("trial", 0) >= 8,
     }
+
+
+def _score_questionnaires(rows: list[dict[str, str]]) -> dict[str, Any]:
+    """Run each instrument's published scoring over whatever came back."""
+    from . import instruments
+
+    by_form: dict[str, dict[str, str]] = {}
+    for row in rows:
+        if row.get("source") != "questionnaire":
+            continue
+        form, item, answer = row.get("form"), row.get("item"), row.get("answer", "")
+        if form and item:
+            by_form.setdefault(form, {})[item] = answer
+
+    def numeric(form: str, mapping: dict[str, int] | None = None) -> dict[str, int]:
+        out: dict[str, int] = {}
+        for key, value in by_form.get(form, {}).items():
+            if not value:
+                continue
+            if mapping is not None:
+                if value in mapping:
+                    out[key] = mapping[value]
+                continue
+            try:
+                out[key] = int(float(value))
+            except ValueError:
+                pass
+        return out
+
+    severity = {"None": 0, "Slight": 1, "Moderate": 2, "Severe": 3}
+    scored: dict[str, Any] = {}
+
+    for form, label in (("ssq_before", "ssq_before"), ("ssq_after", "ssq_after")):
+        if form in by_form:
+            scored[label] = instruments.score_ssq(numeric(form, severity))
+
+    # Change over the session is the number that matters for a safety report: an
+    # absolute post-exposure score cannot tell a headache the study caused from one
+    # somebody walked in with.
+    if "ssq_before" in scored and "ssq_after" in scored:
+        scored["ssq_change"] = {
+            key: scored["ssq_after"][key] - scored["ssq_before"][key]
+            for key in scored["ssq_after"]
+        }
+
+    if "nasa_tlx" in by_form:
+        scored["nasa_tlx"] = instruments.score_tlx(numeric("nasa_tlx"))
+    if "trust" in by_form:
+        scored["trust"] = instruments.score_trust(numeric("trust"))
+    if "presence" in by_form:
+        scored["presence"] = instruments.score_presence(numeric("presence"))
+    if "baseline_mood" in by_form:
+        scored["baseline_mood"] = instruments.score_baseline_mood(by_form["baseline_mood"])
+    if "awareness" in by_form:
+        scored["awareness"] = instruments.score_awareness(by_form["awareness"])
+    if "preference" in by_form:
+        scored["preference"] = instruments.score_preference(by_form["preference"])
+
+    return scored
 
 
 def bundle(data_dir: Path, participant: str, out_dir: Path) -> dict[str, Any]:
