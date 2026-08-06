@@ -104,7 +104,7 @@ namespace EmotionRooms
         [Tooltip("Read the session from persistentDataPath instead of the asset above. " +
                  "This is the sideloading path, so a mis-generated session is a file " +
                  "swap rather than a rebuild.")]
-        public string sessionFileName = "";
+        public string sessionFileName = "session.json";
 
         [Tooltip("Run only the warm-up rooms and stop. Piloting mode: nothing is scored " +
                  "and no review block runs, so the kit can be exercised without burning " +
@@ -229,10 +229,10 @@ namespace EmotionRooms
             practice = null;
             if (!string.IsNullOrEmpty(practiceFileName))
             {
-                string practicePath = Path.Combine(Application.persistentDataPath, practiceFileName);
-                if (File.Exists(practicePath))
+                string practiceJson = ParticipantPacks.Read(participantId, practiceFileName);
+                if (practiceJson != null)
                 {
-                    practice = RoomBatch.FromJson(File.ReadAllText(practicePath));
+                    practice = RoomBatch.FromJson(practiceJson);
                     if (practice != null && practice.rooms != null)
                     {
                         foreach (var room in practice.rooms)
@@ -426,9 +426,10 @@ namespace EmotionRooms
         {
             if (!string.IsNullOrEmpty(sessionFileName))
             {
-                string path = Path.Combine(Application.persistentDataPath, sessionFileName);
-                if (File.Exists(path)) return File.ReadAllText(path);
-                Debug.LogWarning("TrialRunner: no session at " + path);
+                string json = ParticipantPacks.Read(participantId, sessionFileName);
+                if (json != null) return json;
+                Debug.LogWarning("TrialRunner: no " + sessionFileName + " for " +
+                                 participantId + " in the data folder or the shipped packs.");
             }
             return sessionAsset != null ? sessionAsset.text : null;
         }

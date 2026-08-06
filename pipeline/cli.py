@@ -7,6 +7,7 @@ Commands, in the order design-spec.md section 8 says to use them:
     pools              show the frozen pools and the design space size
     validate           gate a config, batch or session file
     build-practice     practice rooms shown before the real trials
+    build-participants pre-build every participant's stimuli into the app
     bundle-participant join one participant's files into a single record
     emit-questionnaires write the in-app questionnaires for Unity
     emit-unity-pools   regenerate unity/PoolConstants.cs from pools.py
@@ -277,6 +278,87 @@ def _practice_rooms() -> list[dict]:
             "rationale": "Practice room. Not a study stimulus.",
         },
     ]
+
+
+def cmd_build_participants(args: argparse.Namespace) -> int:
+    """Pre-build every participant's stimuli into the app.
+
+    So a session can be run by someone with no copy of this repo, no Python and no
+    Unity: a standalone build carries the rooms for the whole sample and the researcher
+    picks a participant number. Generating stimuli on the machine that runs the session
+    was fine while that was also the machine holding the pipeline, and stops being fine
+    the moment a second person collects data.
+
+    Counterbalancing still comes from the participant index, so participant 7 gets the
+    same trial order whoever runs them and on whichever machine.
+    """
+    import json
+    import shutil
+    from pathlib import Path
+
+    from .oversight import OversightError, build_oversight_block
+    from .session import build_session
+
+    rooms = _rooms_of(_load(args.batch))
+    practice = _practice_rooms()
+
+    out = Path(args.out)
+    if out.exists():
+        shutil.rmtree(out)
+    out.mkdir(parents=True)
+
+    built = []
+    for i in range(args.count):
+        participant = f"p{i + 1:02d}"
+        folder = out / participant
+        folder.mkdir()
+
+        try:
+            session = build_session(
+                rooms,
+                participant=participant,
+                seed=args.seed + i,
+                participant_index=i,
+            )
+            block = build_oversight_block(
+                rooms, participant=participant, seed=args.seed + i, per_condition=3
+            )
+        except (ValueError, OversightError) as exc:
+            print(f"error building {participant}: {exc}", file=sys.stderr)
+            return 1
+
+        trials = [
+            {**trial, "id": trial.get("trial_id", trial.get("id"))}
+            for trial in session.trials
+        ]
+        exported = [unity_config(room) for room in trials]
+
+        accepted, rejected = validate_batch(exported)
+        if rejected:
+            print(f"error: {participant} produced invalid rooms", file=sys.stderr)
+            for room, violations in rejected:
+                print(f"  {room.get('id', '<no id>')}", file=sys.stderr)
+                print(format_violations(violations), file=sys.stderr)
+            return 1
+
+        (folder / "session.json").write_text(
+            json.dumps({"rooms": exported}, indent=2) + "\n", encoding="utf-8"
+        )
+        (folder / "oversight.json").write_text(
+            json.dumps(block, indent=2) + "\n", encoding="utf-8"
+        )
+        (folder / "practice.json").write_text(
+            json.dumps({"rooms": practice}, indent=2) + "\n", encoding="utf-8"
+        )
+        built.append(participant)
+
+    (out / "index.json").write_text(
+        json.dumps({"participants": built}, indent=2) + "\n", encoding="utf-8"
+    )
+    print(f"wrote {len(built)} participants to {out}")
+    print("  each folder holds session.json, oversight.json and practice.json")
+    print("  these ship inside the built app, so no Python is needed to run a session")
+    return 0
 
 
 def cmd_bundle_participant(args: argparse.Namespace) -> int:
@@ -587,6 +669,16 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument("--out", default="runs/practice.json")
     p.set_defaults(func=cmd_build_practice)
+
+    p = sub.add_parser(
+        "build-participants",
+        help="pre-build N participants' stimuli into the Unity app itself",
+    )
+    p.add_argument("--batch", default="configs/pilot_8cell.json")
+    p.add_argument("--count", type=int, default=30)
+    p.add_argument("--seed", type=int, default=40)
+    p.add_argument("--out", default="unity/Assets/StreamingAssets/participants")
+    p.set_defaults(func=cmd_build_participants)
 
     p = sub.add_parser(
         "bundle-participant",

@@ -131,6 +131,16 @@ namespace EmotionRooms.EditorTools
             PersistMaterials(rooms);
             PersistMaterials(root);
 
+            var runtimePanel = root.AddComponent<RuntimeControlPanel>();
+            runtimePanel.bootstrap = bootstrap;
+            runtimePanel.trialRunner = runner;
+            runtimePanel.review = review;
+            runtimePanel.questionnaires = forms;
+            runtimePanel.server = server;
+            // Off in the editor, where the docked panel is better; on in a build, which
+            // is the only interface a second researcher has.
+            runtimePanel.visibleOnStart = !Application.isEditor;
+
             var stamp = root.AddComponent<StudySceneStamp>();
             stamp.version = StudySceneStamp.Current;
             stamp.note = "form server, self-positioning grid, saved materials";

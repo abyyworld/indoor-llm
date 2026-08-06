@@ -507,9 +507,10 @@ namespace EmotionRooms
         {
             if (!string.IsNullOrEmpty(blockFileName))
             {
-                string path = Path.Combine(Application.persistentDataPath, blockFileName);
-                if (File.Exists(path)) return File.ReadAllText(path);
-                Debug.LogWarning("OversightReview: no block at " + path);
+                string json = ParticipantPacks.Read(participantId, blockFileName);
+                if (json != null) return json;
+                Debug.LogWarning("OversightReview: no " + blockFileName + " for " +
+                                 participantId + " in the data folder or the shipped packs.");
             }
             return blockAsset != null ? blockAsset.text : null;
         }

@@ -1,0 +1,100 @@
+{
+  "rooms": [
+    {
+      "id": "depressed_pilot_cur_linear",
+      "target_emotion": "depressed",
+      "source": "handwritten",
+      "hue": 120,
+      "saturation": 0.2,
+      "brightness": 300,
+      "texture": "concrete",
+      "rationale": "Desaturated green, low light, rough cold concrete.",
+      "shape": "linear",
+      "roughness": "rough"
+    },
+    {
+      "id": "calm_pilot_lin_linear",
+      "target_emotion": "calm",
+      "source": "handwritten",
+      "hue": 240,
+      "saturation": 0.2,
+      "brightness": 150,
+      "texture": "plaster",
+      "rationale": "Cool blue at low saturation, soft residential light, smooth plaster.",
+      "shape": "linear",
+      "roughness": "smooth"
+    },
+    {
+      "id": "excited_pilot_cur_linear",
+      "target_emotion": "excited",
+      "source": "handwritten",
+      "hue": 60,
+      "saturation": 0.4,
+      "brightness": 750,
+      "texture": "textile",
+      "rationale": "Warm yellow, saturated, bright, soft smooth textile.",
+      "shape": "linear",
+      "roughness": "smooth"
+    },
+    {
+      "id": "calm_pilot_lin_curved",
+      "target_emotion": "calm",
+      "source": "handwritten",
+      "hue": 240,
+      "saturation": 0.2,
+      "brightness": 150,
+      "texture": "plaster",
+      "rationale": "Cool blue at low saturation, soft residential light, smooth plaster.",
+      "shape": "curved",
+      "roughness": "smooth"
+    },
+    {
+      "id": "excited_pilot_cur_curved",
+      "target_emotion": "excited",
+      "source": "handwritten",
+      "hue": 60,
+      "saturation": 0.4,
+      "brightness": 750,
+      "texture": "textile",
+      "rationale": "Warm yellow, saturated, bright, soft smooth textile.",
+      "shape": "curved",
+      "roughness": "smooth"
+    },
+    {
+      "id": "tense_pilot_lin_curved",
+      "target_emotion": "tense",
+      "source": "handwritten",
+      "hue": 0,
+      "saturation": 0.4,
+      "brightness": 500,
+      "texture": "concrete",
+      "rationale": "Saturated red on rough concrete at hard mid-high light.",
+      "shape": "curved",
+      "roughness": "rough"
+    },
+    {
+      "id": "depressed_pilot_cur_curved",
+      "target_emotion": "depressed",
+      "source": "handwritten",
+      "hue": 120,
+      "saturation": 0.2,
+      "brightness": 300,
+      "texture": "concrete",
+      "rationale": "Desaturated green, low light, rough cold concrete.",
+      "shape": "curved",
+      "roughness": "rough"
+    },
+    {
+      "id": "tense_pilot_lin_linear",
+      "target_emotion": "tense",
+      "source": "handwritten",
+      "hue": 0,
+      "saturation": 0.4,
+      "brightness": 500,
+      "texture": "concrete",
+      "rationale": "Saturated red on rough concrete at hard mid-high light.",
+      "shape": "linear",
+      "roughness": "rough"
+    }
+  ]
+}
