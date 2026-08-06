@@ -26,14 +26,9 @@ namespace EmotionRooms
         /// <summary>Participant ids the app ships stimuli for.</summary>
         public static List<string> Available()
         {
-            var ids = new List<string>();
-            if (!Directory.Exists(ShippedRoot)) return ids;
-
-            foreach (var dir in Directory.GetDirectories(ShippedRoot))
-            {
-                string id = Path.GetFileName(dir);
-                if (File.Exists(Path.Combine(dir, "session.json"))) ids.Add(id);
-            }
+            // From the loaded index rather than a directory listing: StreamingAssets
+            // cannot be enumerated inside an APK.
+            var ids = new List<string>(ShippedAssets.Participants);
             ids.Sort(string.CompareOrdinal);
             return ids;
         }
@@ -45,25 +40,21 @@ namespace EmotionRooms
         /// participant expects to be running that, and silently preferring the shipped
         /// copy would hand them a session they thought they had replaced.
         /// </summary>
-        public static string Find(string participant, string fileName)
-        {
-            string loose = Path.Combine(Application.persistentDataPath, fileName);
-            if (File.Exists(loose)) return loose;
-
-            if (string.IsNullOrEmpty(participant)) return null;
-            string shipped = Path.Combine(ShippedRoot, participant, fileName);
-            return File.Exists(shipped) ? shipped : null;
-        }
-
         public static string Read(string participant, string fileName)
         {
-            string path = Find(participant, fileName);
-            return path == null ? null : File.ReadAllText(path);
+            // The loose file in the data folder wins. Someone who has just regenerated
+            // one participant expects to be running that, and silently preferring the
+            // shipped copy would hand them a session they thought they had replaced.
+            string loose = Path.Combine(Application.persistentDataPath, fileName);
+            if (File.Exists(loose)) return File.ReadAllText(loose);
+
+            if (string.IsNullOrEmpty(participant)) return null;
+            return ShippedAssets.Get("participants/" + participant + "/" + fileName);
         }
 
         public static bool Has(string participant)
         {
-            return Find(participant, "session.json") != null;
+            return Read(participant, "session.json") != null;
         }
     }
 }

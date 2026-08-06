@@ -22,6 +22,8 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Net;
+using System.Net.NetworkInformation;
+using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using UnityEngine;
@@ -35,10 +37,29 @@ namespace EmotionRooms
 
         public QuestionnaireRunner questionnaires;
 
+        /// <summary>Address for a browser on this machine.</summary>
         public string Root { get { return "http://localhost:" + port + "/"; } }
-        public bool IsRunning { get { return listener != null && listener.IsListening; } }
 
-        HttpListener listener;
+        /// <summary>
+        /// Address for a browser on another machine on the same network.
+        ///
+        /// Needed for the standalone headset build: the app is running on the Quest, and
+        /// the questionnaires have to be filled on the researcher's laptop. A server bound
+        /// to localhost would be reachable only from inside the headset, which is the one
+        /// place these must not be answered.
+        /// </summary>
+        public string NetworkRoot
+        {
+            get
+            {
+                string ip = LocalAddress();
+                return ip == null ? Root : "http://" + ip + ":" + port + "/";
+            }
+        }
+
+        public bool IsRunning { get { return listener != null; } }
+
+        TcpListener listener;
         Thread thread;
         volatile bool stopping;
 
@@ -61,21 +82,28 @@ namespace EmotionRooms
             if (IsRunning) return;
             try
             {
-                listener = new HttpListener();
-                listener.Prefixes.Add(Root);
+                // A raw TcpListener rather than HttpListener. HttpListener is unreliable
+                // on Android and IL2CPP, which is exactly the standalone headset build,
+                // and the protocol needed here is small enough to write out: read a
+                // request line, read headers, read a body, write a response.
+                //
+                // Bound to Any, not loopback, so the researcher's laptop can reach a
+                // server running on the headset.
+                listener = new TcpListener(IPAddress.Any, port);
                 listener.Start();
 
                 stopping = false;
                 thread = new Thread(Serve) { IsBackground = true };
                 thread.Start();
 
-                Debug.Log("FormServer: questionnaires available at " + Root);
+                Debug.Log("FormServer: questionnaires at " + Root +
+                          (NetworkRoot != Root ? "  (from another machine: " + NetworkRoot + ")" : ""));
             }
             catch (Exception e)
             {
-                Debug.LogError("FormServer: could not start on " + Root + ". " + e.Message +
-                               "\nAnother copy of the study may still be running. Change " +
-                               "the port on the FormServer component if so.");
+                Debug.LogError("FormServer: could not listen on port " + port + ". " +
+                               e.Message + "\nAnother copy of the study may still be " +
+                               "running. Change the port on the FormServer component if so.");
                 listener = null;
             }
         }
@@ -85,7 +113,7 @@ namespace EmotionRooms
             stopping = true;
             if (listener != null)
             {
-                try { listener.Stop(); listener.Close(); } catch (Exception) { }
+                try { listener.Stop(); } catch (Exception) { }
                 listener = null;
             }
             thread = null;
@@ -93,38 +121,70 @@ namespace EmotionRooms
 
         void Serve()
         {
-            while (!stopping && listener != null && listener.IsListening)
+            while (!stopping && listener != null)
             {
-                HttpListenerContext context;
-                try { context = listener.GetContext(); }
+                TcpClient client;
+                try { client = listener.AcceptTcpClient(); }
                 catch (Exception) { return; }   // Stop() closing the listener lands here.
 
-                try { Handle(context); }
-                catch (Exception e)
-                {
-                    Debug.LogError("FormServer: " + e.Message);
-                    try { context.Response.Abort(); } catch (Exception) { }
-                }
+                try { using (client) Handle(client); }
+                catch (Exception e) { Debug.LogWarning("FormServer: " + e.Message); }
             }
         }
 
-        void Handle(HttpListenerContext context)
+        void Handle(TcpClient client)
         {
-            string path = context.Request.Url.AbsolutePath;
+            var stream = client.GetStream();
+            client.ReceiveTimeout = 5000;
 
-            if (context.Request.HttpMethod == "POST" && path == "/submit")
+            string requestLine = ReadLine(stream);
+            if (string.IsNullOrEmpty(requestLine)) return;
+
+            var parts = requestLine.Split(' ');
+            if (parts.Length < 2) return;
+            string method = parts[0];
+            string target = parts[1];
+
+            int contentLength = 0;
+            for (string header = ReadLine(stream); !string.IsNullOrEmpty(header);
+                 header = ReadLine(stream))
             {
-                string body;
-                using (var reader = new StreamReader(context.Request.InputStream,
-                                                     context.Request.ContentEncoding))
-                    body = reader.ReadToEnd();
+                if (header.StartsWith("Content-Length:", StringComparison.OrdinalIgnoreCase))
+                    int.TryParse(header.Substring(15).Trim(), out contentLength);
+            }
 
+            string body = "";
+            if (contentLength > 0)
+            {
+                var buffer = new byte[contentLength];
+                int got = 0;
+                while (got < contentLength)
+                {
+                    int read = stream.Read(buffer, got, contentLength - got);
+                    if (read <= 0) break;
+                    got += read;
+                }
+                body = Encoding.UTF8.GetString(buffer, 0, got);
+            }
+
+            string path = target;
+            string query = "";
+            int mark = target.IndexOf('?');
+            if (mark >= 0) { path = target.Substring(0, mark); query = target.Substring(mark + 1); }
+
+            Write(stream, Route(method, path, query, body));
+        }
+
+        string Route(string method, string path, string query, string body)
+        {
+            if (method == "POST" && path == "/submit")
+            {
                 var fields = ParseForm(body);
                 string formId;
                 fields.TryGetValue("__form", out formId);
 
-                // File writing and state changes happen on the main thread, so the
-                // questionnaire state cannot be read half-updated by the panel.
+                // State changes and file writes happen on the main thread, so the panel
+                // can never read a half-updated questionnaire.
                 var done = new ManualResetEvent(false);
                 lock (mainThread)
                 {
@@ -135,31 +195,65 @@ namespace EmotionRooms
                     });
                 }
                 done.WaitOne(5000);
-
-                Respond(context, ThanksPage(formId), "text/html");
-                return;
+                return ThanksPage(formId);
             }
 
             if (path == "/form")
             {
-                string id = context.Request.QueryString["id"];
+                var values = ParseForm(query);
+                string id;
+                values.TryGetValue("id", out id);
                 var form = questionnaires != null ? questionnaires.Find(id) : null;
-                if (form == null) { Respond(context, NotFound(id), "text/html", 404); return; }
-                Respond(context, FormPage(form), "text/html");
-                return;
+                return form == null ? NotFound(id) : FormPage(form);
             }
 
-            Respond(context, IndexPage(), "text/html");
+            return IndexPage();
         }
 
-        static void Respond(HttpListenerContext context, string html, string type, int code = 200)
+        static string ReadLine(NetworkStream stream)
         {
-            var bytes = Encoding.UTF8.GetBytes(html);
-            context.Response.StatusCode = code;
-            context.Response.ContentType = type + "; charset=utf-8";
-            context.Response.ContentLength64 = bytes.Length;
-            context.Response.OutputStream.Write(bytes, 0, bytes.Length);
-            context.Response.OutputStream.Close();
+            var line = new StringBuilder();
+            int b;
+            while ((b = stream.ReadByte()) != -1)
+            {
+                if (b == '\n') break;
+                if (b != '\r') line.Append((char)b);
+            }
+            return line.ToString();
+        }
+
+        static void Write(NetworkStream stream, string html)
+        {
+            var body = Encoding.UTF8.GetBytes(html);
+            var head = Encoding.ASCII.GetBytes(
+                "HTTP/1.1 200 OK\r\n" +
+                "Content-Type: text/html; charset=utf-8\r\n" +
+                "Content-Length: " + body.Length + "\r\n" +
+                "Connection: close\r\n\r\n");
+            stream.Write(head, 0, head.Length);
+            stream.Write(body, 0, body.Length);
+            stream.Flush();
+        }
+
+        static string LocalAddress()
+        {
+            try
+            {
+                foreach (var nic in NetworkInterface.GetAllNetworkInterfaces())
+                {
+                    if (nic.OperationalStatus != OperationalStatus.Up) continue;
+                    if (nic.NetworkInterfaceType == NetworkInterfaceType.Loopback) continue;
+
+                    foreach (var address in nic.GetIPProperties().UnicastAddresses)
+                    {
+                        if (address.Address.AddressFamily != AddressFamily.InterNetwork) continue;
+                        string ip = address.Address.ToString();
+                        if (!ip.StartsWith("169.254")) return ip;
+                    }
+                }
+            }
+            catch (Exception) { }
+            return null;
         }
 
         static Dictionary<string, string> ParseForm(string body)

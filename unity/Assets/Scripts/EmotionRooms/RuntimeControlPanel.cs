@@ -39,16 +39,22 @@ namespace EmotionRooms
         void Start()
         {
             visible = visibleOnStart;
-            participants = ParticipantPacks.Available();
-
-            if (participants.Count == 0)
-                Debug.LogWarning("RuntimeControlPanel: no participant packs shipped. " +
-                                 "Build them with: python3 -m pipeline.cli build-participants");
         }
 
         void Update()
         {
             if (Input.GetKeyDown(toggleKey)) visible = !visible;
+
+            // Refreshed rather than read once: the packs arrive asynchronously so the
+            // list is empty for the first few frames.
+            if (ShippedAssets.Ready && participants.Count == 0)
+            {
+                participants = ParticipantPacks.Available();
+                if (participants.Count == 0)
+                    Debug.LogWarning("RuntimeControlPanel: no participant packs in this " +
+                                     "build. Build them with: python3 -m pipeline.cli " +
+                                     "build-participants, then rebuild the app.");
+            }
         }
 
         void OnGUI()
@@ -85,7 +91,9 @@ namespace EmotionRooms
 
             if (participants.Count == 0)
             {
-                GUILayout.Label("No participant packs found in this build.", Fine());
+                GUILayout.Label(ShippedAssets.Ready
+                    ? "No participant packs found in this build."
+                    : "Loading participants…", Fine());
                 return;
             }
 
@@ -125,18 +133,25 @@ namespace EmotionRooms
                 return;
             }
 
-            GUILayout.Label("Open in a browser on this machine:", Fine());
+            bool onHeadset = Application.platform == RuntimePlatform.Android;
+            GUILayout.Label(onHeadset
+                ? "Open these on the RESEARCHER'S LAPTOP, at the address below. Do not " +
+                  "try to answer them in the headset."
+                : "Open in a browser on this machine:", Fine());
             foreach (var form in questionnaires.Due(when))
             {
                 var state = questionnaires.StateOf(form.id);
                 GUILayout.BeginHorizontal();
                 GUILayout.Label(state == FormState.Completed ? "done" : "  ·  ",
                     Fine(), GUILayout.Width(38f));
-                if (GUILayout.Button(form.title, GUILayout.Height(22f)))
-                    Application.OpenURL(server.Root + "form?id=" + form.id);
+                using (new Scope(!onHeadset))
+                {
+                    if (GUILayout.Button(form.title, GUILayout.Height(22f)))
+                        Application.OpenURL(server.Root + "form?id=" + form.id);
+                }
                 GUILayout.EndHorizontal();
             }
-            GUILayout.Label(server.Root, Fine());
+            GUILayout.Label(onHeadset ? server.NetworkRoot : server.Root, Fine());
             GUILayout.Space(10f);
         }
 

@@ -66,6 +66,9 @@ namespace EmotionRooms.EditorTools
             loader.minIntensity = 0.2f;
             loader.maxIntensity = 2.5f;
 
+            // First, so its coroutine is running before anything asks for a file.
+            root.AddComponent<ShippedAssets>();
+
             var events = root.AddComponent<EventLog>();
             events.headTransform = camera.transform;
 

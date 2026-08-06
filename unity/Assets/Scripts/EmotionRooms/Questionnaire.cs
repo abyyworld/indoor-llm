@@ -97,22 +97,35 @@ namespace EmotionRooms
         readonly Dictionary<string, FormState> states = new Dictionary<string, FormState>();
         bool summaryVisible;
 
-        void Awake()
+        void Start()
         {
+            // ShippedAssets loads asynchronously because Android has to go through
+            // UnityWebRequest, so this waits rather than reading an empty cache in Awake
+            // and concluding there are no questionnaires.
+            StartCoroutine(LoadWhenReady());
+        }
+
+        System.Collections.IEnumerator LoadWhenReady()
+        {
+            float deadline = Time.realtimeSinceStartup + 20f;
+            while (!ShippedAssets.Ready && Time.realtimeSinceStartup < deadline)
+                yield return null;
             Load();
         }
 
         void Load()
         {
-            string path = Path.Combine(Application.streamingAssetsPath, fileName);
-            if (!File.Exists(path))
+            // Through ShippedAssets, because StreamingAssets is not a readable folder
+            // on Android and this file has to survive a standalone headset build.
+            string text = ShippedAssets.Get(fileName);
+            if (text == null)
             {
                 Debug.LogWarning("Questionnaire: no " + fileName + " in StreamingAssets. " +
                                  "Run: python3 -m pipeline.cli emit-questionnaires\n" +
                                  "The session will run without questionnaires.");
                 return;
             }
-            set = QuestionnaireSet.FromJson(File.ReadAllText(path));
+            set = QuestionnaireSet.FromJson(text);
             if (set == null || set.forms == null) return;
 
             foreach (var form in set.forms) states[form.id] = FormState.NotShown;
