@@ -145,6 +145,23 @@ def bundle(participant: str) -> dict:
     return {"file": str(out.relative_to(ROOT)), "rows": len(rows)}
 
 
+# Shared state between the researcher's laptop and the headset.
+#
+# The headset is for the rooms and nothing else. It opens one page once, the participant
+# presses one button to enter VR, and after that it is driven entirely from the laptop:
+# the researcher presses Start and the session begins in the headset. Nobody types or
+# reads a questionnaire with a headset on, which was the whole point and which the first
+# version got backwards.
+STATE = {
+    "command": "idle",      # idle | run | stop
+    "participant": "",
+    "headset": "away",      # away | ready | in_vr | running | finished
+    "trial": 0,
+    "of": 0,
+    "seen": 0.0,            # when the headset last checked in
+}
+
+
 class Handler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(WEB), **kwargs)
@@ -167,6 +184,16 @@ class Handler(SimpleHTTPRequestHandler):
         return json.loads(self.rfile.read(length) or b"{}")
 
     def do_GET(self):
+        if self.path == "/state":
+            import time
+
+            state = dict(STATE)
+            # The headset is only "there" if it checked in recently. Without this the
+            # panel would keep claiming a headset that has been taken off and put down.
+            state["connected"] = (time.time() - STATE["seen"]) < 4.0
+            self._json(state)
+            return
+
         if self.path.startswith("/bundle"):
             from urllib.parse import parse_qs, urlparse
 
@@ -210,6 +237,29 @@ class Handler(SimpleHTTPRequestHandler):
                     writer.writeheader()
                     writer.writerows(rows)
             self._json({"written": len(rows)})
+
+        elif self.path == "/command":
+            # From the laptop panel.
+            for key in ("command", "participant"):
+                if key in payload:
+                    STATE[key] = payload[key]
+            print(f"  panel: {STATE['command']} {STATE['participant']}")
+            self._json(dict(STATE))
+
+        elif self.path == "/headset":
+            # From the headset, a few times a second.
+            import time
+
+            STATE["seen"] = time.time()
+            for key in ("headset", "trial", "of"):
+                if key in payload:
+                    STATE[key] = payload[key]
+            # Consumed once: the headset has picked the command up, so it should not
+            # start a second session on the next poll.
+            if STATE["command"] == "run" and payload.get("headset") == "running":
+                STATE["command"] = "idle"
+            self._json({"command": payload.get("ack") and "idle" or STATE["command"],
+                        "participant": STATE["participant"]})
 
         elif self.path == "/form-submit":
             answers = payload.get("answers", {})

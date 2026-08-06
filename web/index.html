@@ -38,11 +38,16 @@
 <body>
 <main>
   <h1>Emotion Rooms</h1>
-  <div class="sub">Researcher panel. Run this in the Quest browser to start a session.</div>
+  <div class="sub">Researcher panel — keep this on the laptop. The headset only ever
+    shows the rooms.</div>
 
   <div class="card">
     <h2>0. Before anyone sits down</h2>
     <div id="checks"></div>
+    <p class="muted" id="headsetline">Headset: checking…</p>
+    <p class="muted">One-time, before the participant arrives: put the headset on, open
+      the Browser, go to <code id="vrurl"></code>, and press <b>Enter VR</b>. That is the
+      only thing ever typed or pressed in the headset.</p>
   </div>
 
   <div class="card">
@@ -61,11 +66,11 @@
 
   <div class="card">
     <h2>3. The rooms</h2>
-    <p class="muted">Fit the headset, then press this. About 27 minutes. You do nothing
-      during it. To stop early, take the headset off and close the tab — everything
-      recorded so far is kept.</p>
+    <p class="muted">Fit the headset and press Start here. About 27 minutes. The
+      participant does nothing but look and point. To stop early, they take the headset
+      off — everything recorded so far is kept.</p>
     <div class="row">
-      <button id="enter" disabled>Enter VR and begin</button>
+      <button id="start" disabled>Start the rooms on the headset</button>
       <span id="xrstatus" class="muted"></span>
     </div>
   </div>
@@ -107,21 +112,12 @@ async function boot() {
   // serve-study.py generates a certificate: without this the headset browser reports no
   // VR support at all and the reason is not obvious.
   const secure = window.isSecureContext;
-  const xr = 'xr' in navigator;
-  let immersive = false;
-  if (xr) {
-    try { immersive = await navigator.xr.isSessionSupported('immersive-vr'); }
-    catch (e) { immersive = false; }
-  }
 
   const index = await fetch('data/participants/index.json').then(r => r.json()).catch(() => null);
   const questionnaires = await fetch('data/questionnaires.json').then(r => r.json()).catch(() => null);
 
   check(secure, secure ? 'secure connection' :
-    'NOT a secure connection — VR will not start. Use the https:// address.');
-  check(immersive, immersive ? 'headset ready for VR'
-    : xr ? 'no VR headset — open this page inside the Quest browser'
-         : 'this browser has no WebXR — use the Quest browser');
+    'NOT a secure connection — the headset will refuse VR. Use the https:// address.');
   check(!!index, index ? `${index.participants.length} participants loaded`
                        : 'participant rooms missing');
   check(!!questionnaires, questionnaires
@@ -139,8 +135,8 @@ async function boot() {
     renderForms();
   }
 
-  $('enter').disabled = !(immersive && index);
-  $('xrstatus').textContent = immersive ? '' : 'VR unavailable — see the checks above.';
+  $('vrurl').textContent = location.origin + '/vr.html';
+  pollHeadset();
 }
 
 function renderForms() {
@@ -159,34 +155,46 @@ function renderForms() {
 
 $('participant').addEventListener('change', renderForms);
 
-$('enter').addEventListener('click', async () => {
-  const participant = $('participant').value;
-
-  data.session = await fetch(`data/participants/${participant}/session.json`).then(r => r.json());
-  data.oversight = await fetch(`data/participants/${participant}/oversight.json`).then(r => r.json());
-  data.practice = await fetch(`data/participants/${participant}/practice.json`).then(r => r.json()).catch(() => null);
-
-  const renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setPixelRatio(window.devicePixelRatio);
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.xr.enabled = true;
-  document.body.appendChild(renderer.domElement);
-
-  study = new Study(participant, data);
-  study.init(renderer);
-
-  const session = await navigator.xr.requestSession('immersive-vr',
-    { optionalFeatures: ['local-floor', 'bounded-floor'] });
-  await renderer.xr.setSession(session);
-
-  renderer.setAnimationLoop(() => {
-    study.update();
-    renderer.render(study.scene, study.camera);
+$('start').addEventListener('click', async () => {
+  await fetch('/command', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ command: 'run', participant: $('participant').value }),
   });
-
-  session.addEventListener('end', () => study.stop());
-  study.run();
+  $('xrstatus').textContent = 'starting…';
 });
+
+// The panel follows the headset rather than assuming it. A headset that has been taken
+// off and put down should not look like one that is mid-session.
+async function pollHeadset() {
+  try {
+    const state = await fetch('/state').then(r => r.json());
+    const line = $('headsetline');
+
+    if (!state.connected) {
+      line.textContent = 'Headset: not connected — open the address above in it.';
+      $('start').disabled = true;
+      $('xrstatus').textContent = '';
+    } else if (state.headset === 'in_vr') {
+      line.textContent = 'Headset: in VR, waiting for you to press Start.';
+      $('start').disabled = false;
+      $('xrstatus').textContent = '';
+    } else if (state.headset === 'running') {
+      line.textContent = `Headset: running — trial ${state.trial} of ${state.of}.`;
+      $('start').disabled = true;
+      $('xrstatus').textContent = 'in progress';
+    } else if (state.headset === 'finished') {
+      line.textContent = 'Headset: finished. Take it off and do the after-forms.';
+      $('start').disabled = true;
+      $('xrstatus').textContent = 'done';
+    } else {
+      line.textContent = 'Headset: connected, not in VR yet — press Enter VR in it.';
+      $('start').disabled = true;
+    }
+  } catch (e) {
+    $('headsetline').textContent = 'Headset: cannot reach the server.';
+  }
+}
+setInterval(pollHeadset, 1000);
 
 $('bundle').addEventListener('click', async () => {
   const participant = $('participant').value;

@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Emotion Rooms</title>
+<style>
+  :root { color-scheme: dark; }
+  body { font: 22px/1.5 -apple-system, system-ui, sans-serif; margin: 0; height: 100vh;
+         display: flex; align-items: center; justify-content: center; text-align: center;
+         background: #14141a; color: #ececf2; }
+  .box { max-width: 34rem; padding: 2rem; }
+  h1 { font-size: 2rem; margin: 0 0 .6rem; }
+  p { opacity: .75; }
+  button { font: inherit; font-size: 1.5rem; font-weight: 700; padding: 1.6rem 3rem;
+           margin-top: 1.5rem; border: 0; border-radius: 1rem; background: #3b82f6;
+           color: #fff; cursor: pointer; }
+  button:disabled { background: #44444e; }
+  .small { font-size: .8rem; opacity: .5; margin-top: 2rem; }
+</style>
+</head>
+<body>
+<div class="box" id="box">
+  <h1>Emotion Rooms</h1>
+  <p id="msg">Getting ready…</p>
+  <button id="enter" disabled>Enter VR</button>
+  <div class="small">This is the only button on the headset. Everything else is done by
+    the researcher on the laptop.</div>
+</div>
+
+<script type="importmap">
+{ "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { Study } from './runner.js';
+
+const $ = id => document.getElementById(id);
+let study = null, renderer = null, xrSession = null, inVR = false, busy = false;
+
+// Entering an immersive session requires a button press inside the headset -- that is a
+// browser security rule, not a choice. It is the one press, and after it the headset is
+// driven entirely from the laptop.
+$('enter').addEventListener('click', async () => {
+  try {
+    xrSession = await navigator.xr.requestSession('immersive-vr',
+      { optionalFeatures: ['local-floor', 'bounded-floor'] });
+
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.xr.enabled = true;
+    document.body.appendChild(renderer.domElement);
+    await renderer.xr.setSession(xrSession);
+
+    inVR = true;
+    $('msg').textContent = 'In VR. Waiting for the researcher to start.';
+    $('enter').disabled = true;
+
+    xrSession.addEventListener('end', () => {
+      inVR = false;
+      if (study) study.stop();
+      $('msg').textContent = 'VR ended. Press Enter VR to go back in.';
+      $('enter').disabled = false;
+    });
+
+    idleScene();
+  } catch (e) {
+    $('msg').textContent = 'Could not start VR: ' + e.message;
+  }
+});
+
+// A plain dark scene with a line of text, so the participant is not staring at nothing
+// between entering VR and the researcher pressing Start.
+function idleScene() {
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0d0d12);
+  const camera = new THREE.PerspectiveCamera(70, 1, 0.05, 60);
+  scene.add(new THREE.AmbientLight(0xffffff, 1));
+
+  renderer.setAnimationLoop(() => {
+    if (study) { study.update(); renderer.render(study.scene, study.camera); }
+    else renderer.render(scene, camera);
+  });
+}
+
+async function beat() {
+  let state = 'away';
+  if (busy) state = 'running';
+  else if (inVR) state = 'in_vr';
+
+  let reply = null;
+  try {
+    reply = await fetch('/headset', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        headset: state,
+        trial: study ? Math.max(study.log.trialIndex, 0) : 0,
+        of: study ? (study.data.session?.rooms.length ?? 0) : 0,
+      }),
+    }).then(r => r.json());
+  } catch (e) { /* the laptop will show the headset as gone; nothing to do here */ }
+
+  if (reply && reply.command === 'run' && inVR && !busy) {
+    busy = true;
+    await start(reply.participant);
+    busy = false;
+  }
+}
+setInterval(beat, 700);
+
+async function start(participant) {
+  $('msg').textContent = 'Running ' + participant;
+
+  const data = {};
+  data.session = await fetch(`data/participants/${participant}/session.json`).then(r => r.json());
+  data.oversight = await fetch(`data/participants/${participant}/oversight.json`).then(r => r.json());
+  data.practice = await fetch(`data/participants/${participant}/practice.json`)
+    .then(r => r.json()).catch(() => null);
+
+  study = new Study(participant, data);
+  study.init(renderer);
+  await study.run();
+
+  $('msg').textContent = 'Finished. Please take the headset off.';
+  await fetch('/headset', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ headset: 'finished', ack: true }),
+  }).catch(() => {});
+}
+
+async function boot() {
+  const secure = window.isSecureContext;
+  let ok = false;
+  if ('xr' in navigator) {
+    try { ok = await navigator.xr.isSessionSupported('immersive-vr'); } catch (e) { ok = false; }
+  }
+
+  if (!secure) $('msg').textContent = 'Not a secure connection. Use the https:// address.';
+  else if (!ok) $('msg').textContent = 'No VR here. Open this page in the Quest browser.';
+  else { $('msg').textContent = 'Ready. Press the button, then hand over to the researcher.'; }
+
+  $('enter').disabled = !(secure && ok);
+}
+boot();
+</script>
+</body>
+</html>
