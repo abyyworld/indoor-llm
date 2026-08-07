@@ -362,6 +362,27 @@ export class Study {
       }
     }
 
+    // The correction loop. Apply what they chose, show it, and let them rate the
+    // room they themselves produced. This is what turns a correction from a menu
+    // choice into a measurable signal: the reference is their own first rating of
+    // the same room, so no external criterion is needed -- and it is what makes the
+    // participant a principal rather than a rater. The Unity route has had this all
+    // along; the browser route losing it would have quietly dropped the study's
+    // central measure on one platform.
+    let after = null, applied = false;
+    if (field && value !== '') {
+      const corrected = { ...config, [field]: coerce(field, value) };
+      applied = true;
+      this.log.event('correction_room_shown', { field, value: String(value) });
+      this.showRoom(corrected);
+      await wait(REVIEW_EXPOSURE * 1000);
+      if (this.stopped) return;
+
+      this.hideRooms();
+      after = await this.askGrid('And how does the room feel now, with your change?');
+      if (this.stopped) return;
+    }
+
     this.hideRooms();
     this.responses.push({
       participant: this.participant, source: 'review',
@@ -372,6 +393,9 @@ export class Study {
       detected: noticed === 'yes' ? 1 : 0,
       attributed_field: field, corrected_value: value,
       valence_before: before.valence, arousal_before: before.arousal,
+      valence_after: after ? after.valence : '',
+      arousal_after: after ? after.arousal : '',
+      correction_applied: applied ? 1 : 0,
       utc: new Date().toISOString(), utc_ms: Date.now(),
     });
     await this.postResponses();
@@ -404,6 +428,14 @@ export class Study {
     this.log.event('stopped_early');
     this.log.flush();
   }
+}
+
+// A chosen correction arrives as the button's label string; the config field it
+// lands in is typed. Coercing here rather than at render time keeps the buttons dumb.
+function coerce(field, value) {
+  if (field === 'hue') return parseInt(value, 10);
+  if (field === 'saturation' || field === 'brightness') return parseFloat(value);
+  return String(value);
 }
 
 // Mirrors PoolConstants: the values a participant can propose as a correction.

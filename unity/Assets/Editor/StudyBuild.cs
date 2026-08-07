@@ -304,7 +304,7 @@ namespace EmotionRooms.EditorTools
                 "runs", "headset-data");
             Directory.CreateDirectory(dest);
 
-            if (Adb("pull /sdcard/Android/data/" + Package + "/files "" + dest + """,
+            if (Adb("pull /sdcard/Android/data/" + Package + "/files \"" + dest + "\"",
                     "data pulled to " + dest))
                 EditorUtility.RevealInFinder(dest);
         }
