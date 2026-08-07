@@ -33,6 +33,9 @@ namespace EmotionRooms
         /// <summary>"own" or "yoked" -- whose correction actually gets applied.</summary>
         public string correction_source;
 
+        /// <summary>Fixes the substituted value, so a yoked trial is reproducible.</summary>
+        public int sham_seed;
+
         public string trial_id;
         public string condition;
         public string target_emotion_shown;
@@ -45,6 +48,12 @@ namespace EmotionRooms
     public class OversightGroundTruth
     {
         public string swapped_field;
+
+        /// <summary>The value before the swap -- the one that would repair the room.
+        /// Read so a yoked substitution can avoid accidentally being correct.</summary>
+        public string original_value;
+        public string swapped_in_value;
+
         public string donor_emotion;
         public bool rationale_is_wrong;
     }
@@ -209,16 +218,28 @@ namespace EmotionRooms
         /// yoked correction is as plausible a repair as the participant's own and the
         /// comparison isolates whose choice it was, not whether it was sensible.
         /// </summary>
-        string OtherValueFor(string field, string chosen)
+        string OtherValueFor(string field, string chosen, string original, int seed)
         {
             var values = PoolConstants.ValuesFor(field);
             if (values == null || values.Length < 2) return chosen;
 
             var options = new List<string>();
-            foreach (var value in values) if (value != chosen) options.Add(value);
+            foreach (var value in values)
+            {
+                if (value == chosen) continue;
+                // Never the value that would actually repair the room. A substitution
+                // that happened to be correct would read as a successful yoked
+                // correction and blunt the very contrast it exists to draw.
+                if (!string.IsNullOrEmpty(original) && value == original) continue;
+                options.Add(value);
+            }
             if (options.Count == 0) return chosen;
 
-            return options[UnityEngine.Random.Range(0, options.Count)];
+            // Seeded from the trial file, so the same participant on the same block
+            // gets the same substitution on both platforms and it can be reconstructed
+            // from the data afterwards.
+            var rng = new System.Random(seed);
+            return options[rng.Next(options.Count)];
         }
         AffectResponse lastRating;
         bool hasRating;
@@ -471,8 +492,11 @@ namespace EmotionRooms
                 // do not differ, that is a finding -- people believed their oversight
                 // helped when it did not.
                 bool yoked = trial.correction_source == "yoked";
+                string original = trial.ground_truth != null
+                    ? trial.ground_truth.original_value : null;
                 string applyValue = yoked
-                    ? OtherValueFor(pendingAttributedField, pendingCorrectedValue)
+                    ? OtherValueFor(pendingAttributedField, pendingCorrectedValue,
+                                    original, trial.sham_seed)
                     : pendingCorrectedValue;
 
                 var corrected = trial.stimulus.With(pendingAttributedField, applyValue);

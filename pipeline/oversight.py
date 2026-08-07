@@ -295,6 +295,14 @@ def build_oversight_block(
     rng.shuffle(sources)
     for trial, source in zip(corrupted, sources):
         trial["correction_source"] = source
+        # Fixed in advance rather than drawn when the moment arrives.
+        #
+        # Which value a yoked trial substitutes depends on what the participant chose,
+        # so it cannot be written out here -- but the draw can still be deterministic.
+        # Seeding it from the block means the substitution is reproducible from the
+        # trial file alone, identical on both platforms, and auditable afterwards
+        # rather than being a runtime coin flip nobody can reconstruct.
+        trial["sham_seed"] = rng.randrange(1 << 30)
     for trial in trials:
         trial.setdefault("correction_source", "")
 
@@ -306,6 +314,13 @@ def build_oversight_block(
         "participant": participant,
         "seed": seed,
         "phase": "B",
+        # What a yoked trial substitutes, stated once so the write-up and the ethics
+        # application describe the same thing: a different legal value for the variable
+        # the participant named, drawn from the same pool, never their own choice and
+        # never the value that would repair the room. No other participant's data is
+        # used, so nothing about one person is shown to another.
+        "sham_rule": "same-pool value, excluding the participant's choice and the "
+                     "original (correct) value",
         "conditions": conditions,
         "counts": counts,
         "trials_total": len(trials),

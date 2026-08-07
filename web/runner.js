@@ -376,7 +376,9 @@ export class Study {
     let after = null, applied = false, appliedValue = '', source = '';
     if (field && value !== '') {
       const yoked = trial.correction_source === 'yoked';
-      appliedValue = yoked ? otherValueFor(field, value) : value;
+      appliedValue = yoked
+        ? otherValueFor(field, value, trial.ground_truth?.original_value, trial.sham_seed)
+        : value;
       source = yoked ? 'yoked' : 'own';
 
       const corrected = { ...config, [field]: coerce(field, appliedValue) };
@@ -446,12 +448,22 @@ export class Study {
 // A legal value for this field that the participant did not choose. Drawn from the same
 // pool so a yoked correction is as plausible a repair as their own -- the comparison is
 // about whose choice it was, not whether it was sensible.
-function otherValueFor(field, chosen) {
+function otherValueFor(field, chosen, original, seed) {
   const values = POOL_VALUES[field];
   if (!values || values.length < 2) return chosen;
-  const options = values.filter(v => String(v) !== String(chosen));
+
+  const options = values.filter(v =>
+    String(v) !== String(chosen) &&
+    // Never the value that would actually repair the room: a substitution that happened
+    // to be correct would read as a successful yoked correction and blunt the contrast.
+    (original === undefined || original === null || String(v) !== String(original)));
   if (!options.length) return chosen;
-  return options[Math.floor(Math.random() * options.length)];
+
+  // Seeded from the trial file so the substitution matches the Unity route exactly and
+  // can be reconstructed from the data afterwards.
+  let x = (seed || 1) >>> 0;
+  x ^= x << 13; x >>>= 0; x ^= x >> 17; x ^= x << 5; x >>>= 0;
+  return options[x % options.length];
 }
 
 function coerce(field, value) {

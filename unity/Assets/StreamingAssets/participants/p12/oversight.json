@@ -2,6 +2,7 @@
   "participant": "p12",
   "seed": 51,
   "phase": "B",
+  "sham_rule": "same-pool value, excluding the participant's choice and the original (correct) value",
   "conditions": [
     "faithful",
     "swapped",
@@ -39,6 +40,7 @@
         "rationale_is_wrong": false
       },
       "correction_source": "yoked",
+      "sham_seed": 315434207,
       "trial_index": 1,
       "trial_id": "p12_b001"
     },
@@ -147,6 +149,7 @@
         "rationale_is_wrong": false
       },
       "correction_source": "own",
+      "sham_seed": 906859844,
       "trial_index": 5,
       "trial_id": "p12_b005"
     },
@@ -175,6 +178,7 @@
         "all_variables_random": true
       },
       "correction_source": "own",
+      "sham_seed": 383368389,
       "trial_index": 6,
       "trial_id": "p12_b006"
     },
@@ -230,6 +234,7 @@
         "all_variables_random": true
       },
       "correction_source": "own",
+      "sham_seed": 241464331,
       "trial_index": 8,
       "trial_id": "p12_b008"
     },
@@ -311,6 +316,7 @@
         "rationale_is_wrong": false
       },
       "correction_source": "own",
+      "sham_seed": 640170320,
       "trial_index": 11,
       "trial_id": "p12_b011"
     },
@@ -420,6 +426,7 @@
         "all_variables_random": true
       },
       "correction_source": "yoked",
+      "sham_seed": 997089758,
       "trial_index": 15,
       "trial_id": "p12_b015"
     },
@@ -475,6 +482,7 @@
         "all_variables_random": true
       },
       "correction_source": "yoked",
+      "sham_seed": 24179919,
       "trial_index": 17,
       "trial_id": "p12_b017"
     },
@@ -502,6 +510,7 @@
         "rationale_is_wrong": false
       },
       "correction_source": "yoked",
+      "sham_seed": 336700602,
       "trial_index": 18,
       "trial_id": "p12_b018"
     },
@@ -530,6 +539,7 @@
         "all_variables_random": true
       },
       "correction_source": "own",
+      "sham_seed": 904743833,
       "trial_index": 19,
       "trial_id": "p12_b019"
     },
@@ -558,6 +568,7 @@
         "all_variables_random": true
       },
       "correction_source": "yoked",
+      "sham_seed": 166092821,
       "trial_index": 20,
       "trial_id": "p12_b020"
     },
@@ -612,6 +623,7 @@
         "rationale_is_wrong": false
       },
       "correction_source": "yoked",
+      "sham_seed": 608295282,
       "trial_index": 22,
       "trial_id": "p12_b022"
     },
@@ -693,6 +705,7 @@
         "rationale_is_wrong": false
       },
       "correction_source": "own",
+      "sham_seed": 939586869,
       "trial_index": 25,
       "trial_id": "p12_b025"
     },
@@ -721,6 +734,7 @@
         "all_variables_random": true
       },
       "correction_source": "own",
+      "sham_seed": 958746375,
       "trial_index": 26,
       "trial_id": "p12_b026"
     },
@@ -749,6 +763,7 @@
         "all_variables_random": true
       },
       "correction_source": "own",
+      "sham_seed": 1026252166,
       "trial_index": 27,
       "trial_id": "p12_b027"
     },
@@ -776,6 +791,7 @@
         "rationale_is_wrong": false
       },
       "correction_source": "yoked",
+      "sham_seed": 819121362,
       "trial_index": 28,
       "trial_id": "p12_b028"
     },
@@ -884,6 +900,7 @@
         "rationale_is_wrong": false
       },
       "correction_source": "yoked",
+      "sham_seed": 36092886,
       "trial_index": 32,
       "trial_id": "p12_b032"
     }

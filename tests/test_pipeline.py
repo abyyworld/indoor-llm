@@ -1042,6 +1042,32 @@ class TestPhaseBMeasurement(unittest.TestCase):
             if trial["condition"] == FAITHFUL:
                 self.assertEqual(trial["correction_source"], "")
 
+    def test_every_yoked_trial_can_reconstruct_its_substitution(self):
+        # The substituted value depends on what the participant chose, so it cannot be
+        # written out in advance -- but the draw can still be deterministic. Seeding it
+        # from the block makes a yoked trial reproducible from the trial file alone and
+        # identical on both platforms, rather than a runtime coin flip nobody can
+        # reconstruct afterwards.
+        from pipeline.oversight import YOKED
+
+        for trial in self._block()["trials"]:
+            if trial["correction_source"] == YOKED:
+                self.assertIsInstance(trial["sham_seed"], int)
+
+    def test_the_sham_rule_is_stated_in_the_block(self):
+        # The write-up and the ethics application have to describe the same procedure.
+        block = self._block()
+        self.assertIn("excluding", block["sham_rule"])
+
+    def test_swapped_trials_record_the_value_that_would_repair_them(self):
+        # A substitution that happened to be correct would read as a successful yoked
+        # correction, so the runtime needs to know which value to avoid.
+        from pipeline.oversight import SWAPPED
+
+        for trial in self._block()["trials"]:
+            if trial["condition"] == SWAPPED:
+                self.assertIsNotNone(trial["ground_truth"]["original_value"])
+
     def test_the_split_is_deterministic_for_a_participant(self):
         a = self._block()["trials"]
         b = self._block()["trials"]
