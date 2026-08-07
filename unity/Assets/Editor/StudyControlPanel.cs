@@ -15,6 +15,7 @@ using System.IO;
 using System.Text.RegularExpressions;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Networking;
 using Debug = UnityEngine.Debug;
 
 namespace EmotionRooms.EditorTools
@@ -230,7 +231,9 @@ namespace EmotionRooms.EditorTools
             using (new EditorGUI.DisabledScope(!up))
             {
                 if (GUILayout.Button("Open researcher panel", GUILayout.Height(26f)))
-                    Later(() => Application.OpenURL(WebServer.PanelUrl));
+                    Later(() => Application.OpenURL(
+                        WebServer.PanelUrl + "?participant=" +
+                        UnityWebRequest.EscapeURL(participant)));
             }
             EditorGUILayout.EndHorizontal();
 

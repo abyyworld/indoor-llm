@@ -6,202 +6,190 @@
 <title>Emotion Rooms</title>
 <style>
   :root { color-scheme: dark; }
-  body { font: 17px/1.6 -apple-system, system-ui, sans-serif; margin: 0;
-         background: #14141a; color: #ececf2; }
-  main { max-width: 44rem; margin: 0 auto; padding: 2.5rem 1.25rem 5rem; }
-  h1 { font-size: 1.7rem; margin: 0 0 .3rem; }
-  .sub { opacity: .7; margin-bottom: 2rem; }
-  .card { border: 1px solid #ffffff22; border-radius: .75rem; padding: 1.1rem 1.25rem;
-          margin-bottom: 1rem; }
-  .card h2 { font-size: 1.05rem; margin: 0 0 .5rem; }
-  label { display: block; font-weight: 600; margin-bottom: .35rem; }
-  select, button { font: inherit; }
-  select { width: 100%; padding: .6rem; border-radius: .5rem; background: #1e1e26;
-           color: inherit; border: 1px solid #ffffff33; }
-  button { padding: .8rem 1.6rem; border-radius: .5rem; border: 0; background: #3b82f6;
-           color: #fff; font-weight: 600; cursor: pointer; }
-  button:disabled { background: #44444e; cursor: not-allowed; }
+  body { font: 17px/1.55 -apple-system, system-ui, sans-serif; margin: 0;
+         background: #101016; color: #ececf2; }
+  main { max-width: 42rem; margin: 0 auto; padding: 2rem 1.25rem 5rem; }
+  h1 { font-size: 1.55rem; margin: 0 0 1.5rem; }
+
+  /* Only one step is ever live. Everything else is dimmed, so there is never a
+     question about what to press next. */
+  .step { border: 1px solid #ffffff1a; border-radius: .8rem; padding: 1.1rem 1.25rem;
+          margin-bottom: .8rem; opacity: .38; transition: opacity .2s, border-color .2s; }
+  .step.now { opacity: 1; border-color: #3b82f6; background: #3b82f60d; }
+  .step.done { opacity: .5; border-color: #4ade8055; }
+  .head { display: flex; align-items: center; gap: .6rem; font-weight: 700; }
+  .n { width: 1.7rem; height: 1.7rem; flex: none; border-radius: 50%; background: #2a2a34;
+       display: grid; place-items: center; font-size: .9rem; }
+  .step.now .n { background: #3b82f6; }
+  .step.done .n { background: #16a34a; }
+  .badge { margin-left: auto; font-size: .72rem; letter-spacing: .06em; padding: .18rem .5rem;
+           border-radius: .3rem; background: #3b82f6; color: #fff; }
+  .step:not(.now) .badge { display: none; }
+  p { margin: .5rem 0 0; opacity: .8; font-size: .95rem; }
+  button { font: inherit; font-weight: 600; padding: .8rem 1.5rem; border-radius: .55rem;
+           border: 0; background: #3b82f6; color: #fff; cursor: pointer; margin-top: .8rem; }
   button.ghost { background: #2a2a34; }
-  .row { display: flex; gap: .6rem; flex-wrap: wrap; align-items: center; }
-  .check { display: flex; gap: .5rem; align-items: baseline; margin: .3rem 0;
-           font-size: .92rem; }
-  .ok { color: #4ade80; font-weight: 700; }
-  .no { color: #fbbf24; font-weight: 700; }
-  .forms a { display: inline-block; margin: .2rem .35rem .2rem 0; padding: .4rem .8rem;
-             border: 1px solid #ffffff33; border-radius: .4rem; color: #9dc4ff;
-             text-decoration: none; }
-  .forms a.done { border-color: #4ade8066; color: #4ade80; }
-  code { background: #ffffff14; padding: .1rem .35rem; border-radius: .3rem; }
-  .muted { opacity: .65; font-size: .9rem; }
+  button:disabled { background: #33333d; color: #8a8a94; cursor: not-allowed; }
+  code { background: #ffffff14; padding: .5rem .7rem; border-radius: .4rem; display: block;
+         margin-top: .6rem; font-size: 1.05rem; user-select: all; word-break: break-all; }
+  .who { font-size: .78rem; text-transform: uppercase; letter-spacing: .07em;
+         opacity: .55; margin-top: .1rem; }
+  .warn { background: #f59e0b1a; border: 1px solid #f59e0b55; border-radius: .5rem;
+          padding: .7rem .9rem; margin-top: .7rem; font-size: .9rem; }
 </style>
 </head>
 <body>
 <main>
-  <h1>Emotion Rooms</h1>
-  <div class="sub">Researcher panel — keep this on the laptop. The headset only ever
-    shows the rooms.</div>
+  <h1>Emotion Rooms — <span id="who">?</span></h1>
 
-  <div class="card">
-    <h2>0. Before anyone sits down</h2>
-    <div id="checks"></div>
-    <p class="muted" id="headsetline">Headset: checking…</p>
-    <p class="muted">One-time, before the participant arrives: put the headset on, open
-      the Browser, go to <code id="vrurl"></code>, and press <b>Enter VR</b>. That is the
-      only thing ever typed or pressed in the headset.</p>
+  <div class="step" id="s1">
+    <div class="head"><span class="n">1</span> Point the headset at this study
+      <span class="badge">DO THIS</span></div>
+    <div class="who">once, before the participant arrives</div>
+    <p>Put the headset on, open its <b>Browser</b>, and type this exactly:</p>
+    <code id="vrurl">…</code>
+    <p>Accept the certificate warning (Advanced → Proceed), press <b>Enter VR</b>, then
+      take the headset off and put it down. That is the only thing ever done in the
+      headset.</p>
+    <p id="hstat" class="warn">Waiting for the headset…</p>
   </div>
 
-  <div class="card">
-    <h2>1. Participant</h2>
-    <label for="participant">Which participant is this?</label>
-    <select id="participant"></select>
-    <p class="muted">Never reuse a number. Agree the split with the other researcher
-      before either of you starts.</p>
+  <div class="step" id="s2">
+    <div class="head"><span class="n">2</span> First questionnaires
+      <span class="badge">DO THIS</span></div>
+    <div class="who">participant, on this laptop, headset off</div>
+    <p>Consent, about you, and how you feel right now — all on one page.</p>
+    <button id="before">Open the first questionnaires</button>
   </div>
 
-  <div class="card">
-    <h2>2. Before the headset goes on</h2>
-    <p class="muted">Hand them the keyboard. Every form can be skipped.</p>
-    <div class="forms" id="before"></div>
+  <div class="step" id="s3">
+    <div class="head"><span class="n">3</span> The rooms
+      <span class="badge">DO THIS</span></div>
+    <div class="who">participant, in the headset · about 27 minutes</div>
+    <p>Fit the headset, check they are comfortable, then press this. They only look and
+      point. To stop early they take the headset off; everything so far is kept.</p>
+    <button id="start" disabled>Start the rooms</button>
+    <p id="progress"></p>
   </div>
 
-  <div class="card">
-    <h2>3. The rooms</h2>
-    <p class="muted">Fit the headset and press Start here. About 27 minutes. The
-      participant does nothing but look and point. To stop early, they take the headset
-      off — everything recorded so far is kept.</p>
-    <div class="row">
-      <button id="start" disabled>Start the rooms on the headset</button>
-      <span id="xrstatus" class="muted"></span>
-    </div>
+  <div class="step" id="s4">
+    <div class="head"><span class="n">4</span> Last questionnaires
+      <span class="badge">DO THIS</span></div>
+    <div class="who">participant, on this laptop, headset off</div>
+    <p>How they feel, the workload, trust, presence, and the debrief — one page. The
+      debrief explains the study, so do not skip it.</p>
+    <button id="after">Open the last questionnaires</button>
   </div>
 
-  <div class="card">
-    <h2>4. After the headset comes off</h2>
-    <div class="forms" id="after"></div>
-  </div>
-
-  <div class="card">
-    <h2>5. Data</h2>
-    <p class="muted">Written continuously, nothing to press. One combined file per
-      participant appears in <code>runs/web-data/</code> on the machine serving this page.</p>
-    <div class="row"><button class="ghost" id="bundle">Write the combined file now</button>
-      <span id="bundled" class="muted"></span></div>
+  <div class="step" id="s5">
+    <div class="head"><span class="n">5</span> Done <span class="badge">DO THIS</span></div>
+    <div class="who">nothing to press</div>
+    <p id="donetext">The combined file is written automatically when the rooms finish.</p>
+    <button class="ghost" id="bundle">Write it again now</button>
+    <span id="bundled" style="opacity:.7;font-size:.9rem"></span>
   </div>
 </main>
 
-<script type="importmap">
-{ "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
-</script>
-
 <script type="module">
-import * as THREE from 'three';
-import { Study } from './runner.js';
-
 const $ = id => document.getElementById(id);
-let data = {}, study = null, forms = [];
+const params = new URLSearchParams(location.search);
+let participant = params.get('participant') || '';
+let info = { headset_url: '' };
+let beforeDone = false, afterDone = false, roomsDone = false;
 
-function check(ok, text) {
-  const row = document.createElement('div');
-  row.className = 'check';
-  row.innerHTML = `<span class="${ok ? 'ok' : 'no'}">${ok ? 'OK' : '!!'}</span><span>${text}</span>`;
-  $('checks').appendChild(row);
+// Sent so the headset, which polls the same server, knows who it is running.
+async function claim() {
+  if (!participant) return;
+  await fetch('/command', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ participant }),
+  }).catch(() => {});
 }
 
 async function boot() {
-  // WebXR needs a secure context. Over a LAN address that means HTTPS, which is why
-  // serve-study.py generates a certificate: without this the headset browser reports no
-  // VR support at all and the reason is not obvious.
-  const secure = window.isSecureContext;
+  info = await fetch('/info').then(r => r.json()).catch(() => info);
+  $('vrurl').textContent = info.headset_url || '(server unreachable)';
 
-  const index = await fetch('data/participants/index.json').then(r => r.json()).catch(() => null);
-  const questionnaires = await fetch('data/questionnaires.json').then(r => r.json()).catch(() => null);
-
-  check(secure, secure ? 'secure connection' :
-    'NOT a secure connection — the headset will refuse VR. Use the https:// address.');
-  check(!!index, index ? `${index.participants.length} participants loaded`
-                       : 'participant rooms missing');
-  check(!!questionnaires, questionnaires
-    ? `${questionnaires.forms.length} questionnaires loaded` : 'questionnaires missing');
-
-  if (index) {
-    for (const id of index.participants) {
-      const option = document.createElement('option');
-      option.value = option.textContent = id;
-      $('participant').appendChild(option);
-    }
-  }
-  if (questionnaires) {
-    forms = questionnaires.forms;
-    renderForms();
-  }
-
-  $('vrurl').textContent = location.origin + '/vr.html';
-  pollHeadset();
+  const state = await fetch('/state').then(r => r.json()).catch(() => null);
+  if (!participant && state?.participant) participant = state.participant;
+  $('who').textContent = participant || 'no participant set';
+  await claim();
+  tick();
 }
 
-function renderForms() {
-  for (const when of ['before', 'after']) {
-    const holder = $(when);
-    holder.innerHTML = '';
-    for (const form of forms.filter(f => f.when === when)) {
-      const link = document.createElement('a');
-      link.href = `form.html?id=${form.id}&participant=${$('participant').value}`;
-      link.target = '_blank';
-      link.textContent = form.title;
-      holder.appendChild(link);
-    }
-  }
-}
+$('before').addEventListener('click', () => {
+  beforeDone = true;
+  window.open(`form.html?group=before&participant=${encodeURIComponent(participant)}`, '_blank');
+  tick();
+});
 
-$('participant').addEventListener('change', renderForms);
+$('after').addEventListener('click', () => {
+  afterDone = true;
+  window.open(`form.html?group=after&participant=${encodeURIComponent(participant)}`, '_blank');
+  tick();
+});
 
 $('start').addEventListener('click', async () => {
   await fetch('/command', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ command: 'run', participant: $('participant').value }),
+    body: JSON.stringify({ command: 'run', participant }),
   });
-  $('xrstatus').textContent = 'starting…';
 });
 
-// The panel follows the headset rather than assuming it. A headset that has been taken
-// off and put down should not look like one that is mid-session.
-async function pollHeadset() {
-  try {
-    const state = await fetch('/state').then(r => r.json());
-    const line = $('headsetline');
-
-    if (!state.connected) {
-      line.textContent = 'Headset: not connected — open the address above in it.';
-      $('start').disabled = true;
-      $('xrstatus').textContent = '';
-    } else if (state.headset === 'in_vr') {
-      line.textContent = 'Headset: in VR, waiting for you to press Start.';
-      $('start').disabled = false;
-      $('xrstatus').textContent = '';
-    } else if (state.headset === 'running') {
-      line.textContent = `Headset: running — trial ${state.trial} of ${state.of}.`;
-      $('start').disabled = true;
-      $('xrstatus').textContent = 'in progress';
-    } else if (state.headset === 'finished') {
-      line.textContent = 'Headset: finished. Take it off and do the after-forms.';
-      $('start').disabled = true;
-      $('xrstatus').textContent = 'done';
-    } else {
-      line.textContent = 'Headset: connected, not in VR yet — press Enter VR in it.';
-      $('start').disabled = true;
-    }
-  } catch (e) {
-    $('headsetline').textContent = 'Headset: cannot reach the server.';
-  }
-}
-setInterval(pollHeadset, 1000);
-
 $('bundle').addEventListener('click', async () => {
-  const participant = $('participant').value;
   const result = await fetch(`/bundle?participant=${participant}`).then(r => r.json());
   $('bundled').textContent = result.file ? 'written: ' + result.file : (result.error ?? '');
 });
 
+// One step is live at a time, worked out from what has actually happened rather than
+// from a counter -- so re-opening the page mid-session lands on the right step.
+function highlight(id) {
+  for (const step of ['s1', 's2', 's3', 's4', 's5']) {
+    $(step).classList.remove('now', 'done');
+  }
+  const order = ['s1', 's2', 's3', 's4', 's5'];
+  const at = order.indexOf(id);
+  order.forEach((step, i) => {
+    if (i < at) $(step).classList.add('done');
+    else if (i === at) $(step).classList.add('now');
+  });
+}
+
+let headsetReady = false, running = false;
+
+async function tick() {
+  try {
+    const state = await fetch('/state').then(r => r.json());
+    headsetReady = state.connected && state.headset !== 'away';
+    running = state.headset === 'running';
+    if (state.headset === 'finished') roomsDone = true;
+
+    $('hstat').textContent =
+      !state.connected ? 'Waiting for the headset to open the address above…'
+      : state.headset === 'in_vr' ? 'Headset is in VR and ready.'
+      : state.headset === 'running' ? 'Headset is running the study.'
+      : state.headset === 'finished' ? 'Headset has finished.'
+      : 'Headset connected, not in VR yet — press Enter VR in it.';
+    $('hstat').style.display = (headsetReady && state.headset === 'in_vr') ? 'none' : '';
+
+    $('progress').textContent = running
+      ? `Running — trial ${state.trial} of ${state.of}.` : '';
+    $('start').disabled = !(state.headset === 'in_vr') || !participant;
+
+    if (roomsDone && afterDone) highlight('s5');
+    else if (roomsDone) highlight('s4');
+    else if (running) highlight('s3');
+    else if (beforeDone && headsetReady) highlight('s3');
+    else if (headsetReady) highlight('s2');
+    else highlight('s1');
+
+    if (roomsDone) $('donetext').textContent =
+      'The combined file has been written for ' + participant + '.';
+  } catch (e) {
+    $('hstat').textContent = 'Cannot reach the study server.';
+  }
+}
+setInterval(tick, 1000);
 boot();
 </script>
 </body>

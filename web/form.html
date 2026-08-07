@@ -35,66 +35,86 @@
 <div id="page">Loading…</div>
 <script type="module">
 const params = new URLSearchParams(location.search);
-const formId = params.get('id');
+const group = params.get('group');           // "before" or "after"
+const single = params.get('id');             // one instrument, for checking wording
 const participant = params.get('participant') || 'unknown';
 const escape = s => String(s ?? '').replace(/[&<>"']/g,
   c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 const data = await fetch('data/questionnaires.json').then(r => r.json());
-const form = data.forms.find(f => f.id === formId);
 
-if (!form) {
-  document.getElementById('page').textContent = 'No form called ' + formId;
+// One page, several instruments.
+//
+// Twelve separate forms meant twelve buttons and twelve submissions, which is a lot of
+// clicking for the researcher and a lot of places to lose a participant's attention.
+// They are still stored as separate instruments -- the scoring and the citations depend
+// on that -- but they are answered in one sitting and submitted together.
+const forms = single
+  ? data.forms.filter(f => f.id === single)
+  : data.forms.filter(f => f.when === group);
+
+if (!forms.length) {
+  document.getElementById('page').textContent = 'Nothing to show.';
 } else {
-  let html = `<h1>${escape(form.title)}</h1>`;
-  if (form.instruction) html += `<div class="intro">${escape(form.instruction)}</div>`;
-  html += '<form id="f">';
+  const title = group === 'before' ? 'Before we start' : 'A few last questions';
+  let html = `<h1>${escape(single ? forms[0].title : title)}</h1>`;
 
-  for (const item of form.items) {
-    html += '<div class="q">';
-    if (item.text) html += `<div class="t">${escape(item.text)}</div>`;
-    if (item.help) html += `<div class="help">${escape(item.help)}</div>`;
+  for (const form of forms) {
+    if (!single) html += `<h2 style="margin:2.4rem 0 .3rem;font-size:1.2rem">${escape(form.title)}</h2>`;
+    if (form.instruction) html += `<div class="intro">${escape(form.instruction)}</div>`;
 
-    if (item.type === 'choice') {
-      html += '<div class="opts">';
-      for (const o of item.options)
-        html += `<label class="opt"><input type="radio" name="${escape(item.id)}" value="${escape(o)}"> ${escape(o)}</label>`;
+    for (const item of form.items) {
+      // Namespaced, because item ids are only unique within an instrument.
+      const name = form.id + '::' + item.id;
+      html += '<div class="q">';
+      if (item.text) html += `<div class="t">${escape(item.text)}</div>`;
+      if (item.help) html += `<div class="help">${escape(item.help)}</div>`;
+
+      if (item.type === 'choice') {
+        html += '<div class="opts">';
+        for (const o of item.options)
+          html += `<label class="opt"><input type="radio" name="${escape(name)}" value="${escape(o)}"> ${escape(o)}</label>`;
+        html += '</div>';
+      } else if (item.type === 'scale') {
+        html += '<div class="opts">';
+        for (let v = item.min; v <= item.max; v += (item.step || 1))
+          html += `<label class="opt"><input type="radio" name="${escape(name)}" value="${v}"> ${v}</label>`;
+        html += `</div><div class="ends"><span>${escape(item.min_label)}</span><span>${escape(item.max_label)}</span></div>`;
+      } else if (item.type === 'paragraph') {
+        html += `<textarea name="${escape(name)}"></textarea>`;
+      } else {
+        html += `<input type="text" name="${escape(name)}">`;
+      }
       html += '</div>';
-    } else if (item.type === 'scale') {
-      html += '<div class="opts">';
-      for (let v = item.min; v <= item.max; v += (item.step || 1))
-        html += `<label class="opt"><input type="radio" name="${escape(item.id)}" value="${v}"> ${v}</label>`;
-      html += `</div><div class="ends"><span>${escape(item.min_label)}</span><span>${escape(item.max_label)}</span></div>`;
-    } else if (item.type === 'paragraph') {
-      html += `<textarea name="${escape(item.id)}"></textarea>`;
-    } else {
-      html += `<input type="text" name="${escape(item.id)}">`;
     }
-    html += '</div>';
+
+    if (form.citation) html += `<div class="cite">${escape(form.citation)}</div>`;
   }
 
-  if (form.citation) html += `<div class="cite">${escape(form.citation)}</div>`;
   // Nothing is required. A participant declining to answer is data; a form that will not
   // submit until it is full produces compliance, not answers.
-  html += '<div class="bar"><button type="submit">Submit</button></div></form>';
-  document.getElementById('page').innerHTML = html;
+  html += '<div class="bar"><button type="submit" form="f">Submit</button></div>';
+  document.getElementById('page').innerHTML = '<form id="f">' + html + '</form>';
 
   document.getElementById('f').addEventListener('submit', async e => {
     e.preventDefault();
-    const answers = {};
-    for (const item of form.items) {
-      const field = e.target.elements[item.id];
-      answers[item.id] = field ? (field.value ?? '') : '';
+    for (const form of forms) {
+      const answers = {};
+      for (const item of form.items) {
+        const field = e.target.elements[form.id + '::' + item.id];
+        answers[item.id] = field ? (field.value ?? '') : '';
+      }
+      await fetch('/form-submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ participant, form: form.id, answers,
+                               items: form.items.map(i => i.id) }),
+      });
     }
-    await fetch('/form-submit', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ participant, form: form.id, answers,
-                             items: form.items.map(i => i.id) }),
-    });
     document.getElementById('page').innerHTML =
       '<h1>Thank you</h1><div class="intro">Your answers have been saved. ' +
       'Please let the researcher know you have finished.</div>';
+    window.scrollTo(0, 0);
   });
 }
 </script>

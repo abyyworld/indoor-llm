@@ -159,7 +159,12 @@ STATE = {
     "trial": 0,
     "of": 0,
     "seen": 0.0,            # when the headset last checked in
+    "bundled": "",          # who has already had their combined file written
 }
+
+
+def participant_of(state: dict) -> str:
+    return state.get("participant") or "unknown"
 
 
 class Handler(SimpleHTTPRequestHandler):
@@ -184,6 +189,14 @@ class Handler(SimpleHTTPRequestHandler):
         return json.loads(self.rfile.read(length) or b"{}")
 
     def do_GET(self):
+        if self.path == "/info":
+            # The page cannot work its own LAN address out, and location.origin is
+            # whatever the researcher typed -- which was localhost, so the address shown
+            # for the headset pointed the headset at itself. Only the server knows.
+            self._json({"ip": local_ip(), "port": PORT,
+                        "headset_url": f"https://{local_ip()}:{PORT}/vr.html"})
+            return
+
         if self.path == "/state":
             import time
 
@@ -258,6 +271,13 @@ class Handler(SimpleHTTPRequestHandler):
             # start a second session on the next poll.
             if STATE["command"] == "run" and payload.get("headset") == "running":
                 STATE["command"] = "idle"
+
+            # Combine automatically at the end. Asking a researcher to press a button
+            # after the participant has left is asking for a file that never gets written.
+            if payload.get("headset") == "finished" and STATE.get("bundled") != participant_of(STATE):
+                result = bundle(participant_of(STATE))
+                STATE["bundled"] = participant_of(STATE)
+                print(f"  session finished -- {result.get('file', result.get('error'))}")
             self._json({"command": payload.get("ack") and "idle" or STATE["command"],
                         "participant": STATE["participant"]})
 
