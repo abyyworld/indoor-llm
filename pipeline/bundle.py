@@ -28,6 +28,7 @@ SOURCES = {
     "oversight_responses.csv": "review",
     "consent_log.csv": "consent",
     "questionnaire_responses.csv": "questionnaire",
+    "rationale_responses.csv": "rationale",
 }
 
 # Prefixes of the per-run files, which carry a participant and timestamp in the name.

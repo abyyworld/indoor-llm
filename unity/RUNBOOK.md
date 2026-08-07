@@ -256,7 +256,7 @@ python3 -m pipeline.cli export-unity runs/session_p01.json --out runs/unity_p01.
 
 python3 -m pipeline.cli oversight-block \
   --batch configs/pilot_8cell.json \
-  --participant p01 --seed 42 --per-condition 3 \
+  --participant p01 --seed 42 \
   --out runs/oversight_p01.json
 ```
 

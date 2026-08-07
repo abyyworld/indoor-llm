@@ -36,6 +36,7 @@ namespace EmotionRooms
             Collect(rows, columns, Path.Combine(dir, "responses.csv"), "trial", participant);
             Collect(rows, columns, Path.Combine(dir, "oversight_responses.csv"), "review", participant);
             Collect(rows, columns, Path.Combine(dir, "questionnaire_responses.csv"), "questionnaire", participant);
+            Collect(rows, columns, Path.Combine(dir, "rationale_responses.csv"), "rationale", participant);
             Collect(rows, columns, Path.Combine(dir, "consent_log.csv"), "consent", participant);
 
             string logs = Path.Combine(dir, "logs");

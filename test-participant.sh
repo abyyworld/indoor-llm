@@ -30,7 +30,7 @@ python3 -m pipeline.cli export-unity "runs/session_$PARTICIPANT.json" \
 
 python3 -m pipeline.cli oversight-block \
   --batch "$BATCH" --participant "$PARTICIPANT" --seed "$SEED" \
-  --per-condition 3 --out "runs/oversight_$PARTICIPANT.json"
+  --out "runs/oversight_$PARTICIPANT.json"
 
 python3 -m pipeline.cli build-practice --out runs/practice.json
 
@@ -39,7 +39,8 @@ python3 -m pipeline.cli build-practice --out "runs/practice.json"
 
 cp "runs/unity_$PARTICIPANT.json"     "$DEST/session.json"
 cp "runs/practice.json"               "$DEST/practice.json"
-cp "runs/oversight_$PARTICIPANT.json" "$DEST/oversight.json"
+cp "runs/oversight_$PARTICIPANT.json"           "$DEST/oversight.json"
+cp "runs/oversight_${PARTICIPANT}_rationale.json" "$DEST/rationale.json"
 
 echo
 echo "Ready for $PARTICIPANT in: $DEST"
@@ -54,6 +55,10 @@ print(f"  oversight.json  {len(b['trials'])} review trials")
 print("    conditions:", dict(collections.Counter(t["condition"] for t in b["trials"])))
 print("    swapped:   ", dict(collections.Counter(
     t["ground_truth"].get("swapped_field") or "-" for t in b["trials"])))
+print("    corrections:", dict(collections.Counter(
+    t.get("correction_source") or "n/a" for t in b["trials"])))
+r = json.load(open(f"runs/oversight_{p}_rationale.json"))
+print(f"  rationale.json  {len(r['trials'])} trials  ({r['question']})")
 PY
 echo
 echo "In Unity: Emotion Rooms > Study Control Panel (Cmd-Shift-E) sets the id and runs"

@@ -113,11 +113,19 @@ namespace EmotionRooms.EditorTools
             server.trialRunner = runner;
             server.review = review;
 
+            var rationale = root.AddComponent<RationaleReview>();
+            rationale.loader = loader;
+            rationale.events = events;
+            rationale.telemetry = telemetry;
+            rationale.answerPanel = detection;
+
             var messageBoard = root.AddComponent<MessageBoard>();
             messageBoard.viewer = camera;
 
             var bootstrap = root.AddComponent<StudyBootstrap>();
             bootstrap.board = messageBoard;
+            bootstrap.rationaleReview = rationale;
+            rationale.board = messageBoard;
             bootstrap.questionnaires = forms;
             server.bootstrap = bootstrap;
             bootstrap.detectionPanel = detection;

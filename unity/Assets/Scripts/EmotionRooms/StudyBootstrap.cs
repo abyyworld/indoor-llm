@@ -27,6 +27,9 @@ namespace EmotionRooms
         [Header("Wiring")]
         public TrialRunner trialRunner;
         public OversightReview oversightReview;
+
+        [Tooltip("The rationale check. Runs after the oversight block, ~3 minutes.")]
+        public RationaleReview rationaleReview;
         public AffectGrid grid;
 
         [Tooltip("In-app forms. Runs the 'before' set on Begin Study and the 'after' set " +
@@ -160,6 +163,7 @@ namespace EmotionRooms
                 trialRunner.practiceFileName = practiceRooms ? "practice.json" : "";
             }
             if (oversightReview != null) oversightReview.participantId = participantId;
+            if (rationaleReview != null) rationaleReview.participantId = participantId;
 
             // Found in the scene rather than through TrialRunner, so a log still gets the
             // right id if one of the runners is unwired. A writer that silently keeps the
@@ -184,6 +188,7 @@ namespace EmotionRooms
                 trialRunner.SessionFinished += OnSessionFinished;
             }
             if (oversightReview != null) oversightReview.BlockFinished += OnBlockFinished;
+            if (rationaleReview != null) rationaleReview.BlockFinished += OnRationaleFinished;
             if (questionnaires != null) questionnaires.FormFinished += OnFormFinished;
 
             if (detectionPanel != null) detectionPanel.Answered += OnDetectionAnswered;
@@ -208,6 +213,8 @@ namespace EmotionRooms
                 trialRunner.Abort("stopped_early");
             if (oversightReview != null && oversightReview.IsRunning)
                 oversightReview.Abort("stopped_early");
+            if (rationaleReview != null && rationaleReview.IsRunning)
+                rationaleReview.Abort("stopped_early");
 
             BundleNow("session stopped early");
         }
@@ -218,6 +225,7 @@ namespace EmotionRooms
         {
             if (trialRunner != null) trialRunner.SessionFinished -= OnSessionFinished;
             if (oversightReview != null) oversightReview.BlockFinished -= OnBlockFinished;
+            if (rationaleReview != null) rationaleReview.BlockFinished -= OnRationaleFinished;
             if (questionnaires != null) questionnaires.FormFinished -= OnFormFinished;
             if (detectionPanel != null) detectionPanel.Answered -= OnDetectionAnswered;
             if (attributionPanel != null) attributionPanel.Answered -= OnAttributionAnswered;
@@ -426,6 +434,18 @@ namespace EmotionRooms
 
         void OnBlockFinished()
         {
+            // The rationale check follows the detection block, never precedes it: it
+            // shows the model's reasoning, which names what the system was trying to do.
+            if (rationaleReview != null)
+            {
+                rationaleReview.BeginBlock();
+                return;
+            }
+            OnRationaleFinished();
+        }
+
+        void OnRationaleFinished()
+        {
             // The VR part is over. The after-forms are opened from the panel once the
             // headset is off -- NASA-TLX asks about the review block, so it wants to be
             // soon, but it does not want to be answered through a headset.
@@ -451,6 +471,12 @@ namespace EmotionRooms
 
         void OnDetectionAnswered(string value, float confidence)
         {
+            // The same two-option panel serves both blocks; whichever is running owns it.
+            if (rationaleReview != null && rationaleReview.IsRunning)
+            {
+                rationaleReview.CommitAnswer(value == "yes");
+                return;
+            }
             if (oversightReview == null) return;
             oversightReview.pendingDetectionConfidence = confidence;
             oversightReview.CommitDetection(value == "yes" ? false : true);
