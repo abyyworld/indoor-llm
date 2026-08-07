@@ -132,17 +132,42 @@ async function start(participant) {
 }
 
 async function boot() {
+  // Say which of the three things is wrong, in words a person can act on. "It did not
+  // work" sends someone hunting through all three; naming the one that failed does not.
   const secure = window.isSecureContext;
+  const hasXR = 'xr' in navigator;
   let ok = false;
-  if ('xr' in navigator) {
+  if (hasXR) {
     try { ok = await navigator.xr.isSessionSupported('immersive-vr'); } catch (e) { ok = false; }
   }
 
-  if (!secure) $('msg').textContent = 'Not a secure connection. Use the https:// address.';
-  else if (!ok) $('msg').textContent = 'No VR here. Open this page in the Quest browser.';
-  else { $('msg').textContent = 'Ready. Press the button, then hand over to the researcher.'; }
+  if (!secure) {
+    $('msg').innerHTML =
+      '<b>Not a secure connection.</b><br>VR will not start over plain http. ' +
+      'Go back and use the address the researcher panel shows, and accept the ' +
+      'certificate warning with Advanced then Proceed.';
+  } else if (!hasXR) {
+    $('msg').innerHTML =
+      '<b>This browser has no VR support.</b><br>This page has to be opened in the ' +
+      'headset\'s own Browser app, not on a laptop.';
+  } else if (!ok) {
+    $('msg').innerHTML =
+      '<b>VR is not available.</b><br>The browser supports it but the headset is not ' +
+      'offering it. Take the headset off and put it back on, then reload this page.';
+  } else {
+    $('msg').innerHTML =
+      '<b>Ready.</b><br>Press the button below, then take the headset off and give it ' +
+      'to the participant when the researcher says so.';
+  }
 
   $('enter').disabled = !(secure && ok);
+
+  // Tiny, and only here because a headset cannot easily be screenshotted or inspected:
+  // if something is wrong this is the line to read out.
+  const line = document.createElement('div');
+  line.className = 'small';
+  line.textContent = `secure:${secure} webxr:${hasXR} immersive:${ok} at ${location.host}`;
+  document.getElementById('box').appendChild(line);
 }
 boot();
 </script>

@@ -37,6 +37,7 @@ DATA = ROOT / "runs" / "web-data"
 CERT = ROOT / "runs" / "study-cert.pem"
 KEY = ROOT / "runs" / "study-key.pem"
 PORT = 8443
+REDIRECT_PORT = 8080   # plain HTTP, only to bounce a short typed address to HTTPS
 
 
 def local_ip() -> str:
@@ -189,11 +190,18 @@ class Handler(SimpleHTTPRequestHandler):
         return json.loads(self.rfile.read(length) or b"{}")
 
     def do_GET(self):
+        # Short aliases. Typing "https://192.168.1.23:8443/vr.html" on a virtual keyboard
+        # inside a headset is the single most error-prone step in the whole setup, so the
+        # headset page answers to /v as well.
+        if self.path in ("/v", "/v/"):
+            self.path = "/vr.html"
+
         if self.path == "/info":
             # The page cannot work its own LAN address out, and location.origin is
             # whatever the researcher typed -- which was localhost, so the address shown
             # for the headset pointed the headset at itself. Only the server knows.
             self._json({"ip": local_ip(), "port": PORT,
+                        "short": f"{local_ip()}:{REDIRECT_PORT}",
                         "headset_url": f"https://{local_ip()}:{PORT}/vr.html"})
             return
 
@@ -309,6 +317,35 @@ class Handler(SimpleHTTPRequestHandler):
             self._json({"error": "unknown endpoint"}, 404)
 
 
+class RedirectHandler(SimpleHTTPRequestHandler):
+    """Bounce plain HTTP to the HTTPS study.
+
+    So the address typed into the headset can be `192.168.1.23:8080` -- no scheme, no
+    path, no punctuation beyond a colon and a dot. The browser assumes http, lands here,
+    and is sent on. WebXR still runs over HTTPS; this only removes the typing.
+    """
+
+    def do_GET(self):
+        target = f"https://{local_ip()}:{PORT}/vr.html"
+        self.send_response(302)
+        self.send_header("Location", target)
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+
+    def log_message(self, fmt, *args):
+        pass
+
+
+def start_redirect() -> None:
+    import threading
+
+    try:
+        server = ThreadingHTTPServer(("0.0.0.0", REDIRECT_PORT), RedirectHandler)
+    except OSError:
+        return
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+
+
 def main() -> int:
     if not WEB.is_dir():
         print(f"error: no web/ folder at {WEB}")
@@ -328,13 +365,14 @@ def main() -> int:
 
     server = ThreadingHTTPServer(("0.0.0.0", PORT), Handler)
     server.socket = context.wrap_socket(server.socket, server_side=True)
+    start_redirect()
 
     ip = local_ip()
     print()
     print("  Emotion Rooms is being served.")
     print()
-    print(f"    In the Quest browser:   https://{ip}:{PORT}/")
-    print(f"    On this machine:        https://localhost:{PORT}/")
+    print(f"    TYPE THIS IN THE HEADSET:   {ip}:{REDIRECT_PORT}")
+    print(f"    Researcher panel (here):    https://localhost:{PORT}/")
     print()
     print("  The headset will warn that the certificate is not trusted. That is expected:")
     print("  tap Advanced, then Proceed. WebXR needs HTTPS and this is a self-signed")

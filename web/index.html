@@ -46,11 +46,12 @@
     <div class="head"><span class="n">1</span> Point the headset at this study
       <span class="badge">DO THIS</span></div>
     <div class="who">once, before the participant arrives</div>
-    <p>Put the headset on, open its <b>Browser</b>, and type this exactly:</p>
-    <code id="vrurl">…</code>
-    <p>Accept the certificate warning (Advanced → Proceed), press <b>Enter VR</b>, then
-      take the headset off and put it down. That is the only thing ever done in the
-      headset.</p>
+    <p>Put the headset on, open its <b>Browser</b>, and type just this — no https,
+      no slashes:</p>
+    <code id="vrshort">…</code>
+    <p>It will warn that the connection is not private. That is expected and safe here:
+      tap <b>Advanced</b>, then <b>Proceed</b>. Then press <b>Enter VR</b>, take the
+      headset off and put it down. That is the only thing ever done in the headset.</p>
     <p id="hstat" class="warn">Waiting for the headset…</p>
   </div>
 
@@ -108,7 +109,7 @@ async function claim() {
 
 async function boot() {
   info = await fetch('/info').then(r => r.json()).catch(() => info);
-  $('vrurl').textContent = info.headset_url || '(server unreachable)';
+  $('vrshort').textContent = info.short || '(server unreachable)';
 
   const state = await fetch('/state').then(r => r.json()).catch(() => null);
   if (!participant && state?.participant) participant = state.participant;
