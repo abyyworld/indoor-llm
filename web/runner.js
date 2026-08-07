@@ -369,11 +369,21 @@ export class Study {
     // participant a principal rather than a rater. The Unity route has had this all
     // along; the browser route losing it would have quietly dropped the study's
     // central measure on one platform.
-    let after = null, applied = false;
+    // The yoked control. Half the corrected trials apply a value the participant did
+    // not choose, unannounced, because otherwise the correction effect cannot be told
+    // apart from self-consistency: someone rates their own fix highly because it is
+    // theirs. Both values are logged; analysis compares own against yoked.
+    let after = null, applied = false, appliedValue = '', source = '';
     if (field && value !== '') {
-      const corrected = { ...config, [field]: coerce(field, value) };
+      const yoked = trial.correction_source === 'yoked';
+      appliedValue = yoked ? otherValueFor(field, value) : value;
+      source = yoked ? 'yoked' : 'own';
+
+      const corrected = { ...config, [field]: coerce(field, appliedValue) };
       applied = true;
-      this.log.event('correction_room_shown', { field, value: String(value) });
+      this.log.event('correction_room_shown', {
+        field, chose: String(value), applied_value: String(appliedValue), source,
+      });
       this.showRoom(corrected);
       await wait(REVIEW_EXPOSURE * 1000);
       if (this.stopped) return;
@@ -392,6 +402,7 @@ export class Study {
       swapped_field: trial.ground_truth?.swapped_field ?? '',
       detected: noticed === 'yes' ? 1 : 0,
       attributed_field: field, corrected_value: value,
+      applied_value: appliedValue, correction_source: source,
       valence_before: before.valence, arousal_before: before.arousal,
       valence_after: after ? after.valence : '',
       arousal_after: after ? after.arousal : '',
@@ -432,6 +443,17 @@ export class Study {
 
 // A chosen correction arrives as the button's label string; the config field it
 // lands in is typed. Coercing here rather than at render time keeps the buttons dumb.
+// A legal value for this field that the participant did not choose. Drawn from the same
+// pool so a yoked correction is as plausible a repair as their own -- the comparison is
+// about whose choice it was, not whether it was sensible.
+function otherValueFor(field, chosen) {
+  const values = POOL_VALUES[field];
+  if (!values || values.length < 2) return chosen;
+  const options = values.filter(v => String(v) !== String(chosen));
+  if (!options.length) return chosen;
+  return options[Math.floor(Math.random() * options.length)];
+}
+
 function coerce(field, value) {
   if (field === 'hue') return parseInt(value, 10);
   if (field === 'saturation' || field === 'brightness') return parseFloat(value);

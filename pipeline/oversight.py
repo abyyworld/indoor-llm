@@ -32,7 +32,38 @@ SWAPPED = "swapped"
 RANDOM = "random"
 RATIONALE_MISMATCHED = "rationale_mismatched"
 
-CONDITIONS: tuple[str, ...] = (FAITHFUL, SWAPPED, RANDOM, RATIONALE_MISMATCHED)
+#: The main detection block. RATIONALE_MISMATCHED is deliberately NOT here.
+#:
+#: It is coded as a corruption but is perceptually identical to a faithful room -- the
+#: room is correct and only the stated reasoning is wrong. Scored alongside the others it
+#: contaminates d-prime, because a participant who correctly sees nothing wrong with the
+#: room is marked as having missed a corruption. It also has no answer in the attribution
+#: instrument: none of the five variables is at fault, so "nothing wrong" is
+#: simultaneously the closest-to-correct response and the one that ends the trial.
+#: It runs as its own short block with its own question instead.
+CONDITIONS: tuple[str, ...] = (FAITHFUL, SWAPPED, RANDOM)
+
+#: Every condition the study can present, including the one that lives in its own block.
+ALL_CONDITIONS: tuple[str, ...] = (FAITHFUL, SWAPPED, RANDOM, RATIONALE_MISMATCHED)
+
+#: Half the trials are faithful.
+#:
+#: At 25% faithful a participant works out within a few trials that most rooms are broken
+#: and shifts criterion hard toward "something is wrong". Hit rate then looks excellent
+#: and means nothing, and criterion measures the block's base rate rather than the person.
+#: An even split is what makes criterion a property of the participant.
+FAITHFUL_SHARE: float = 0.5
+
+#: Corrections applied as the participant asked, versus a different legal value.
+#:
+#: Without this comparison the correction effect has an obvious alternative explanation
+#: and no defence: someone who diagnoses a fault, chooses a fix, watches it applied and
+#: then rates the result will rate it higher because it was theirs. That is
+#: self-consistency, not correction quality. Half the corrected trials therefore apply a
+#: value the participant did not choose, unannounced, so own-correction can be compared
+#: against a matched one.
+OWN: str = "own"
+YOKED: str = "yoked"
 
 #: Variables a participant can be asked to attribute an error to. Kept here rather than
 #: derived from pools.py because Phase B asks about the agent's *decisions*, and which
@@ -108,7 +139,7 @@ def make_trial(
     pool_sampler=None,
 ) -> dict:
     """Build one Phase B trial, with its ground truth attached."""
-    if condition not in CONDITIONS:
+    if condition not in ALL_CONDITIONS:
         raise OversightError(f"unknown condition {condition!r}")
 
     target = config.get("target_emotion")
@@ -193,23 +224,43 @@ def build_oversight_block(
     *,
     seed: int,
     participant: str,
-    per_condition: int = 4,
+    trials_total: int = 32,
     pool_sampler=None,
 ) -> dict:
-    """One participant's Phase B block, balanced across conditions and shuffled.
+    """One participant's Phase B block: half faithful, half corrupted, shuffled.
 
-    Balanced because detection sensitivity compares faithful against swapped: an
-    unbalanced block would confound sensitivity with response bias.
+    32 trials by default, not 12. Detection sensitivity is estimated per participant from
+    the faithful/corrupted contrast, and three faithful trials give a false-alarm rate
+    that can only be 0, .33, .67 or 1 -- a d-prime computed from that is not an estimate.
+    Sixteen of each is the smallest split that supports the analysis.
+
+    Corrupted trials are further split between swapped and random, and each corrupted
+    trial is pre-assigned to have the participant's own correction applied or a different
+    one, balanced, so the yoked comparison is by design rather than by whatever happened.
     """
     if len(configs) < 2:
         raise OversightError("need at least two configs so there is a donor to draw from")
+    if trials_total < 4:
+        raise OversightError("a block needs at least four trials to be balanced")
 
     rng = random.Random(seed)
     trials: list[dict] = []
 
-    conditions = list(CONDITIONS) if pool_sampler else [c for c in CONDITIONS if c != RANDOM]
+    faithful_count = int(round(trials_total * FAITHFUL_SHARE))
+    corrupted_count = trials_total - faithful_count
+
+    corrupt_kinds = [SWAPPED, RANDOM] if pool_sampler else [SWAPPED]
+    per_kind = corrupted_count // len(corrupt_kinds)
+    counts = {FAITHFUL: faithful_count}
+    for i, kind in enumerate(corrupt_kinds):
+        # Any remainder goes to the first kind rather than being dropped.
+        counts[kind] = per_kind + (corrupted_count - per_kind * len(corrupt_kinds)
+                                   if i == 0 else 0)
+
+    conditions = [FAITHFUL] + corrupt_kinds
 
     for condition in conditions:
+        per_condition = counts[condition]
         # Spread each condition evenly over the configs rather than drawing with
         # replacement. Sampling independently lets a condition cluster on one or two
         # emotions by chance, which confounds condition with emotion: if most swapped
@@ -234,6 +285,19 @@ def build_oversight_block(
             )
 
     rng.shuffle(trials)
+
+    # Assign the yoked half among the corrupted trials only -- a faithful room has
+    # nothing to correct. Assigned from a shuffled balanced list rather than a coin flip
+    # per trial, so every participant gets the same split instead of a binomial draw.
+    corrupted = [t for t in trials if t["condition"] != FAITHFUL]
+    sources = [OWN, YOKED] * (len(corrupted) // 2 + 1)
+    sources = sources[: len(corrupted)]
+    rng.shuffle(sources)
+    for trial, source in zip(corrupted, sources):
+        trial["correction_source"] = source
+    for trial in trials:
+        trial.setdefault("correction_source", "")
+
     for index, trial in enumerate(trials, start=1):
         trial["trial_index"] = index
         trial["trial_id"] = f"{participant}_b{index:03d}"
@@ -243,7 +307,71 @@ def build_oversight_block(
         "seed": seed,
         "phase": "B",
         "conditions": conditions,
-        "per_condition": per_condition,
+        "counts": counts,
+        "trials_total": len(trials),
+        "faithful_share": FAITHFUL_SHARE,
+        "trials": trials,
+    }
+
+
+def build_rationale_block(
+    configs: Sequence[dict],
+    *,
+    seed: int,
+    participant: str,
+    trials_total: int = 6,
+) -> dict:
+    """The rationale check, as its own block with its own question.
+
+    Asked as "does the stated reasoning match the room?" rather than "is anything wrong
+    with the room?", because the room is correct in both halves. Half the trials carry
+    the model's own rationale and half carry another emotion's, so this is its own
+    two-alternative detection task and cannot contaminate the room-detection d-prime.
+    """
+    if len(configs) < 2:
+        raise OversightError("need at least two configs so a rationale can be swapped")
+
+    rng = random.Random(seed + 9973)
+    matched = trials_total // 2
+    trials: list[dict] = []
+
+    pool = list(configs)
+    rng.shuffle(pool)
+    for i in range(trials_total):
+        config = pool[i % len(pool)]
+        if i < matched:
+            trials.append({
+                "condition": "rationale_matched",
+                "stimulus": dict(config),
+                "target_emotion_shown": config.get("target_emotion"),
+                "rationale_shown": config.get("rationale", ""),
+                "ground_truth": {"rationale_is_wrong": False, "donor_emotion": None},
+            })
+        else:
+            donors = [c for c in configs
+                      if c.get("target_emotion") != config.get("target_emotion")]
+            if not donors:
+                raise OversightError("no donor with a different emotion for the rationale block")
+            donor = rng.choice(donors)
+            trials.append({
+                "condition": "rationale_mismatched",
+                "stimulus": dict(config),
+                "target_emotion_shown": config.get("target_emotion"),
+                "rationale_shown": donor.get("rationale", ""),
+                "ground_truth": {"rationale_is_wrong": True,
+                                 "donor_emotion": donor.get("target_emotion")},
+            })
+
+    rng.shuffle(trials)
+    for index, trial in enumerate(trials, start=1):
+        trial["trial_index"] = index
+        trial["trial_id"] = f"{participant}_r{index:03d}"
+
+    return {
+        "participant": participant,
+        "seed": seed,
+        "phase": "B-rationale",
+        "question": "Does the stated reasoning match the room?",
         "trials": trials,
     }
 

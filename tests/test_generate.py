@@ -129,14 +129,20 @@ class TestGenerationHappyPath(unittest.TestCase):
         self.assertIn("enum", item["properties"]["hue"])
         self.assertFalse(item["additionalProperties"])
 
-    def test_schema_count_matches_what_the_prompt_asks_for(self):
+    def test_schema_caps_the_batch_without_pinning_a_minimum(self):
+        # The API rejects any minItems other than 0 or 1: "For 'array' type, 'minItems'
+        # values other than 0 or 1 are not supported." Pinning both bounds to the
+        # requested count made every live call fail, which is how this path ran for
+        # months against tests and never once against the real endpoint. maxItems still
+        # caps the batch; the accept/reject/continuation loop tops it up to `count`.
         client = FakeClient([FakeMessage(n_valid(2)), FakeMessage(n_valid(2, start=2))])
         generate_candidates(client, "calm", 4, chunk_size=2, verbose=False)
 
         for call in client.messages.calls:
             candidates = call["output_config"]["format"]["schema"]["properties"]["candidates"]
-            self.assertEqual(candidates["minItems"], 2)
             self.assertEqual(candidates["maxItems"], 2)
+            self.assertLessEqual(candidates["minItems"], 1,
+                                 "the API rejects minItems above 1")
 
     def test_floats_are_snapped_onto_pool_members(self):
         client = FakeClient([FakeMessage([candidate(saturation=0.2000000001)])])

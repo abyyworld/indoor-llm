@@ -824,17 +824,24 @@ class TestOversightTrials(unittest.TestCase):
     def test_blocks_are_balanced_and_deterministic(self):
         from pipeline.oversight import build_oversight_block
 
-        a = build_oversight_block(self.CONFIGS, seed=7, participant="P01", per_condition=3)
-        b = build_oversight_block(self.CONFIGS, seed=7, participant="P01", per_condition=3)
+        a = build_oversight_block(self.CONFIGS, seed=7, participant="P01", trials_total=8)
+        b = build_oversight_block(self.CONFIGS, seed=7, participant="P01", trials_total=8)
         self.assertEqual(a["trials"], b["trials"])
 
         counts = Counter(t["condition"] for t in a["trials"])
-        self.assertEqual(set(counts.values()), {3}, "unbalanced block confounds sensitivity")
+        # Half the block is faithful. At 25% faithful a participant works out that most
+        # rooms are broken and shifts criterion toward "something is wrong": hit rate
+        # then looks excellent and criterion measures the base rate rather than the
+        # person. The corrupted half is split evenly across its kinds.
+        from pipeline.oversight import FAITHFUL
+        corrupted = sum(v for k, v in counts.items() if k != FAITHFUL)
+        self.assertEqual(counts[FAITHFUL], corrupted,
+                         "an uneven base rate makes criterion a property of the block")
 
     def test_random_condition_needs_a_sampler(self):
         from pipeline.oversight import build_oversight_block
 
-        block = build_oversight_block(self.CONFIGS, seed=1, participant="P01", per_condition=2)
+        block = build_oversight_block(self.CONFIGS, seed=1, participant="P01", trials_total=6)
         self.assertNotIn("random", block["conditions"])
 
 
@@ -947,6 +954,99 @@ class TestCounterbalancing(unittest.TestCase):
         with self.assertRaises(ValueError):
             build_session(self.ROOMS, participant="P", seed=1,
                           variants_per_emotion=1, counterbalance="latin")
+
+
+class TestPhaseBMeasurement(unittest.TestCase):
+    """The four things that made Phase B uninterpretable, as invariants.
+
+    Each of these is a measurement defect rather than a matter of taste: a reviewer who
+    knows signal detection theory finds them mechanically, and any one of them is a
+    reject rather than a revision.
+    """
+
+    CONFIGS = [
+        {"target_emotion": "calm", "hue": 240, "saturation": 0.2, "brightness": 150,
+         "texture": "plaster", "roughness": "smooth", "rationale": "Cool, soft."},
+        {"target_emotion": "excited", "hue": 30, "saturation": 0.4, "brightness": 750,
+         "texture": "plaster", "roughness": "rough", "rationale": "Warm, bright."},
+        {"target_emotion": "tense", "hue": 0, "saturation": 0.4, "brightness": 750,
+         "texture": "concrete", "roughness": "rough", "rationale": "Hard, harsh."},
+        {"target_emotion": "depressed", "hue": 240, "saturation": 0.2, "brightness": 150,
+         "texture": "textile", "roughness": "rough", "rationale": "Dim, muted."},
+    ]
+
+    def _block(self, **kwargs):
+        from pipeline.controls import random_rooms
+        from pipeline.oversight import build_oversight_block
+
+        def sampler(rng):
+            room = random_rooms(1, seed=rng.randrange(1 << 30))[0]
+            return {k: room[k] for k in ("hue", "saturation", "brightness", "texture")}
+
+        return build_oversight_block(self.CONFIGS, participant="P01", seed=5,
+                                     pool_sampler=sampler, **kwargs)
+
+    def test_the_block_is_long_enough_for_a_usable_d_prime(self):
+        # Three faithful trials give a false-alarm rate that can only be 0, .33, .67 or
+        # 1. A d-prime computed from that is not an estimate.
+        from pipeline.oversight import FAITHFUL
+
+        trials = self._block()["trials"]
+        faithful = sum(1 for t in trials if t["condition"] == FAITHFUL)
+        self.assertGreaterEqual(len(trials), 32)
+        self.assertGreaterEqual(faithful, 16)
+
+    def test_half_the_trials_are_faithful(self):
+        from pipeline.oversight import FAITHFUL
+
+        trials = self._block()["trials"]
+        faithful = sum(1 for t in trials if t["condition"] == FAITHFUL)
+        self.assertEqual(faithful, len(trials) - faithful,
+                         "an uneven base rate makes criterion a property of the block")
+
+    def test_rationale_mismatch_is_not_in_the_detection_block(self):
+        # It is perceptually identical to a faithful room, so scoring it as a corruption
+        # marks a correct "nothing is wrong" as a miss and contaminates d-prime.
+        from pipeline.oversight import RATIONALE_MISMATCHED
+
+        conditions = {t["condition"] for t in self._block()["trials"]}
+        self.assertNotIn(RATIONALE_MISMATCHED, conditions)
+
+    def test_the_rationale_block_asks_its_own_question(self):
+        from pipeline.oversight import build_rationale_block
+
+        block = build_rationale_block(self.CONFIGS, seed=5, participant="P01")
+        self.assertIn("reasoning", block["question"])
+
+        kinds = Counter(t["condition"] for t in block["trials"])
+        self.assertEqual(kinds["rationale_matched"], kinds["rationale_mismatched"],
+                         "its own detection task needs its own even base rate")
+
+    def test_corrected_trials_are_split_between_own_and_yoked(self):
+        # Without a yoked comparison the correction effect cannot be told apart from
+        # self-consistency, and that is the study's central measure.
+        from pipeline.oversight import FAITHFUL, OWN, YOKED
+
+        trials = self._block()["trials"]
+        corrupted = [t for t in trials if t["condition"] != FAITHFUL]
+        sources = Counter(t["correction_source"] for t in corrupted)
+
+        self.assertEqual(sources[OWN], sources[YOKED])
+        self.assertEqual(sources[OWN] + sources[YOKED], len(corrupted))
+
+    def test_faithful_trials_carry_no_correction_source(self):
+        # There is nothing to correct in a room that is not broken.
+        from pipeline.oversight import FAITHFUL
+
+        for trial in self._block()["trials"]:
+            if trial["condition"] == FAITHFUL:
+                self.assertEqual(trial["correction_source"], "")
+
+    def test_the_split_is_deterministic_for_a_participant(self):
+        a = self._block()["trials"]
+        b = self._block()["trials"]
+        self.assertEqual([t["correction_source"] for t in a],
+                         [t["correction_source"] for t in b])
 
 
 class TestPracticeRooms(unittest.TestCase):
@@ -1360,7 +1460,7 @@ class TestDesignLevelRegressions(unittest.TestCase):
         for seed in range(30):
             block = build_oversight_block(
                 self.CONFIGS, seed=seed, participant="P",
-                per_condition=4, pool_sampler=sampler,
+                trials_total=12, pool_sampler=sampler,
             )
             for condition in {t["condition"] for t in block["trials"]}:
                 counts = Counter(
@@ -1369,7 +1469,13 @@ class TestDesignLevelRegressions(unittest.TestCase):
                     if t["condition"] == condition
                 )
                 worst = max(worst, max(counts.values()) - min(counts.values()))
-        self.assertEqual(worst, 0, "condition is not evenly spread over emotions")
+
+        # At most one trial apart. Cycling a reshuffled list is what caps it; drawing
+        # with replacement would let a condition cluster on one emotion, and attribution
+        # accuracy for "swapped" would partly be an accuracy figure for whichever
+        # emotion dominated it. Exact evenness is only possible when the trial count
+        # divides by the number of configs, which 16 faithful over 4 emotions does not.
+        self.assertLessEqual(worst, 1, "condition is not evenly spread over emotions")
 
 
 class TestAffectGrid(unittest.TestCase):
@@ -1525,7 +1631,7 @@ class TestOversightBlockContract(unittest.TestCase):
         from pipeline.oversight import build_oversight_block
 
         return build_oversight_block(
-            self.CONFIGS, seed=7, participant="b01", per_condition=3
+            self.CONFIGS, seed=7, participant="b01", trials_total=8
         )
 
     def test_every_stimulus_would_pass_the_load_time_gate(self):
@@ -1837,7 +1943,7 @@ class TestConditionComparison(unittest.TestCase):
         seen = set()
         for p in range(24):
             block = build_oversight_block(configs, seed=9000 + p, participant=f"p{p}",
-                                          per_condition=3, pool_sampler=sampler)
+                                          trials_total=12, pool_sampler=sampler)
             for trial in block["trials"]:
                 if trial["condition"] == "random":
                     s = trial["stimulus"]

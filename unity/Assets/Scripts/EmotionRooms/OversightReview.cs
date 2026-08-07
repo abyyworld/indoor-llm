@@ -30,6 +30,9 @@ namespace EmotionRooms
     [Serializable]
     public class OversightTrialData
     {
+        /// <summary>"own" or "yoked" -- whose correction actually gets applied.</summary>
+        public string correction_source;
+
         public string trial_id;
         public string condition;
         public string target_emotion_shown;
@@ -73,6 +76,10 @@ namespace EmotionRooms
         public float attributionConfidence;
         public string correctedValue;
 
+        /// <summary>What was actually applied, which is not always what they chose.</summary>
+        public string appliedValue;
+        public string correctionSource;
+
         public long durationMs;
         public string swappedField;      // ground truth, written alongside for convenience
         public string startedUtc;
@@ -96,6 +103,8 @@ namespace EmotionRooms
                 attributedField ?? "",
                 attributionConfidence.ToString("0.###", CultureInfo.InvariantCulture),
                 correctedValue ?? "",
+                appliedValue ?? "",
+                correctionSource ?? "",
                 durationMs.ToString(CultureInfo.InvariantCulture),
                 swappedField ?? "",
                 startedUtc,
@@ -119,7 +128,8 @@ namespace EmotionRooms
         {
             return "participant,trial_index,trial_id,condition,target_emotion_shown," +
                    "detected,detection_confidence,attributed_field,attribution_confidence," +
-                   "corrected_value,duration_ms,swapped_field,started_utc," +
+                   "corrected_value,applied_value,correction_source," +
+                   "duration_ms,swapped_field,started_utc," +
                    "valence_before,arousal_before,valence_after,arousal_after," +
                    "correction_applied";
         }
@@ -190,6 +200,26 @@ namespace EmotionRooms
         [NonSerialized] public string pendingCorrectedValue;
 
         bool detectionAnswered, attributionAnswered, correctionAnswered;
+        string appliedValue = "", correctionSource = "";
+
+        /// <summary>
+        /// A legal value for this field that the participant did not choose.
+        ///
+        /// Matched in kind rather than random noise: it comes from the same pool, so a
+        /// yoked correction is as plausible a repair as the participant's own and the
+        /// comparison isolates whose choice it was, not whether it was sensible.
+        /// </summary>
+        string OtherValueFor(string field, string chosen)
+        {
+            var values = PoolConstants.ValuesFor(field);
+            if (values == null || values.Length < 2) return chosen;
+
+            var options = new List<string>();
+            foreach (var value in values) if (value != chosen) options.Add(value);
+            if (options.Count == 0) return chosen;
+
+            return options[UnityEngine.Random.Range(0, options.Count)];
+        }
         AffectResponse lastRating;
         bool hasRating;
         OversightBlockData block;
@@ -382,6 +412,8 @@ namespace EmotionRooms
             // manufacture data and wreck the false-alarm measure.
             pendingAttributedField = null;
             pendingCorrectedValue = null;
+            appliedValue = "";
+            correctionSource = "";
 
             if (pendingDetected)
             {
@@ -426,17 +458,39 @@ namespace EmotionRooms
                 !string.IsNullOrEmpty(pendingAttributedField) &&
                 !string.IsNullOrEmpty(pendingCorrectedValue))
             {
-                var corrected = trial.stimulus.With(pendingAttributedField, pendingCorrectedValue);
+                // The yoked control.
+                //
+                // Half the corrected trials apply a value the participant did not
+                // choose, unannounced. Without this comparison the correction effect has
+                // no defence: someone who diagnoses a fault, picks a fix, watches it
+                // applied and then rates the result rates it higher because it was
+                // theirs. That is self-consistency, not correction quality, and it is
+                // the alternative explanation a reviewer reaches for first.
+                //
+                // Both values are logged. Analysis compares own against yoked; if they
+                // do not differ, that is a finding -- people believed their oversight
+                // helped when it did not.
+                bool yoked = trial.correction_source == "yoked";
+                string applyValue = yoked
+                    ? OtherValueFor(pendingAttributedField, pendingCorrectedValue)
+                    : pendingCorrectedValue;
+
+                var corrected = trial.stimulus.With(pendingAttributedField, applyValue);
                 var problems = corrected != null ? corrected.Validate() : new List<string> { "unparseable correction" };
 
                 if (corrected != null && problems.Count == 0)
                 {
                     applied = true;
+                    appliedValue = applyValue;
+                    correctionSource = yoked ? "yoked" : "own";
+
                     loader.HideRooms();
                     loader.Load(corrected);
                     if (events != null)
                         events.WriteRoom("correction_room_shown", corrected,
-                            pendingAttributedField + "=" + pendingCorrectedValue);
+                            pendingAttributedField + "=" + applyValue +
+                            " source=" + correctionSource +
+                            " chose=" + pendingCorrectedValue);
                     yield return new WaitForSeconds(reviewExposureSeconds);
 
                     loader.HideRooms();
@@ -478,6 +532,8 @@ namespace EmotionRooms
                 attributedField = pendingAttributedField,
                 attributionConfidence = pendingAttributionConfidence,
                 correctedValue = pendingCorrectedValue,
+                appliedValue = appliedValue,
+                correctionSource = correctionSource,
                 durationMs = (long)((Time.time - began) * 1000f),
                 swappedField = trial.ground_truth != null ? trial.ground_truth.swapped_field : null,
                 startedUtc = startedUtc,

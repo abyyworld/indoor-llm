@@ -50,7 +50,10 @@ def _rooms_of(payload: dict | list) -> list[dict]:
     """Accept a single config, a `{"rooms": [...]}` batch, a session, or a bare list."""
     if isinstance(payload, list):
         return payload
-    for key in ("rooms", "trials"):
+    # "cells" is the handoff format's key. Without it check-separability wrapped the
+    # whole document as a single config and failed with "need at least two configs",
+    # which is how it never ran against a real handoff file.
+    for key in ("rooms", "trials", "cells"):
         if key in payload:
             return payload[key]
     return [payload]
@@ -153,7 +156,7 @@ def cmd_validate_handoff(args: argparse.Namespace) -> int:
 def cmd_oversight_block(args: argparse.Namespace) -> int:
     """Phase B: one participant's detection / attribution / correction block."""
     from .controls import random_rooms
-    from .oversight import build_oversight_block
+    from .oversight import build_oversight_block, build_rationale_block
 
     payload = _load(args.batch)
     configs = _rooms_of(payload)
@@ -170,7 +173,7 @@ def cmd_oversight_block(args: argparse.Namespace) -> int:
         configs,
         seed=args.seed,
         participant=args.participant,
-        per_condition=args.per_condition,
+        trials_total=args.trials,
         pool_sampler=None if args.no_random_arm else pool_sampler,
     )
 
@@ -188,7 +191,17 @@ def cmd_oversight_block(args: argparse.Namespace) -> int:
         print("  injected faults by variable: " +
               ", ".join(f"{k}={v}" for k, v in sorted(broken.items())))
 
+    rationale = build_rationale_block(
+        configs, seed=args.seed, participant=args.participant,
+        trials_total=args.rationale_trials,
+    )
+    yoked = sum(1 for t in block["trials"] if t.get("correction_source") == "yoked")
+    print(f"  corrections: {len(block['trials']) - yoked * 2} n/a, "
+          f"{yoked} own, {yoked} yoked")
+    print(f"  rationale block: {len(rationale['trials'])} trials, written alongside")
+
     _write(args.out, block)
+    _write(args.out.replace(".json", "_rationale.json"), rationale)
     return 0
 
 
@@ -296,7 +309,8 @@ def cmd_build_participants(args: argparse.Namespace) -> int:
     import shutil
     from pathlib import Path
 
-    from .oversight import OversightError, build_oversight_block
+    from .controls import random_rooms
+    from .oversight import OversightError, build_oversight_block, build_rationale_block
     from .session import build_session
 
     rooms = _rooms_of(_load(args.batch))
@@ -320,8 +334,20 @@ def cmd_build_participants(args: argparse.Namespace) -> int:
                 seed=args.seed + i,
                 participant_index=i,
             )
+            # With the sampler the corrupted half splits swapped/random; without it
+            # every corrupted trial is a swap, and the random arm -- the within-
+            # participant control the design depends on -- silently disappears.
+            def sampler(rng, _rooms=rooms):
+                room = random_rooms(1, seed=rng.randrange(1 << 30))[0]
+                return {k: room[k] for k in
+                        ("hue", "saturation", "brightness", "texture") if k in room}
+
             block = build_oversight_block(
-                rooms, participant=participant, seed=args.seed + i, per_condition=3
+                rooms, participant=participant, seed=args.seed + i,
+                trials_total=32, pool_sampler=sampler,
+            )
+            rationale = build_rationale_block(
+                rooms, participant=participant, seed=args.seed + i
             )
         except (ValueError, OversightError) as exc:
             print(f"error building {participant}: {exc}", file=sys.stderr)
@@ -347,6 +373,9 @@ def cmd_build_participants(args: argparse.Namespace) -> int:
         (folder / "oversight.json").write_text(
             json.dumps(block, indent=2) + "\n", encoding="utf-8"
         )
+        (folder / "rationale.json").write_text(
+            json.dumps(rationale, indent=2) + "\n", encoding="utf-8"
+        )
         (folder / "practice.json").write_text(
             json.dumps({"rooms": practice}, indent=2) + "\n", encoding="utf-8"
         )
@@ -356,7 +385,7 @@ def cmd_build_participants(args: argparse.Namespace) -> int:
         json.dumps({"participants": built}, indent=2) + "\n", encoding="utf-8"
     )
     print(f"wrote {len(built)} participants to {out}")
-    print("  each folder holds session.json, oversight.json and practice.json")
+    print("  each folder holds session.json, oversight.json, rationale.json and practice.json")
     print("  these ship inside the built app, so no Python is needed to run a session")
     return 0
 
@@ -648,7 +677,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--batch", required=True, help="configs to draw stimuli and donors from")
     p.add_argument("--participant", required=True)
     p.add_argument("--seed", type=int, required=True)
-    p.add_argument("--per-condition", type=int, default=4)
+    p.add_argument("--trials", type=int, default=32,
+                   help="Phase B length. 32 is the floor for a usable d-prime: half"
+                        " faithful, half corrupted.")
+    p.add_argument("--rationale-trials", type=int, default=6)
     p.add_argument("--no-random-arm", action="store_true",
                    help="omit the uniform-random condition")
     p.add_argument("--out", default="runs/oversight_block.json")

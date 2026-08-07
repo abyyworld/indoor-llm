@@ -131,7 +131,14 @@ def candidates_envelope_schema(count: int, include_sketch: bool = False) -> dict
         "properties": {
             "candidates": {
                 "type": "array",
-                "minItems": count,
+                # minItems 1, not `count`. The API rejects any other value:
+                # "For 'array' type, 'minItems' values other than 0 or 1 are not
+                # supported." Pinning both to the requested count meant every live
+                # generation call failed -- which is how this path ran for months
+                # against tests and never once against the real endpoint. The
+                # accept/reject/continuation loop in generate.py already tops the batch
+                # up to `count`, so the schema does not need to.
+                "minItems": 1,
                 "maxItems": count,
                 "items": candidate_schema(include_sketch),
             }
