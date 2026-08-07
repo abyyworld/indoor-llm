@@ -39,6 +39,7 @@ DEMOGRAPHICS = {
     "id": "demographics",
     "title": "About you",
     "when": "before",
+    "phases": ['A', 'B'],
     "citation": "",
     "instruction": "A few details before we start. Say so if you would rather not answer.",
     "items": [
@@ -119,6 +120,9 @@ def _ssq(form_id: str, when: str, title: str) -> dict[str, Any]:
         "id": form_id,
         "title": title,
         "when": when,
+        # Both halves. Simulator sickness is a safety measure before it is a variable,
+        # so it is asked of everyone who puts the headset on.
+        "phases": ["A", "B"],
         "citation": "Kennedy, Lane, Berbaum & Lilienthal (1993), IJAP 3(3), 203-220.",
         "instruction": "For each one, choose how much you feel it right now.",
         "items": [
@@ -168,6 +172,7 @@ NASA_TLX = {
     "id": "nasa_tlx",
     "title": "How that felt to do",
     "when": "after",
+    "phases": ['B'],
     "citation": "Hart & Staveland (1988); raw TLX per Hart (2006).",
     "instruction": "These are about the second half, where you were asked whether "
                    "anything looked wrong in a room and what you would change.",
@@ -213,6 +218,7 @@ TRUST = {
     "id": "trust",
     "title": "The system that designed the rooms",
     "when": "after",
+    "phases": ['B'],
     "citation": "Jian, Bisantz & Drury (2000), IJCE 4(1), 53-71.",
     "instruction": "The rooms were designed by an AI system. For each statement, "
                    "1 means not at all and 7 means very much.",
@@ -268,6 +274,7 @@ PRESENCE = {
     "id": "presence",
     "title": "Being there",
     "when": "after",
+    "phases": ['A'],
     "citation": "Schubert, Friedmann & Regenbrecht (2001), Presence 10(3), 266-281 (IPQ).",
     "instruction": "About the rooms you stood in. Scored 1 to 7.",
     "items": [
@@ -287,6 +294,7 @@ STRATEGY = {
     "id": "strategy",
     "title": "The second half",
     "when": "after",
+    "phases": ['B'],
     "citation": "",
     "instruction": "In your own words. There are no right answers here.",
     "items": [
@@ -312,6 +320,7 @@ DEBRIEF = {
     "id": "debrief",
     "title": "What this was about",
     "when": "after",
+    "phases": ['A', 'B'],
     "citation": "",
     "instruction": (
         "The rooms were designed by an AI system asked to make a space feel a particular "
@@ -337,6 +346,7 @@ CONSENT = {
     "id": "consent",
     "title": "Information and consent",
     "when": "before",
+    "phases": ['A', 'B'],
     "citation": "",
     "instruction": (
         "Please read this before deciding whether to take part. Ask the researcher "
@@ -389,6 +399,7 @@ BASELINE_MOOD = {
     "id": "baseline_mood",
     "title": "How you feel at the moment",
     "when": "before",
+    "phases": ['A', 'B'],
     "citation": "Single-item valence and arousal, after Russell's circumplex.",
     "instruction": "Before we start, how are you feeling right now? Not about the study, "
                    "just generally.",
@@ -422,6 +433,7 @@ AWARENESS = {
     "id": "awareness",
     "title": "What you noticed",
     "when": "after",
+    "phases": ['A', 'B'],
     "citation": "",
     "instruction": "There are no right answers here, and guessing is fine.",
     "items": [
@@ -449,6 +461,7 @@ PREFERENCE = {
     "id": "preference",
     "title": "What you liked",
     "when": "after",
+    "phases": ['A'],
     "citation": "",
     "instruction": "Separately from how the rooms made you feel: which did you like?",
     "items": [
@@ -485,12 +498,30 @@ FORMS = [
 ]
 
 
-def before() -> list[dict[str, Any]]:
-    return [f for f in FORMS if f["when"] == "before"]
+def before(phase: str | None = None) -> list[dict[str, Any]]:
+    return due("before", phase)
 
 
-def after() -> list[dict[str, Any]]:
-    return [f for f in FORMS if f["when"] == "after"]
+def after(phase: str | None = None) -> list[dict[str, Any]]:
+    return due("after", phase)
+
+
+def due(when: str, phase: str | None = None) -> list[dict[str, Any]]:
+    """Forms for this point in the session, and this participant's phases.
+
+    A Phase B participant is never asked how much they liked the curved rooms: they
+    were not rating rooms, they were auditing an agent's choices, and an item somebody
+    has no basis to answer is burden that produces noise. Passing no phase returns
+    everything, which is what a participant doing both halves gets.
+    """
+    out = []
+    for form in FORMS:
+        if form["when"] != when:
+            continue
+        if phase is not None and phase not in form.get("phases", ["A", "B"]):
+            continue
+        out.append(form)
+    return out
 
 
 def as_dict() -> dict[str, Any]:

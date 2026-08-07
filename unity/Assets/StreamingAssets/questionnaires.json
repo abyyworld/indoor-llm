@@ -5,6 +5,10 @@
       "id": "consent",
       "title": "Information and consent",
       "when": "before",
+      "phases": [
+        "A",
+        "B"
+      ],
       "citation": "",
       "instruction": "Please read this before deciding whether to take part. Ask the researcher anything at any point, including after you have started.\n\nWHAT HAPPENS. You will wear a VR headset and stand in a series of virtual rooms, about 20 seconds each. After each one you say how the room made you feel, using a grid you point at inside the headset. In the second half you see rooms again and are asked whether anything looks wrong and what you would change. About 45 minutes including breaks.\n\nWHAT WE RECORD. Your answers, and how you moved your head and the controller. No video, no audio, no images of you, nothing about your face or eyes. Data is stored under a participant code, not your name.\n\nVOLUNTARY. You can stop at any moment without giving a reason and nothing follows from it. You can ask us to delete your data within two weeks.\n\nRISKS. Some people feel briefly dizzy or nauseous in VR. Tell the researcher and stop if so. You will be standing; say if that is a problem and we will seat you.",
       "items": [
@@ -70,6 +74,10 @@
       "id": "demographics",
       "title": "About you",
       "when": "before",
+      "phases": [
+        "A",
+        "B"
+      ],
       "citation": "",
       "instruction": "A few details before we start. Say so if you would rather not answer.",
       "items": [
@@ -138,6 +146,10 @@
       "id": "baseline_mood",
       "title": "How you feel at the moment",
       "when": "before",
+      "phases": [
+        "A",
+        "B"
+      ],
       "citation": "Single-item valence and arousal, after Russell's circumplex.",
       "instruction": "Before we start, how are you feeling right now? Not about the study, just generally.",
       "items": [
@@ -165,6 +177,10 @@
       "id": "ssq_before",
       "title": "How you feel right now",
       "when": "before",
+      "phases": [
+        "A",
+        "B"
+      ],
       "citation": "Kennedy, Lane, Berbaum & Lilienthal (1993), IJAP 3(3), 203-220.",
       "instruction": "For each one, choose how much you feel it right now.",
       "items": [
@@ -350,6 +366,10 @@
       "id": "ssq_after",
       "title": "How you feel now",
       "when": "after",
+      "phases": [
+        "A",
+        "B"
+      ],
       "citation": "Kennedy, Lane, Berbaum & Lilienthal (1993), IJAP 3(3), 203-220.",
       "instruction": "For each one, choose how much you feel it right now.",
       "items": [
@@ -535,6 +555,9 @@
       "id": "nasa_tlx",
       "title": "How that felt to do",
       "when": "after",
+      "phases": [
+        "B"
+      ],
       "citation": "Hart & Staveland (1988); raw TLX per Hart (2006).",
       "instruction": "These are about the second half, where you were asked whether anything looked wrong in a room and what you would change.",
       "items": [
@@ -616,6 +639,9 @@
       "id": "trust",
       "title": "The system that designed the rooms",
       "when": "after",
+      "phases": [
+        "B"
+      ],
       "citation": "Jian, Bisantz & Drury (2000), IJCE 4(1), 53-71.",
       "instruction": "The rooms were designed by an AI system. For each statement, 1 means not at all and 7 means very much.",
       "items": [
@@ -745,6 +771,9 @@
       "id": "presence",
       "title": "Being there",
       "when": "after",
+      "phases": [
+        "A"
+      ],
       "citation": "Schubert, Friedmann & Regenbrecht (2001), Presence 10(3), 266-281 (IPQ).",
       "instruction": "About the rooms you stood in. Scored 1 to 7.",
       "items": [
@@ -908,6 +937,10 @@
       "id": "awareness",
       "title": "What you noticed",
       "when": "after",
+      "phases": [
+        "A",
+        "B"
+      ],
       "citation": "",
       "instruction": "There are no right answers here, and guessing is fine.",
       "items": [
@@ -977,6 +1010,9 @@
       "id": "preference",
       "title": "What you liked",
       "when": "after",
+      "phases": [
+        "A"
+      ],
       "citation": "",
       "instruction": "Separately from how the rooms made you feel: which did you like?",
       "items": [
@@ -1019,6 +1055,9 @@
       "id": "strategy",
       "title": "The second half",
       "when": "after",
+      "phases": [
+        "B"
+      ],
       "citation": "",
       "instruction": "In your own words. There are no right answers here.",
       "items": [
@@ -1058,6 +1097,10 @@
       "id": "debrief",
       "title": "What this was about",
       "when": "after",
+      "phases": [
+        "A",
+        "B"
+      ],
       "citation": "",
       "instruction": "The rooms were designed by an AI system asked to make a space feel a particular way, by choosing colour, brightness and materials.\n\nIn the second half, some rooms had one of those choices deliberately replaced with a value the system had picked for a different feeling. We did not tell you which, because knowing would have changed what you noticed. We were measuring whether people can tell when a system like this has got something wrong, and whether they can say which part.\n\nNothing you did was right or wrong. Rooms where you noticed nothing are as informative as rooms where you did. If you want your data removed, say so now or contact the researcher within two weeks.",
       "items": [

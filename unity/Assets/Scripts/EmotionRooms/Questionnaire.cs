@@ -51,6 +51,7 @@ namespace EmotionRooms
         public string id;
         public string title;
         public string when;          // before | after
+        public string[] phases;      // which halves this instrument belongs to
         public string citation;
         public string instruction;
         public QuestionItem[] items;
@@ -131,13 +132,29 @@ namespace EmotionRooms
             foreach (var form in set.forms) states[form.id] = FormState.NotShown;
         }
 
-        /// <summary>Forms due at this point in the session, for the panel to offer.</summary>
+        /// <summary>Which half this participant is doing: "A", "B", or null for both.</summary>
+        public string phase;
+
+        /// <summary>
+        /// Forms due at this point, for this participant's half.
+        ///
+        /// A Phase B participant is never asked how much they liked the curved rooms --
+        /// they were not rating rooms, they were auditing an agent's choices. An item
+        /// somebody has no basis to answer is burden that produces noise.
+        /// </summary>
         public List<QuestionForm> Due(string when)
         {
             var due = new List<QuestionForm>();
             if (set == null || set.forms == null) return due;
+
             foreach (var form in set.forms)
-                if (form.when == when) due.Add(form);
+            {
+                if (form.when != when) continue;
+                if (!string.IsNullOrEmpty(phase) && form.phases != null &&
+                    form.phases.Length > 0 && System.Array.IndexOf(form.phases, phase) < 0)
+                    continue;
+                due.Add(form);
+            }
             return due;
         }
 

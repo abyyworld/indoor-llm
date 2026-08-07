@@ -95,6 +95,7 @@
 const $ = id => document.getElementById(id);
 const params = new URLSearchParams(location.search);
 let participant = params.get('participant') || '';
+const phase = params.get('phase') || '';
 let info = { headset_url: '' };
 let beforeDone = false, afterDone = false, roomsDone = false;
 
@@ -120,13 +121,15 @@ async function boot() {
 
 $('before').addEventListener('click', () => {
   beforeDone = true;
-  window.open(`form.html?group=before&participant=${encodeURIComponent(participant)}`, '_blank');
+  window.open(`form.html?group=before&participant=${encodeURIComponent(participant)}` +
+              (phase ? `&phase=${phase}` : ''), '_blank');
   tick();
 });
 
 $('after').addEventListener('click', () => {
   afterDone = true;
-  window.open(`form.html?group=after&participant=${encodeURIComponent(participant)}`, '_blank');
+  window.open(`form.html?group=after&participant=${encodeURIComponent(participant)}` +
+              (phase ? `&phase=${phase}` : ''), '_blank');
   tick();
 });
 

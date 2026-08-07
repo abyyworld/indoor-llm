@@ -84,6 +84,43 @@ never written to disk.
   Developer Mode, which belongs to the headset's owner. The Mac is for development and
   mouse piloting; VR sessions need the Windows machine.
 - The combined per-participant CSV is written by the app itself at every end point.
+
+## The two phases, and who owns them
+
+**Phase A** is Mengkai's thesis: 8 rooms, the affect grid, the shape x emotion question.
+**Phase B** is the oversight block and is written up separately: 32 trials asking whether
+anything looks wrong for the stated emotion, which variable, and what it should be.
+
+A participant does Phase A only, Phase B only, or both -- set in the control panel and
+written to the event log. **Phase B never runs first** for someone doing both: its
+attribution question lists every manipulated variable, so running it first would tell
+them exactly what varies before they rate anything. Phase B alone is the cleanest version
+of the oversight study, since no stimulus is more familiar than any other.
+
+Instruments carry a `phases` field. TLX, trust and the strategy questions go only to
+Phase B; presence and preference only to Phase A. Consent, demographics, baseline mood,
+SSQ and the debrief go to everyone.
+
+### Phase B measurement, and why these numbers
+
+- **32 trials, half faithful.** Three faithful trials give a false-alarm rate that can
+  only be 0, .33, .67 or 1, so a per-participant d-prime from it is not an estimate. An
+  even base rate is what makes criterion a property of the participant rather than of
+  the block.
+- **Yoked control.** Half the corrected trials apply a value the participant did not
+  choose, drawn from the same pool, never their choice and never the value that would
+  repair the room, seeded from the trial file so it is reproducible. Without it the
+  correction effect cannot be told apart from self-consistency.
+- **`rationale_mismatched` has its own block** with its own question. The room is correct
+  and only the reasoning is wrong, so scoring it as a corruption marks a correct "nothing
+  is wrong" as a miss.
+
+### One appearance per emotion
+
+The model never sees shape, so sampling separately for `calm/linear` and `calm/curved`
+gives two draws from the same distribution and records the difference as design. Shape is
+the manipulation, so appearance is held constant across shapes: four sampling runs, the
+medoid rendered in both shapes. `make-study-config.py` does this.
 [unity/RUNBOOK.md](unity/RUNBOOK.md) is the procedure.
 
 Built and tested: pools, schemas, validator, generation with reject-and-re-ask, the

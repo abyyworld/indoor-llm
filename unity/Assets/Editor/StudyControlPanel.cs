@@ -37,6 +37,11 @@ namespace EmotionRooms.EditorTools
         /// page ever asks again. Anything that can be set in two places eventually is,
         /// differently.
         /// </summary>
+        string PhaseLetter()
+        {
+            return sessionMode == 1 ? "A" : sessionMode == 2 ? "B" : "";
+        }
+
         void PushSettings()
         {
             StudyServerLink.SetParticipant(participant);
@@ -357,7 +362,8 @@ namespace EmotionRooms.EditorTools
                 {
                     if (GUILayout.Button("Open the first questionnaires", GUILayout.Height(26f)))
                         Later(() => Application.OpenURL(
-                            StudyServerLink.HeadsetPage(cachedHeadsetIp, "group?when=before")));
+                            StudyServerLink.HeadsetPage(cachedHeadsetIp,
+                            "group?when=before&phase=" + PhaseLetter())));
 
                     EditorGUILayout.Space(4f);
                     if (GUILayout.Button(practiceOnly
@@ -392,7 +398,8 @@ namespace EmotionRooms.EditorTools
             {
                 if (GUILayout.Button("Open the last questionnaires", GUILayout.Height(26f)))
                     Later(() => Application.OpenURL(
-                        StudyServerLink.HeadsetPage(cachedHeadsetIp, "group?when=after")));
+                        StudyServerLink.HeadsetPage(cachedHeadsetIp,
+                            "group?when=after&phase=" + PhaseLetter())));
                 if (GUILayout.Button("Pull the data to this Mac", GUILayout.Height(26f)))
                     Later(StudyBuild.PullData);
                 EditorGUILayout.LabelField(
@@ -455,7 +462,7 @@ namespace EmotionRooms.EditorTools
                 {
                     if (GUILayout.Button("Open the first questionnaires", GUILayout.Height(26f)))
                         Later(() => Application.OpenURL(
-                            StudyServerLink.FormUrl("before", participant)));
+                            StudyServerLink.FormUrl("before", participant, sessionMode)));
 
                     EditorGUILayout.Space(4f);
                     if (GUILayout.Button("Fit the headset, then START THE ROOMS",
@@ -477,7 +484,7 @@ namespace EmotionRooms.EditorTools
             {
                 if (GUILayout.Button("Open the last questionnaires", GUILayout.Height(26f)))
                     Later(() => Application.OpenURL(
-                        StudyServerLink.FormUrl("after", participant)));
+                        StudyServerLink.FormUrl("after", participant, sessionMode)));
             }
         }
 

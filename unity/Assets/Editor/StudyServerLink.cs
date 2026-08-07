@@ -195,10 +195,12 @@ namespace EmotionRooms.EditorTools
             return "http://" + headsetIp + ":8752/" + path;
         }
 
-        public static string FormUrl(string group, string participant)
+        public static string FormUrl(string group, string participant, int sessionMode)
         {
+            string phase = sessionMode == 1 ? "A" : sessionMode == 2 ? "B" : "";
             return Base + "/form.html?group=" + group +
-                   "&participant=" + UnityWebRequest.EscapeURL(participant);
+                   "&participant=" + UnityWebRequest.EscapeURL(participant) +
+                   (phase.Length > 0 ? "&phase=" + phase : "");
         }
 
         static string Escape(string value)

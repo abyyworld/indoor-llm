@@ -1213,6 +1213,43 @@ class TestInstruments(unittest.TestCase):
         # create the demand characteristics it exists to detect.
         self.assertEqual(when["awareness"], "after")
 
+    def test_each_phase_gets_only_the_instruments_it_can_answer(self):
+        # A Phase B participant never rated rooms, so asking which shape they preferred
+        # or how present they felt is burden that produces noise.
+        from pipeline.instruments import due
+
+        b = {f["id"] for f in due("after", "B")}
+        self.assertNotIn("preference", b)
+        self.assertNotIn("presence", b)
+        self.assertIn("nasa_tlx", b)
+        self.assertIn("trust", b)
+
+        a = {f["id"] for f in due("after", "A")}
+        self.assertIn("presence", a)
+        # TLX asks about the oversight task, which a Phase A participant never did.
+        self.assertNotIn("nasa_tlx", a)
+        self.assertNotIn("trust", a)
+
+    def test_safety_and_consent_reach_everyone(self):
+        from pipeline.instruments import due
+
+        for phase in ("A", "B"):
+            ids = {f["id"] for f in due("before", phase)} | {f["id"] for f in due("after", phase)}
+            for essential in ("consent", "ssq_before", "ssq_after", "debrief"):
+                self.assertIn(essential, ids, f"{essential} missing for phase {phase}")
+
+    def test_no_phase_filter_returns_everything(self):
+        # Somebody doing both halves answers the lot.
+        from pipeline.instruments import FORMS, due
+
+        self.assertEqual(len(due("before")) + len(due("after")), len(FORMS))
+
+    def test_every_form_declares_its_phases(self):
+        from pipeline.instruments import FORMS
+
+        for form in FORMS:
+            self.assertTrue(form.get("phases"), f"{form['id']} has no phases")
+
     def test_generated_json_carries_every_form(self):
         from pipeline.instruments import FORMS, as_dict
 

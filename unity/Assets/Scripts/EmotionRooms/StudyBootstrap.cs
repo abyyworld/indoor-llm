@@ -168,7 +168,13 @@ namespace EmotionRooms
                 log.participantId = participantId;
             foreach (var log in FindObjectsByType<StudyTelemetry>(FindObjectsSortMode.None))
                 log.participantId = participantId;
-            if (questionnaires != null) questionnaires.participantId = participantId;
+            if (questionnaires != null)
+            {
+                questionnaires.participantId = participantId;
+                // Null for a participant doing both, so they get every instrument.
+                questionnaires.phase = sessionMode == 1 ? "A"
+                                     : sessionMode == 2 ? "B" : null;
+            }
         }
 
         void Start()

@@ -38,6 +38,8 @@ const params = new URLSearchParams(location.search);
 const group = params.get('group');           // "before" or "after"
 const single = params.get('id');             // one instrument, for checking wording
 const participant = params.get('participant') || 'unknown';
+// "A", "B", or absent for a participant doing both halves.
+const phase = params.get('phase');
 const escape = s => String(s ?? '').replace(/[&<>"']/g,
   c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -51,7 +53,10 @@ const data = await fetch('data/questionnaires.json').then(r => r.json());
 // on that -- but they are answered in one sitting and submitted together.
 const forms = single
   ? data.forms.filter(f => f.id === single)
-  : data.forms.filter(f => f.when === group);
+  : data.forms.filter(f =>
+      f.when === group &&
+      // A Phase B participant is never asked how much they liked the curved rooms.
+      (!phase || !f.phases || f.phases.includes(phase)));
 
 if (!forms.length) {
   document.getElementById('page').textContent = 'Nothing to show.';

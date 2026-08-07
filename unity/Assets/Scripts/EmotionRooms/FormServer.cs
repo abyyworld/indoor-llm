@@ -317,7 +317,9 @@ namespace EmotionRooms
                 var values = ParseForm(query);
                 string when;
                 values.TryGetValue("when", out when);
-                return GroupPage(when == "after" ? "after" : "before");
+                string phase;
+                values.TryGetValue("phase", out phase);
+                return GroupPage(when == "after" ? "after" : "before", phase);
             }
 
             if (path == "/form")
@@ -520,8 +522,14 @@ namespace EmotionRooms
         /// citations depend on it -- but a participant answers them in one sitting.
         /// Twelve tabs was twelve chances to lose their attention.
         /// </summary>
-        string GroupPage(string when)
+        string GroupPage(string when, string phase)
         {
+            // The runner already filters by the participant's phase; an explicit phase
+            // in the URL only narrows it further, so a link cannot hand somebody a form
+            // that does not apply to them.
+            if (questionnaires != null && !string.IsNullOrEmpty(phase))
+                questionnaires.phase = phase;
+
             var forms = questionnaires != null
                 ? questionnaires.Due(when)
                 : new List<QuestionForm>();
