@@ -87,12 +87,34 @@ namespace EmotionRooms.EditorTools
 
         static void Send(UnityWebRequest request, Action<string> onDone)
         {
-            request.certificateHandler = new LocalCertificate();
-            request.disposeCertificateHandlerOnDispose = true;
-            request.timeout = 4;
-            request.SendWebRequest();
-            inFlight.Add(new Pending { request = request, onDone = onDone });
+            try
+            {
+                request.certificateHandler = new LocalCertificate();
+                request.disposeCertificateHandlerOnDispose = true;
+                request.timeout = 4;
+                request.SendWebRequest();
+                inFlight.Add(new Pending { request = request, onDone = onDone });
+            }
+            catch (Exception e)
+            {
+                // Never let a network problem escape into the caller. This is polled from
+                // the control panel, so an exception here unwinds out of OnGUI, corrupts
+                // the IMGUI layout, and leaves the panel drawing errors on every repaint
+                // instead of showing the session. A server that is not there is a normal
+                // state, not an exceptional one.
+                request.Dispose();
+                if (!warnedOnce)
+                {
+                    warnedOnce = true;
+                    Debug.LogWarning("Study link: " + e.Message +
+                        "\nIf this says insecure connections are not allowed, run " +
+                        "Emotion Rooms > Advanced > Allow local HTTP.");
+                }
+                if (onDone != null) onDone(null);
+            }
         }
+
+        static bool warnedOnce;
 
         /// <summary>Current headset and session state, or null if the server is down.</summary>
         public static void FetchState(Action<ServerState> onDone)

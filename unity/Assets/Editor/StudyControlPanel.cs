@@ -70,6 +70,7 @@ namespace EmotionRooms.EditorTools
             repoPath = EditorPrefs.GetString(RepoKey, GuessRepoPath());
             practiceOnly = EditorPrefs.GetBool(PracticeKey, false);
             sessionMode = EditorPrefs.GetInt(ModeKey, 0);
+            Probe(true);
         }
 
         // Cached probes. The panel used to hit the filesystem on every repaint, and
@@ -101,6 +102,12 @@ namespace EmotionRooms.EditorTools
 
         void OnInspectorUpdate()
         {
+            // Probing lives here, not in OnGUI. It spawns adb and makes web requests, and
+            // anything that can throw has no business running inside a repaint: the
+            // exception unwinds through the layout and the window then draws errors
+            // forever instead of the session.
+            Probe();
+
             // Only while something is actually moving. Repainting an idle window ten
             // times a second costs the same as repainting a busy one.
             if (Application.isPlaying || (server != null && server.headset == "running"))
@@ -109,20 +116,27 @@ namespace EmotionRooms.EditorTools
 
         void OnGUI()
         {
-            Probe();
-
             var bootstrap = UnityEngine.Object.FindFirstObjectByType<StudyBootstrap>();
             var forms = UnityEngine.Object.FindFirstObjectByType<QuestionnaireRunner>();
 
             scroll = EditorGUILayout.BeginScrollView(scroll);
-
-            DrawHeader(bootstrap);
-            DrawSetup(bootstrap);
-            DrawBeforeArrival(bootstrap);
-            DrawSession(bootstrap, forms);
-            DrawScript();
-            DrawTroubleshooting();
-
+            try
+            {
+                DrawHeader(bootstrap);
+                DrawSetup(bootstrap);
+                DrawBeforeArrival(bootstrap);
+                DrawSession(bootstrap, forms);
+                DrawScript();
+                DrawTroubleshooting();
+            }
+            catch (Exception e)
+            {
+                // A throw part-way through leaves IMGUI's layout groups unbalanced, and
+                // every repaint after it reports that instead of the real problem. Caught
+                // here, the panel keeps drawing and the actual message stays readable.
+                if (Event.current.type == EventType.Repaint)
+                    Debug.LogError("Study Control: " + e.Message + "\n" + e.StackTrace);
+            }
             EditorGUILayout.EndScrollView();
         }
 
@@ -274,7 +288,7 @@ namespace EmotionRooms.EditorTools
 
             Row(session && block && practice,
                 session && block && practice
-                    ? "Rooms ready: 8 trials, 12 review trials, 2 warm-up"
+                    ? "Rooms ready: 8 trials, 32 review trials, 6 rationale, 2 warm-up"
                     : "Rooms not built for this participant yet");
 
             using (new EditorGUI.DisabledScope(Application.isPlaying))
@@ -348,6 +362,13 @@ namespace EmotionRooms.EditorTools
                     Later(StudyBuild.LaunchOnHeadset);
                 if (GUILayout.Button("Check again", GUILayout.Height(26f), GUILayout.Width(100f)))
                     Probe(true);
+                EditorGUILayout.EndHorizontal();
+
+                EditorGUILayout.BeginHorizontal();
+                if (GUILayout.Button("Allow local HTTP", GUILayout.Height(22f)))
+                    Later(() => { XRSetup.AllowLocalHttp(); Probe(true); });
+                GUILayout.Label("needed once, so this panel can reach the headset app",
+                    EditorStyles.miniLabel);
                 EditorGUILayout.EndHorizontal();
                 EditorGUILayout.LabelField(
                     "If the headset is asleep, put it on for a moment to wake it.",

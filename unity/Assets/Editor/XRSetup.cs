@@ -45,6 +45,24 @@ namespace EmotionRooms.EditorTools
             "UnityEngine.XR.OpenXR.Features.Interactions.OculusTouchControllerProfile",
         };
 
+        /// <summary>
+        /// Let the editor and the build talk to the study app over plain HTTP.
+        ///
+        /// Unity refuses http:// by default, and the refusal is an exception rather than
+        /// a failed request -- which, thrown from a panel that polls every few seconds,
+        /// takes the whole editor window down with it. The traffic is a laptop talking to
+        /// a headset on the researcher's own network; the alternative is running a
+        /// certificate authority for a Quest.
+        /// </summary>
+        [MenuItem("Emotion Rooms/Advanced/Allow local HTTP", priority = 118)]
+        public static void AllowLocalHttp()
+        {
+            PlayerSettings.insecureHttpOption = InsecureHttpOption.AlwaysAllowed;
+            AssetDatabase.SaveAssets();
+            Debug.Log("Emotion Rooms: plain HTTP allowed, so the panel can reach the app " +
+                      "on the headset.");
+        }
+
         [MenuItem("Emotion Rooms/Advanced/Set Up XR", priority = 126)]
         public static void Run()
         {
