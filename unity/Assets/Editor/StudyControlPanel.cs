@@ -79,8 +79,6 @@ namespace EmotionRooms.EditorTools
             DrawSetup(bootstrap);
             DrawBeforeArrival(bootstrap);
             DrawSession(bootstrap, forms);
-            DrawAfter();
-            DrawWebStudy();
             DrawScript();
             DrawTroubleshooting();
 
@@ -121,7 +119,10 @@ namespace EmotionRooms.EditorTools
 
             EditorGUILayout.BeginHorizontal();
             EditorGUILayout.LabelField("Participant", GUILayout.Width(70f));
+            EditorGUI.BeginChangeCheck();
             participant = EditorGUILayout.TextField(participant, GUILayout.Width(90f));
+            if (EditorGUI.EndChangeCheck() && !string.IsNullOrEmpty(participant))
+                StudyServerLink.SetParticipant(participant);
             GUILayout.FlexibleSpace();
             EditorGUILayout.EndHorizontal();
 
@@ -135,23 +136,9 @@ namespace EmotionRooms.EditorTools
                     "There is already data filed under " + participant + ". Use a " +
                     "different id unless you mean to add to it.", MessageType.Warning);
 
-            if (bootstrap != null)
-            {
-                int mode = bootstrap.practiceOnly ? 1 : 0;
-                int picked = GUILayout.Toolbar(mode, new[] { "Real session", "Practice only" });
-                if (picked != mode)
-                {
-                    bootstrap.practiceOnly = picked == 1;
-                    EditorUtility.SetDirty(bootstrap);
-                }
-                EditorGUILayout.LabelField(
-                    bootstrap.practiceOnly
-                        ? "Two warm-up rooms then stop. Nothing scored, no review block, " +
-                          "no participant id burned. Use this to try the kit."
-                        : "Warm-up, 8 scored rooms, the review block, then the after-forms. " +
-                          "About 45 minutes.",
-                    EditorStyles.wordWrappedMiniLabel);
-            }
+            EditorGUILayout.LabelField(
+                "Warm-up rooms, 8 scored rooms, then the review block. About 45 minutes " +
+                "including the questionnaires.", EditorStyles.wordWrappedMiniLabel);
         }
 
         // -------------------------------------------------------------------- setup
@@ -206,53 +193,6 @@ namespace EmotionRooms.EditorTools
 
         // ------------------------------------------------------------ before arrival
 
-        void DrawWebStudy()
-        {
-            Section("Run on the headset through its browser",
-                    "No Developer Mode, no cable, no install. This is the route that works " +
-                    "on a headset you do not own.");
-
-            bool up = WebServer.IsRunning;
-            Row(up, up ? "Study server running at " + WebServer.HeadsetUrl
-                       : "Study server stopped");
-
-            EditorGUILayout.BeginHorizontal();
-            if (GUILayout.Button(up ? "Stop server" : "Start server", GUILayout.Height(26f)))
-                Later(() =>
-                {
-                    if (up) { WebServer.Stop(); return; }
-                    // Fall back to the guessed repo rather than refusing over a field
-                    // nobody was told to fill in.
-                    string path = Directory.Exists(repoPath) ? repoPath : GuessRepoPath();
-                    if (!Directory.Exists(repoPath)) { repoPath = path; EditorPrefs.SetString(RepoKey, path); }
-                    WebServer.Start(path);
-                });
-
-            using (new EditorGUI.DisabledScope(!up))
-            {
-                if (GUILayout.Button("Open researcher panel", GUILayout.Height(26f)))
-                    Later(() => Application.OpenURL(
-                        WebServer.PanelUrl + "?participant=" +
-                        UnityWebRequest.EscapeURL(participant)));
-            }
-            EditorGUILayout.EndHorizontal();
-
-            if (up)
-            {
-                EditorGUILayout.LabelField(
-                    "In the headset's Browser, once, before the participant arrives:",
-                    EditorStyles.wordWrappedMiniLabel);
-                EditorGUILayout.SelectableLabel(WebServer.HeadsetUrl,
-                    EditorStyles.textField, GUILayout.Height(18f));
-                EditorGUILayout.LabelField(
-                    "Accept the certificate warning, press Enter VR, and put it down. " +
-                    "Everything after that is on this laptop.",
-                    EditorStyles.wordWrappedMiniLabel);
-            }
-
-            EndSection();
-        }
-
         void DrawBeforeArrival(StudyBootstrap bootstrap)
         {
             Section("Before they arrive", "Builds this participant's rooms. Takes a second.");
@@ -282,155 +222,148 @@ namespace EmotionRooms.EditorTools
 
         // ------------------------------------------------------------------ session
 
+        ServerState server;
+        double serverPolledAt;
+
+        void PollServer()
+        {
+            if (EditorApplication.timeSinceStartup - serverPolledAt < 1.0) return;
+            serverPolledAt = EditorApplication.timeSinceStartup;
+            StudyServerLink.FetchState(state => { server = state; Repaint(); });
+        }
+
+        /// <summary>
+        /// The session, as five steps with exactly one live at a time.
+        ///
+        /// Which step is live comes from what the server says has actually happened --
+        /// whether the headset has checked in, whether it is running, whether it has
+        /// finished -- rather than from a counter this window keeps. A panel reopened
+        /// mid-session then shows where the session is, not where it started.
+        /// </summary>
         void DrawSession(StudyBootstrap bootstrap, QuestionnaireRunner forms)
         {
-            Section("Running the session", "Follow these in order.");
+            PollServer();
 
-            bool running = Application.isPlaying && bootstrap != null &&
-                           bootstrap.trialRunner != null && bootstrap.trialRunner.IsRunning;
+            bool up = WebServer.IsRunning && server != null;
+            bool headsetIn = up && server.connected &&
+                             (server.headset == "in_vr" || server.headset == "running" ||
+                              server.headset == "finished");
+            bool running = up && server.headset == "running";
+            bool finished = up && server.headset == "finished";
+            bool haveId = !string.IsNullOrEmpty(participant);
 
-            EditorGUILayout.HelpBox(
-                "Watch the GAME tab, not Scene. Everything the participant sees — the " +
-                "rooms, the rating grid, and every questionnaire — is drawn to the Game " +
-                "view. The Scene view shows the room geometry only, so from there a " +
-                "session looks like rooms appearing and vanishing with nothing in " +
-                "between.", MessageType.Info);
+            int live = !up ? 0 : !headsetIn ? 1 : running ? 3 : finished ? 4 : 2;
 
-            Numbered(1, "Sit them at the laptop with the headset OFF. Press Play.");
-            Numbered(2, "Open the BEFORE forms below and hand them the keyboard. " +
-                        "They open in a browser, not in the headset. When they submit, " +
-                        "each one turns green here.");
+            Section("Running a session", "One step at a time. Do the highlighted one.");
 
-            EditorGUILayout.BeginHorizontal();
-            if (!Application.isPlaying)
+            // 0 -- server
+            Step(0, live, "Start the study server", up
+                ? "Running."
+                : "Not running. Everything else needs it.");
+            if (live == 0)
             {
-                if (GUILayout.Button("Press Play", GUILayout.Height(30f)))
-                    EditorApplication.isPlaying = true;
-            }
-            else
-            {
-                var stamp = UnityEngine.Object.FindFirstObjectByType<StudySceneStamp>();
-                bool stale = stamp == null || !stamp.IsCurrent;
-                bool noId = string.IsNullOrEmpty(participant);
-
-                if (stale)
-                    EditorGUILayout.HelpBox(
-                        "Rebuild the scene first — it is out of date and the session will " +
-                        "not behave.", MessageType.Error);
-
-                using (new EditorGUI.DisabledScope(bootstrap == null || running || stale || noId))
-                {
-                    if (GUILayout.Button(running ? "Running…" :
-                                         noId ? "Type a participant id first" :
-                                         stale ? "Scene out of date" : "Begin " + participant,
-                                         GUILayout.Height(30f)))
-                        Later(() =>
+                if (GUILayout.Button("Start server", GUILayout.Height(28f)))
+                    Later(() =>
+                    {
+                        string path = Directory.Exists(repoPath) ? repoPath : GuessRepoPath();
+                        if (!Directory.Exists(repoPath))
                         {
-                            bootstrap.participantId = participant;
-                            bootstrap.ApplyParticipantId();
-                            bootstrap.BeginStudy();
-                        });
-                }
+                            repoPath = path;
+                            EditorPrefs.SetString(RepoKey, path);
+                        }
+                        WebServer.Start(path);
+                    });
             }
+
+            // 1 -- headset
+            Step(1, live, "Point the headset at the study",
+                headsetIn ? "Headset is connected."
+                          : "In the headset's Browser, type the address below. Nothing " +
+                            "else is ever typed in the headset.");
+            if (live == 1)
+            {
+                EditorGUILayout.SelectableLabel(WebServer.ShortUrl,
+                    EditorStyles.textField, GUILayout.Height(20f));
+                EditorGUILayout.LabelField(
+                    "Accept the certificate warning (Advanced, then Proceed), press " +
+                    "Enter VR, and put the headset down.",
+                    EditorStyles.wordWrappedMiniLabel);
+                if (GUILayout.Button("Copy address"))
+                    EditorGUIUtility.systemCopyBuffer = WebServer.ShortUrl;
+            }
+
+            // 2 -- before forms and start
+            Step(2, live, "First questionnaires, then start",
+                "Consent and how they feel, on this laptop with the headset off.");
+            if (live == 2)
+            {
+                using (new EditorGUI.DisabledScope(!haveId))
+                {
+                    if (GUILayout.Button("Open the first questionnaires", GUILayout.Height(26f)))
+                        Later(() => Application.OpenURL(
+                            StudyServerLink.FormUrl("before", participant)));
+
+                    EditorGUILayout.Space(4f);
+                    if (GUILayout.Button("Fit the headset, then START THE ROOMS",
+                                         GUILayout.Height(32f)))
+                        Later(() => StudyServerLink.StartRooms(participant, null));
+                }
+                if (!haveId)
+                    EditorGUILayout.HelpBox("Type a participant id at the top first.",
+                        MessageType.Warning);
+            }
+
+            // 3 -- running
+            Step(3, live, "The rooms are running",
+                running ? "Trial " + server.trial + " of " + server.of + ". Nothing to do."
+                        : "About 27 minutes once started.");
+            if (live == 3)
+                EditorGUILayout.LabelField(
+                    "If they want to stop, they take the headset off. Everything recorded " +
+                    "so far is kept.", EditorStyles.wordWrappedMiniLabel);
+
+            // 4 -- after
+            Step(4, live, "Last questionnaires", "Headset off. The debrief is in here.");
+            if (live == 4)
+            {
+                if (GUILayout.Button("Open the last questionnaires", GUILayout.Height(26f)))
+                    Later(() => Application.OpenURL(
+                        StudyServerLink.FormUrl("after", participant)));
+                EditorGUILayout.LabelField(
+                    "The combined file was written automatically when the rooms finished.",
+                    EditorStyles.wordWrappedMiniLabel);
+            }
+
+            EndSection();
+        }
+
+        /// <summary>One row of the runbook: current, done, or still to come.</summary>
+        void Step(int index, int live, string title, string detail)
+        {
+            EditorGUILayout.Space(6f);
+            EditorGUILayout.BeginHorizontal();
+
+            var mark = new GUIStyle(EditorStyles.boldLabel)
+            {
+                normal =
+                {
+                    textColor = index < live ? new Color(0.25f, 0.7f, 0.35f)
+                              : index == live ? new Color(0.35f, 0.65f, 1f)
+                              : new Color(0.45f, 0.45f, 0.5f),
+                },
+            };
+            EditorGUILayout.LabelField(index < live ? "OK" : index == live ? "->" : "  ",
+                mark, GUILayout.Width(22f));
+
+            var label = new GUIStyle(EditorStyles.boldLabel);
+            if (index != live) label.normal.textColor = new Color(0.55f, 0.55f, 0.6f);
+            EditorGUILayout.LabelField(title, label);
             EditorGUILayout.EndHorizontal();
 
-            DrawForms("before", forms, UnityEngine.Object.FindFirstObjectByType<FormServer>());
-
-            if (Application.isPlaying && bootstrap != null && !bootstrap.ConsentConfirmed)
-                EditorGUILayout.HelpBox(
-                    "Consent not yet affirmed. Nothing is blocked, but this participant's " +
-                    "data is not usable until it is.", MessageType.Warning);
-
-            Numbered(4, "Fit the headset. Check they can see clearly and are standing " +
-                        "comfortably with room to turn around.");
-            Numbered(5, "2 warm-up rooms, then 8 real ones. ~15 min. Each room appears " +
-                        "for 20 seconds, then vanishes and a 9x9 grid takes its place. " +
-                        "They click one square: left-right is pleasant-unpleasant, " +
-                        "up-down is calm-excited. Then the next room. You do nothing.");
-            Numbered(6, "The review block: 12 rooms, asking whether anything looks wrong. " +
-                        "~12 min. Still nothing for you to do.");
-            Numbered(7, "Headset off. Open the AFTER forms and hand back the keyboard.");
-
-            DrawForms("after", forms, UnityEngine.Object.FindFirstObjectByType<FormServer>());
-
-            Numbered(8, "Check nothing above is still amber, then stop Play. The combined " +
-                        "file is written on the way out.");
-
-            if (Application.isPlaying)
-                EditorGUILayout.HelpBox(
-                    "To stop early, just press Play again. Everything recorded so far is " +
-                    "kept and the combined file is written on the way out, so stopping " +
-                    "midway costs nothing.", MessageType.None);
-
-            EndSection();
+            if (index == live)
+                EditorGUILayout.LabelField("      " + detail,
+                    EditorStyles.wordWrappedMiniLabel);
         }
-
-        // -------------------------------------------------------------------- after
-
-        void DrawForms(string when, QuestionnaireRunner forms, FormServer server)
-        {
-            if (forms == null || server == null)
-            {
-                EditorGUILayout.LabelField(
-                    "      (press Play to open forms)", EditorStyles.miniLabel);
-                return;
-            }
-            if (!server.IsRunning)
-            {
-                EditorGUILayout.HelpBox("The form server is not running. See the console.",
-                    MessageType.Warning);
-                return;
-            }
-
-            foreach (var form in forms.Due(when))
-            {
-                var state = forms.StateOf(form.id);
-                EditorGUILayout.BeginHorizontal();
-
-                var tick = new GUIStyle(EditorStyles.boldLabel)
-                {
-                    normal =
-                    {
-                        textColor = state == FormState.Completed
-                            ? new Color(0.25f, 0.7f, 0.35f)
-                            : new Color(0.75f, 0.55f, 0.2f),
-                    },
-                };
-                EditorGUILayout.LabelField(state == FormState.Completed ? "●" : "○", tick,
-                    GUILayout.Width(14f));
-
-                if (GUILayout.Button(form.title, GUILayout.Height(22f)))
-                {
-                    string url = server.Root + "form?id=" + form.id;
-                    Later(() => Application.OpenURL(url));
-                }
-                EditorGUILayout.LabelField(
-                    state == FormState.Completed ? "done" :
-                    state == FormState.PartlyAnswered ? "partly" : "",
-                    EditorStyles.miniLabel, GUILayout.Width(46f));
-                EditorGUILayout.EndHorizontal();
-            }
-        }
-
-        void DrawAfter()
-        {
-            Section("After", "Nothing to run. The combined file is already written.");
-
-            string bundle = Path.Combine(Application.persistentDataPath, "bundles",
-                                         participant + "_all.csv");
-            bool done = File.Exists(bundle);
-            Row(done, done
-                ? "bundles/" + participant + "_all.csv — every response, event and 20 Hz sample in one file"
-                : "Written automatically when the session ends or a participant withdraws");
-
-            if (GUILayout.Button("Show me the data folder"))
-                EditorUtility.RevealInFinder(
-                    done ? bundle : Application.persistentDataPath);
-
-            EndSection();
-        }
-
-        // ------------------------------------------------------------------- script
 
         void DrawScript()
         {

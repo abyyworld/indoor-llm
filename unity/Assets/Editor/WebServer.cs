@@ -27,6 +27,10 @@ namespace EmotionRooms.EditorTools
 
         public static string PanelUrl { get { return "https://localhost:" + Port + "/"; } }
 
+        /// <summary>The short address typed into the headset. Plain HTTP on purpose:
+        /// it redirects to the HTTPS page, so nobody types a scheme or a path.</summary>
+        public static string ShortUrl { get { return LocalAddress() + ":8080"; } }
+
         public static string HeadsetUrl
         {
             get { return "https://" + LocalAddress() + ":" + Port + "/vr.html"; }
