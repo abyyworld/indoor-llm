@@ -288,6 +288,13 @@ namespace EmotionRooms.EditorTools
                     "Accept the certificate warning (Advanced, then Proceed), press " +
                     "Enter VR, and put the headset down.",
                     EditorStyles.wordWrappedMiniLabel);
+                EditorGUILayout.HelpBox(
+                    "Type it in the headset's own Browser app, with the headset ON. " +
+                    "Opening this address on the laptop will load the page but never " +
+                    "offer VR, because the laptop has no headset attached.\n\n" +
+                    "The cable is irrelevant here — there is no Quest Link for macOS. " +
+                    "The headset reaches the laptop over Wi-Fi, so both have to be on " +
+                    "the same network.", MessageType.Info);
                 if (GUILayout.Button("Copy address"))
                     EditorGUIUtility.systemCopyBuffer = WebServer.ShortUrl;
             }

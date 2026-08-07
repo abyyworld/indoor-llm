@@ -136,6 +136,8 @@ async function boot() {
   // work" sends someone hunting through all three; naming the one that failed does not.
   const secure = window.isSecureContext;
   const hasXR = 'xr' in navigator;
+  // Quest's browser identifies itself; everything else is a computer.
+  const onHeadset = /OculusBrowser|Quest|Pico|Wolvic/i.test(navigator.userAgent);
   let ok = false;
   if (hasXR) {
     try { ok = await navigator.xr.isSessionSupported('immersive-vr'); } catch (e) { ok = false; }
@@ -150,10 +152,23 @@ async function boot() {
     $('msg').innerHTML =
       '<b>This browser has no VR support.</b><br>This page has to be opened in the ' +
       'headset\'s own Browser app, not on a laptop.';
+  } else if (!ok && !onHeadset) {
+    // The common case by far, and the one the old message got wrong. A desktop browser
+    // exposes navigator.xr with no device behind it, so "webxr yes, immersive no" reads
+    // as a broken headset when it actually means the page is open on the wrong machine.
+    $('msg').innerHTML =
+      '<b>This is a computer, not the headset.</b><br><br>' +
+      'Chrome and Edge have the VR interface even with no headset attached, which is ' +
+      'why this page loaded at all.<br><br>' +
+      'Put the headset ON, open the <b>Browser</b> app inside it, and type this address ' +
+      'there:<br><code style="font-size:1.3rem">' + location.host + '</code><br><br>' +
+      'A USB cable does not help: there is no Quest Link for macOS, so the headset ' +
+      'reaches this over <b>Wi-Fi</b>. Both devices have to be on the same network.';
   } else if (!ok) {
     $('msg').innerHTML =
-      '<b>VR is not available.</b><br>The browser supports it but the headset is not ' +
-      'offering it. Take the headset off and put it back on, then reload this page.';
+      '<b>VR is not available in this headset browser.</b><br>Take the headset off and ' +
+      'put it back on so it wakes, then reload. If it persists, check that WebXR is not ' +
+      'disabled in the browser settings.';
   } else {
     $('msg').innerHTML =
       '<b>Ready.</b><br>Press the button below, then take the headset off and give it ' +
@@ -166,7 +181,8 @@ async function boot() {
   // if something is wrong this is the line to read out.
   const line = document.createElement('div');
   line.className = 'small';
-  line.textContent = `secure:${secure} webxr:${hasXR} immersive:${ok} at ${location.host}`;
+  line.textContent = `secure:${secure} webxr:${hasXR} immersive:${ok} ` +
+                     `headset-browser:${onHeadset} at ${location.host}`;
   document.getElementById('box').appendChild(line);
 }
 boot();
