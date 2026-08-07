@@ -80,6 +80,20 @@ namespace EmotionRooms.EditorTools
                 process.BeginOutputReadLine();
                 process.BeginErrorReadLine();
 
+                // A server that exits a moment after starting is indistinguishable from
+                // one that never started, and the usual cause -- a second copy already
+                // holding the port -- is invisible unless its exit is reported.
+                process.EnableRaisingEvents = true;
+                process.Exited += (_, __) =>
+                {
+                    if (process != null && process.ExitCode != 0)
+                        Debug.LogError("Study server stopped on its own (exit " +
+                                       process.ExitCode + "). The most likely cause is " +
+                                       "another copy already running: in a terminal, " +
+                                       "pkill -f serve-study.py");
+                    process = null;
+                };
+
                 Debug.Log("Study server starting.\n  Researcher panel: " + PanelUrl +
                           "\n  In the headset:   " + HeadsetUrl);
             }

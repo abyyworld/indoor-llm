@@ -11,7 +11,14 @@ SEED="${2:-42}"
 INDEX="${3:-0}"
 BATCH="${BATCH:-configs/pilot_8cell.json}"
 
-DEST="$HOME/Library/Application Support/DefaultCompany/unity"
+# Where the app reads. Passed in by the control panel, which knows Unity's
+# persistentDataPath; the fallback is only for running this by hand.
+#
+# This is not cosmetic: the folder is named after the product, so renaming the product
+# moved it, and the stimuli kept being written to a folder nothing read any more. The
+# study then reported "no session file" with the files sitting right there under the
+# old name.
+DEST="${EMOTION_ROOMS_DATA:-$HOME/Library/Application Support/DefaultCompany/Emotion Rooms}"
 mkdir -p "$DEST" runs
 
 python3 -m pipeline.cli build-session \

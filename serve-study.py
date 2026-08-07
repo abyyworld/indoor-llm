@@ -363,7 +363,16 @@ def main() -> int:
     context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
     context.load_cert_chain(CERT, KEY)
 
-    server = ThreadingHTTPServer(("0.0.0.0", PORT), Handler)
+    try:
+        server = ThreadingHTTPServer(("0.0.0.0", PORT), Handler)
+    except OSError as exc:
+        # Exiting silently here looked exactly like a server that started and stopped,
+        # which is what a second copy of the study does to the first.
+        print(f"error: port {PORT} is already in use ({exc}).")
+        print("Another copy of the study server is running. Stop it first:")
+        print("  pkill -f serve-study.py")
+        return 1
+
     server.socket = context.wrap_socket(server.socket, server_side=True)
     start_redirect()
 

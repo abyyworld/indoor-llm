@@ -460,8 +460,13 @@ namespace EmotionRooms.EditorTools
                 return;
             }
 
-            if (!RunShell(string.Format("./test-participant.sh {0} {1} {2}",
-                                        participant, 40 + index, index)))
+            // persistentDataPath is named after the product, so it moves if the product
+            // is renamed. Passing it through means the stimuli always land where the app
+            // will look, rather than in a folder that used to be right.
+            if (!RunShell(string.Format(
+                    "EMOTION_ROOMS_DATA='{0}' ./test-participant.sh {1} {2} {3}",
+                    Application.persistentDataPath.Replace("'", "'\\''"),
+                    participant, 40 + index, index)))
                 return;
 
             Debug.Log("Study Control: " + participant + " is ready. Rooms, review block " +
