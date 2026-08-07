@@ -43,26 +43,19 @@ namespace EmotionRooms.EditorTools
             repoPath = EditorPrefs.GetString(RepoKey, GuessRepoPath());
         }
 
-        // Cached probes.
-        //
-        // The panel was calling adb, reading the manifest and walking the XR settings on
-        // every repaint, and OnInspectorUpdate repaints ten times a second in play mode.
-        // Spawning a process per frame is what made the window lag. None of these answers
-        // change faster than a person can act on them, so they are refreshed on a timer.
+        // Cached probes. The panel used to hit the filesystem on every repaint, and
+        // OnInspectorUpdate repaints continuously in play mode; nothing here changes
+        // faster than a person can act on it.
         double probedAt;
-        string[] cachedDevices = new string[0];
-        bool cachedDesktopXR, cachedAndroidXR;
-        string cachedRuntime = "";
+        int cachedPacks;
 
         void Probe(bool force = false)
         {
             if (!force && EditorApplication.timeSinceStartup - probedAt < 3.0) return;
             probedAt = EditorApplication.timeSinceStartup;
 
-            cachedDevices = StudyBuild.ConnectedDevices();
-            cachedDesktopXR = XRSetup.IsConfigured(BuildTargetGroup.Standalone);
-            cachedAndroidXR = XRSetup.IsConfigured(BuildTargetGroup.Android);
-            cachedRuntime = XRSetup.RuntimeName();
+            string packs = Path.Combine(Application.streamingAssetsPath, "participants");
+            cachedPacks = Directory.Exists(packs) ? Directory.GetDirectories(packs).Length : 0;
         }
 
         void OnInspectorUpdate()
@@ -86,9 +79,7 @@ namespace EmotionRooms.EditorTools
             DrawBeforeArrival(bootstrap);
             DrawSession(bootstrap, forms);
             DrawAfter();
-            DrawHeadset();
             DrawWebStudy();
-            DrawHandoff();
             DrawScript();
             DrawTroubleshooting();
 
@@ -214,87 +205,6 @@ namespace EmotionRooms.EditorTools
 
         // ------------------------------------------------------------ before arrival
 
-        void DrawHeadset()
-        {
-            Section("Headset", "Only for real participants. Piloting works on the laptop " +
-                               "with a mouse.");
-
-            bool desktop = cachedDesktopXR;
-            bool quest = cachedAndroidXR;
-
-            Row(desktop, desktop
-                ? "OpenXR on for desktop (Quest Link, and Mengkai's Windows build)"
-                : "OpenXR not enabled for desktop");
-            Row(quest, quest
-                ? "OpenXR on for Android (standalone Quest app)"
-                : "OpenXR not enabled for Android");
-
-            if (!desktop || !quest)
-            {
-                if (GUILayout.Button("Set up XR on this machine", GUILayout.Height(26f)))
-                    Later(XRSetup.Run);
-                EditorGUILayout.LabelField(
-                    "Enables the OpenXR loader and the Quest controller profile. If any " +
-                    "part cannot be done automatically the console says which click " +
-                    "replaces it.", EditorStyles.wordWrappedMiniLabel);
-            }
-
-            var devices = cachedDevices;
-            Row(devices.Length > 0, devices.Length > 0
-                ? "Headset visible over USB: " + string.Join(", ", devices)
-                : "adb cannot see a headset over USB");
-
-            if (devices.Length == 0)
-                EditorGUILayout.HelpBox(
-                    "Nothing can be installed on the headset until adb sees it. Check the " +
-                    "cable carries data rather than only power, that Developer Mode is on " +
-                    "(the account owner sets this in the Meta Horizon phone app), and that " +
-                    "you accepted Allow USB Debugging inside the headset.\n\n" +
-                    "The browser version needs none of this — see the section below.",
-                    MessageType.Info);
-
-            using (new EditorGUI.DisabledScope(devices.Length == 0))
-            {
-                if (GUILayout.Button("Build and put it on the headset", GUILayout.Height(26f)))
-                    Later(StudyBuild.BuildAndDeploy);
-            }
-
-            if (Application.isPlaying)
-            {
-                bool live = XRRig.IsHeadsetRunning();
-                bool real = live && XRSetup.IsRealRuntime(cachedRuntime);
-
-                Row(real, !live ? "No XR running — the mouse drives the pointer"
-                         : real ? "Headset tracking (" + cachedRuntime + ")"
-                                : "A MOCK runtime is running, not a headset" +
-                                  (string.IsNullOrEmpty(cachedRuntime) ? "" : " (" + cachedRuntime + ")"));
-
-                if (live && !real)
-                    EditorGUILayout.HelpBox(
-                        "This is not your Quest. macOS has no OpenXR runtime, so Unity " +
-                        "falls back to a mock one: it reports as tracking and renders an " +
-                        "empty preview window, which is what you are seeing.\n\n" +
-                        "Turn OpenXR off for desktop on this machine — it cannot drive a " +
-                        "headset here — and use the browser route below.",
-                        MessageType.Warning);
-            }
-
-            if (desktop && Application.platform == RuntimePlatform.OSXEditor)
-            {
-                if (GUILayout.Button("Turn OpenXR off for desktop (it does nothing on a Mac)"))
-                    Later(() => { XRSetup.DisableDesktop(); Probe(true); });
-            }
-            else
-            {
-                EditorGUILayout.LabelField(
-                    "Plug the Quest in, open the Link app on it, then press Play. This " +
-                    "line will say whether it is tracking.",
-                    EditorStyles.wordWrappedMiniLabel);
-            }
-
-            EndSection();
-        }
-
         void DrawWebStudy()
         {
             Section("Run on the headset through its browser",
@@ -336,32 +246,6 @@ namespace EmotionRooms.EditorTools
                     "Everything after that is on this laptop.",
                     EditorStyles.wordWrappedMiniLabel);
             }
-
-            EndSection();
-        }
-
-        void DrawHandoff()
-        {
-            Section("Give it to someone else", "They need no Unity, no Python and no repo.");
-
-            string packs = Path.Combine(Application.streamingAssetsPath, "participants");
-            int count = Directory.Exists(packs) ? Directory.GetDirectories(packs).Length : 0;
-            Row(count > 0, count > 0
-                ? count + " participants pre-built into the app"
-                : "No participant packs — the build would have no rooms");
-
-            if (count == 0 && GUILayout.Button("Build participant packs"))
-                Later(() => RunPython("build-participants --count 30"));
-
-            using (new EditorGUI.DisabledScope(Application.isPlaying || count == 0))
-            {
-                if (GUILayout.Button("Build the Windows app", GUILayout.Height(26f)))
-                    Later(StudyBuild.BuildWindows);
-            }
-            EditorGUILayout.LabelField(
-                "Send them the whole output folder, not just the .exe. In the app, F9 " +
-                "shows the same panel as this one.",
-                EditorStyles.wordWrappedMiniLabel);
 
             EndSection();
         }

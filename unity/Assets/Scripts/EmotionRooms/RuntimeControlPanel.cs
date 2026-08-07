@@ -102,7 +102,6 @@ namespace EmotionRooms
             bool packs = participants.Count > 0;
             bool forms = questionnaires != null && questionnaires.FormCount > 0;
             bool serving = server != null && server.IsRunning;
-            bool headset = XRRig.IsHeadsetRunning();
             bool writable = CanWriteData();
 
             Check(packs, packs ? participants.Count + " participants loaded"
@@ -111,14 +110,6 @@ namespace EmotionRooms
             Check(serving, serving ? "forms reachable at " + server.Root
                                    : "form server not running");
             Check(writable, writable ? "data folder writable" : "CANNOT WRITE DATA");
-            Check(headset, headset
-                ? "headset tracking"
-                : "no headset — the mouse works, but this is not a VR session");
-
-            if (!headset)
-                GUILayout.Label("If a headset should be connected: check it is plugged in, " +
-                                "worn, and that Quest Link is running on it.", Fine());
-
             GUILayout.Space(10f);
         }
 

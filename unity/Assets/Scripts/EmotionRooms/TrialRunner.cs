@@ -424,13 +424,19 @@ namespace EmotionRooms
 
         string ReadSessionJson()
         {
-            if (!string.IsNullOrEmpty(sessionFileName))
-            {
-                string json = ParticipantPacks.Read(participantId, sessionFileName);
-                if (json != null) return json;
-                Debug.LogWarning("TrialRunner: no " + sessionFileName + " for " +
-                                 participantId + " in the data folder or the shipped packs.");
-            }
+            // Falls back to the filename rather than trusting the serialised value.
+            // A scene built before this field had a default still holds "", and a
+            // serialised field never picks up a new script default -- so the study
+            // reported "no session file" while thirty participants sat loaded in memory.
+            string name = string.IsNullOrEmpty(sessionFileName) ? "session.json" : sessionFileName;
+
+            string json = ParticipantPacks.Read(participantId, name);
+            if (json != null) return json;
+
+            Debug.LogWarning("TrialRunner: no " + name + " for '" + participantId +
+                             "'. Looked in " + Application.persistentDataPath +
+                             " and in the shipped packs (" +
+                             string.Join(", ", new List<string>(ShippedAssets.Participants).ToArray()) + ").");
             return sessionAsset != null ? sessionAsset.text : null;
         }
 

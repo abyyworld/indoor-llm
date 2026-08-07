@@ -40,10 +40,6 @@ namespace EmotionRooms
         public QuestionPanel attributionPanel;
         public QuestionPanel correctionPanel;
 
-        [Tooltip("Head and controller tracking. Created by scene setup; harmless when " +
-                 "no headset is connected, so the same scene runs on a laptop.")]
-        public XRRig xrRig;
-
         [Header("Pointer")]
         [Tooltip("Transform whose forward axis is the pointing ray. A controller's ray " +
                  "origin in the headset. Leave empty in the editor and the mouse is used.")]
@@ -480,16 +476,6 @@ namespace EmotionRooms
 
         bool TryBuildRay(out Ray ray)
         {
-            // The controller wins whenever a headset is actually tracking. Checked every
-            // frame rather than once at startup: a controller that wakes up mid-session
-            // should just start working, and a headset that is not there should leave the
-            // mouse path untouched.
-            if (xrRig != null && xrRig.HeadsetPresent && xrRig.pointer != null)
-            {
-                ray = new Ray(xrRig.pointer.position, xrRig.pointer.forward);
-                return true;
-            }
-
             if (pointerOrigin != null)
             {
                 ray = new Ray(pointerOrigin.position, pointerOrigin.forward);
@@ -509,7 +495,6 @@ namespace EmotionRooms
 
         bool Pressed()
         {
-            if (XRRig.TriggerPressed()) return true;
 
             if (!string.IsNullOrEmpty(selectButton))
             {
@@ -523,8 +508,6 @@ namespace EmotionRooms
                     selectButton = "";
                 }
             }
-            if (xrRig != null && xrRig.HeadsetPresent && XRRig.TriggerPressed()) return true;
-
             return Input.GetMouseButtonDown(0);
         }
     }

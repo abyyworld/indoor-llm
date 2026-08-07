@@ -77,7 +77,13 @@ find "$WORK" -name '*.pyc' -delete 2>/dev/null || true
 
 echo
 echo "Would push $(find "$WORK" -type f | wc -l | tr -d ' ') files:"
-find "$WORK" -type f | sed "s|$WORK/|  |" | sort | head -40
+# `| head` closes the pipe on `find`, which under `set -o pipefail` aborts the whole
+# script -- silently, after printing the listing and before pushing anything. It only
+# started biting once the export grew past forty files. Sort to a variable first so
+# nothing is reading from a pipe that gets closed underneath it.
+LISTING="$(find "$WORK" -type f | sed "s|$WORK/|  |" | sort)"
+echo "$LISTING" | head -40
+[ "$(echo "$LISTING" | wc -l)" -gt 40 ] && echo "  ... and $(($(echo "$LISTING" | wc -l) - 40)) more"
 echo
 
 if [ "${1:-}" != "--push" ]; then

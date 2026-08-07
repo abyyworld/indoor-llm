@@ -505,13 +505,12 @@ namespace EmotionRooms
 
         string ReadBlockJson()
         {
-            if (!string.IsNullOrEmpty(blockFileName))
-            {
-                string json = ParticipantPacks.Read(participantId, blockFileName);
-                if (json != null) return json;
-                Debug.LogWarning("OversightReview: no " + blockFileName + " for " +
-                                 participantId + " in the data folder or the shipped packs.");
-            }
+            string name = string.IsNullOrEmpty(blockFileName) ? "oversight.json" : blockFileName;
+
+            string json = ParticipantPacks.Read(participantId, name);
+            if (json != null) return json;
+
+            Debug.LogWarning("OversightReview: no " + name + " for '" + participantId + "'.");
             return blockAsset != null ? blockAsset.text : null;
         }
 
