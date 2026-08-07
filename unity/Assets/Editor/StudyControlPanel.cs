@@ -24,6 +24,9 @@ namespace EmotionRooms.EditorTools
     {
         const string RepoKey = "EmotionRooms.RepoPath";
         const string PracticeKey = "EmotionRooms.PracticeOnly";
+        const string ModeKey = "EmotionRooms.SessionMode";
+
+        int sessionMode;   // 0 both, 1 Phase A only, 2 Phase B only
 
         bool practiceOnly;
 
@@ -38,7 +41,8 @@ namespace EmotionRooms.EditorTools
         {
             StudyServerLink.SetParticipant(participant);
             if (!string.IsNullOrEmpty(cachedHeadsetIp))
-                StudyServerLink.PushToHeadset(cachedHeadsetIp, participant, practiceOnly, null);
+                StudyServerLink.PushToHeadset(cachedHeadsetIp, participant, practiceOnly,
+                                              sessionMode, null);
         }
 
         string participant = "";
@@ -60,6 +64,7 @@ namespace EmotionRooms.EditorTools
         {
             repoPath = EditorPrefs.GetString(RepoKey, GuessRepoPath());
             practiceOnly = EditorPrefs.GetBool(PracticeKey, false);
+            sessionMode = EditorPrefs.GetInt(ModeKey, 0);
         }
 
         // Cached probes. The panel used to hit the filesystem on every repaint, and
@@ -167,6 +172,15 @@ namespace EmotionRooms.EditorTools
                     "There is already data filed under " + participant + ". Use a " +
                     "different id unless you mean to add to it.", MessageType.Warning);
 
+            int phases = EditorGUILayout.Popup("Phases",
+                sessionMode, new[] { "Both (A then B)", "Phase A only", "Phase B only" });
+            if (phases != sessionMode)
+            {
+                sessionMode = phases;
+                EditorPrefs.SetInt(ModeKey, sessionMode);
+                PushSettings();
+            }
+
             int mode = practiceOnly ? 1 : 0;
             int picked = GUILayout.Toolbar(mode, new[] { "Real session", "Practice only" });
             if (picked != mode)
@@ -175,6 +189,14 @@ namespace EmotionRooms.EditorTools
                 EditorPrefs.SetBool(PracticeKey, practiceOnly);
                 PushSettings();
             }
+
+            EditorGUILayout.LabelField(
+                sessionMode == 1 ? "Phase A only: 8 rooms and the affect grid. ~35 min."
+                : sessionMode == 2 ? "Phase B only: the oversight block, no prior exposure " +
+                                     "to the rooms. ~57 min, and the cleanest version."
+                : "Both: Phase A then Phase B. ~62 min. B is never first — its " +
+                  "attribution question names every manipulated variable.",
+                EditorStyles.wordWrappedMiniLabel);
 
             EditorGUILayout.LabelField(practiceOnly
                 ? "Two warm-up rooms then stop. Nothing scored, no review block, no " +

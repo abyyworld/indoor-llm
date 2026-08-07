@@ -238,6 +238,8 @@ namespace EmotionRooms
                 string who, practice;
                 values.TryGetValue("participant", out who);
                 values.TryGetValue("practice", out practice);
+                string phases;
+                values.TryGetValue("phases", out phases);
 
                 var applied = new ManualResetEvent(false);
                 lock (mainThread)
@@ -255,6 +257,10 @@ namespace EmotionRooms
                                 }
                                 if (!string.IsNullOrEmpty(practice))
                                     bootstrap.practiceOnly = practice == "1";
+                                int mode;
+                                if (!string.IsNullOrEmpty(phases) &&
+                                    int.TryParse(phases, out mode))
+                                    bootstrap.sessionMode = mode;
                             }
                         }
                         finally { applied.Set(); }
@@ -270,6 +276,7 @@ namespace EmotionRooms
                 int done = trialRunner != null ? trialRunner.CompletedTrials : 0;
                 return "{\"participant\":\"" + Escape(bootstrap != null ? bootstrap.participantId : "") +
                        "\",\"practice\":" + (bootstrap != null && bootstrap.practiceOnly ? "true" : "false") +
+                       ",\"phases\":" + (bootstrap != null ? bootstrap.sessionMode : 0) +
                        ",\"running\":" + ((running || reviewing) ? "true" : "false") +
                        ",\"reviewing\":" + (reviewing ? "true" : "false") +
                        ",\"trial\":" + done.ToString(CultureInfo.InvariantCulture) + ",\"of\":8}";

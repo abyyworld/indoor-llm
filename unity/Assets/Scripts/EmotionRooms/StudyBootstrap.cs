@@ -123,6 +123,17 @@ namespace EmotionRooms
                  "whichever emotion the counterbalancing put first.")]
         public bool practiceRooms = true;
 
+        [Tooltip("Which halves this participant does.\n\n" +
+                 "0 = both (Phase A then Phase B), 1 = Phase A only, 2 = Phase B only.\n\n" +
+                 "Phase B is never run first for someone doing both: its attribution " +
+                 "question lists all five manipulated variables, so running it first " +
+                 "would tell the participant exactly what varies before they rate " +
+                 "anything.")]
+        public int sessionMode;
+
+        public bool DoesPhaseA { get { return sessionMode != 2; } }
+        public bool DoesPhaseB { get { return sessionMode != 1; } }
+
         [Tooltip("Practice only: run the two warm-up rooms and stop. For piloting the " +
                  "kit and for training a new researcher, without burning a participant " +
                  "id or writing a session that looks real.")]
@@ -243,6 +254,17 @@ namespace EmotionRooms
             // and a session that waited on a form would be a session a skipped form could
             // stall.
             if (board != null) board.Hide();
+
+            if (!DoesPhaseA)
+            {
+                // Phase B only. The cleanest version of the oversight study: no prior
+                // exposure to the rooms, so a faithful stimulus is no more familiar than
+                // a random one, and nothing has told them what varies.
+                if (oversightReview != null) oversightReview.BeginBlock();
+                else Debug.LogError("StudyBootstrap: Phase B only, but no OversightReview.");
+                return;
+            }
+
             trialRunner.BeginSession();
         }
 
@@ -285,6 +307,11 @@ namespace EmotionRooms
             if (ConsentConfirmed) return;
             ConsentConfirmed = true;
             WriteConsentRow("consent_taken", "");
+            if (trialRunner != null && trialRunner.events != null)
+                trialRunner.events.WriteValues("session_mode",
+                    sessionMode == 1 ? "phase_a_only"
+                    : sessionMode == 2 ? "phase_b_only" : "both",
+                    practiceOnly ? "practice" : "real", null);
             if (trialRunner != null && trialRunner.events != null)
                 trialRunner.events.WriteValues("consent_confirmed", consentFormVersion,
                     researcherInitials, null);
@@ -377,6 +404,16 @@ namespace EmotionRooms
             // Phase A is complete and its data is written before anything asks the
             // participant to evaluate a room. That ordering is the whole reason the
             // review block does not contaminate the affect ratings.
+            if (!DoesPhaseB)
+            {
+                Debug.Log("StudyBootstrap: Phase A only, session complete.");
+                if (questionnaires != null) questionnaires.ShowSummary();
+                if (board != null)
+                    board.Show("That is everything.\n\nPlease take the headset off.");
+                BundleNow("phase A finished");
+                return;
+            }
+
             Debug.Log("StudyBootstrap: main session finished, starting the review block.");
             oversightReview.BeginBlock();
         }
