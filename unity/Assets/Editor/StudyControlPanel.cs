@@ -275,6 +275,23 @@ namespace EmotionRooms.EditorTools
                     });
             }
 
+            // 1a -- the cable route, when the headset allows it.
+            var devices = StudyBuild.ConnectedDevices();
+            if (devices.Length > 0)
+            {
+                EditorGUILayout.Space(4f);
+                EditorGUILayout.HelpBox(
+                    "Headset visible over USB. You can put the study on it and launch it " +
+                    "from here — nothing is typed or pressed in the headset at all.",
+                    MessageType.Info);
+                EditorGUILayout.BeginHorizontal();
+                if (GUILayout.Button("Install on the headset", GUILayout.Height(26f)))
+                    Later(StudyBuild.BuildAndDeploy);
+                if (GUILayout.Button("Launch it", GUILayout.Height(26f), GUILayout.Width(90f)))
+                    Later(StudyBuild.LaunchOnHeadset);
+                EditorGUILayout.EndHorizontal();
+            }
+
             // 1 -- headset
             Step(1, live, "Point the headset at the study",
                 headsetIn ? "Headset is connected."

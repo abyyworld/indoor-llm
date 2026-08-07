@@ -134,6 +134,10 @@ namespace EmotionRooms.EditorTools
             PersistMaterials(rooms);
             PersistMaterials(root);
 
+            var xr = root.AddComponent<XRRig>();
+            xr.headCamera = camera;
+            bootstrap.xrRig = xr;
+
             var runtimePanel = root.AddComponent<RuntimeControlPanel>();
             runtimePanel.bootstrap = bootstrap;
             runtimePanel.trialRunner = runner;
