@@ -23,6 +23,23 @@ namespace EmotionRooms.EditorTools
     public class StudyControlPanel : EditorWindow
     {
         const string RepoKey = "EmotionRooms.RepoPath";
+        const string PracticeKey = "EmotionRooms.PracticeOnly";
+
+        bool practiceOnly;
+
+        /// <summary>
+        /// Send the participant and the mode to wherever the study is running.
+        ///
+        /// Both are set here and nowhere else, so neither the headset app nor the browser
+        /// page ever asks again. Anything that can be set in two places eventually is,
+        /// differently.
+        /// </summary>
+        void PushSettings()
+        {
+            StudyServerLink.SetParticipant(participant);
+            if (!string.IsNullOrEmpty(cachedHeadsetIp))
+                StudyServerLink.PushToHeadset(cachedHeadsetIp, participant, practiceOnly, null);
+        }
 
         string participant = "";
         string repoPath = "";
@@ -42,6 +59,7 @@ namespace EmotionRooms.EditorTools
         void OnEnable()
         {
             repoPath = EditorPrefs.GetString(RepoKey, GuessRepoPath());
+            practiceOnly = EditorPrefs.GetBool(PracticeKey, false);
         }
 
         // Cached probes. The panel used to hit the filesystem on every repaint, and
@@ -129,7 +147,7 @@ namespace EmotionRooms.EditorTools
             EditorGUI.BeginChangeCheck();
             participant = EditorGUILayout.TextField(participant, GUILayout.Width(90f));
             if (EditorGUI.EndChangeCheck() && !string.IsNullOrEmpty(participant))
-                StudyServerLink.SetParticipant(participant);
+                PushSettings();
             GUILayout.FlexibleSpace();
             EditorGUILayout.EndHorizontal();
 
@@ -143,9 +161,21 @@ namespace EmotionRooms.EditorTools
                     "There is already data filed under " + participant + ". Use a " +
                     "different id unless you mean to add to it.", MessageType.Warning);
 
-            EditorGUILayout.LabelField(
-                "Warm-up rooms, 8 scored rooms, then the review block. About 45 minutes " +
-                "including the questionnaires.", EditorStyles.wordWrappedMiniLabel);
+            int mode = practiceOnly ? 1 : 0;
+            int picked = GUILayout.Toolbar(mode, new[] { "Real session", "Practice only" });
+            if (picked != mode)
+            {
+                practiceOnly = picked == 1;
+                EditorPrefs.SetBool(PracticeKey, practiceOnly);
+                PushSettings();
+            }
+
+            EditorGUILayout.LabelField(practiceOnly
+                ? "Two warm-up rooms then stop. Nothing scored, no review block, no " +
+                  "participant id used up. This is how to try the kit."
+                : "Warm-up rooms, 8 scored rooms, then the review block. About 45 minutes " +
+                  "including the questionnaires.",
+                EditorStyles.wordWrappedMiniLabel);
         }
 
         // -------------------------------------------------------------------- setup
@@ -348,9 +378,18 @@ namespace EmotionRooms.EditorTools
                             StudyServerLink.FormUrl("before", participant)));
 
                     EditorGUILayout.Space(4f);
-                    if (GUILayout.Button("Fit the headset, then START THE ROOMS",
-                                         GUILayout.Height(32f)))
-                        Later(() => StudyServerLink.StartRooms(participant, null));
+                    if (GUILayout.Button(practiceOnly
+                            ? "Fit the headset, then START THE PRACTICE"
+                            : "Fit the headset, then START THE ROOMS",
+                            GUILayout.Height(32f)))
+                        Later(() =>
+                        {
+                            PushSettings();
+                            if (!string.IsNullOrEmpty(cachedHeadsetIp))
+                                StudyServerLink.StartOnHeadset(cachedHeadsetIp, participant, null);
+                            else
+                                StudyServerLink.StartRooms(participant, null);
+                        });
                 }
                 if (!haveId)
                     EditorGUILayout.HelpBox("Type a participant id at the top first.",

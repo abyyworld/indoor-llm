@@ -204,6 +204,42 @@ namespace EmotionRooms
                 return ThanksPage(formId);
             }
 
+            if (path == "/set")
+            {
+                // Pushed from the control panel so nobody picks a participant twice.
+                // Two places to set it is two places to get it different, and a
+                // mismatched id means a session whose files never join up.
+                var values = ParseForm(query);
+                string who, practice;
+                values.TryGetValue("participant", out who);
+                values.TryGetValue("practice", out practice);
+
+                var applied = new ManualResetEvent(false);
+                lock (mainThread)
+                {
+                    mainThread.Enqueue(() =>
+                    {
+                        try
+                        {
+                            if (bootstrap != null)
+                            {
+                                if (!string.IsNullOrEmpty(who))
+                                {
+                                    bootstrap.participantId = who;
+                                    bootstrap.ApplyParticipantId();
+                                }
+                                if (!string.IsNullOrEmpty(practice))
+                                    bootstrap.practiceOnly = practice == "1";
+                            }
+                        }
+                        finally { applied.Set(); }
+                    });
+                }
+                applied.WaitOne(5000);
+                return "{\"participant\":\"" + Escape(bootstrap != null ? bootstrap.participantId : "") +
+                       "\",\"practice\":" + (bootstrap != null && bootstrap.practiceOnly ? "true" : "false") + "}";
+            }
+
             if (path == "/start")
             {
                 var values = ParseForm(query);
@@ -368,34 +404,32 @@ namespace EmotionRooms
             string who = bootstrap != null ? bootstrap.participantId : "";
             bool running = trialRunner != null && trialRunner.IsRunning;
 
-            page.Append("<p>Participant <b>").Append(Escape(who)).Append("</b>. ")
+            bool practiceOnly = bootstrap != null && bootstrap.practiceOnly;
+            page.Append("<p>Participant <b>").Append(Escape(who)).Append("</b>")
+                .Append(practiceOnly ? " &middot; <b>practice only</b>" : "")
+                .Append(". Set from the control panel. ")
                 .Append(running
                     ? "Running — trial " + (trialRunner != null ? trialRunner.CompletedTrials : 0) + " of 8."
                     : "Not started.")
                 .Append("</p>");
 
-            page.Append("<h2>1. Set the participant</h2>");
-            page.Append("<form method=get action=/start><div class=opts>");
-            foreach (var id in ParticipantPacks.Available())
-                page.Append("<label class=opt><input type=radio name=participant value='")
-                    .Append(Escape(id)).Append("'")
-                    .Append(id == who ? " checked" : "").Append("> ")
-                    .Append(Escape(id)).Append("</label>");
-            page.Append("</div>");
+            page.Append("<form method=get action=/start>");
+            page.Append("<input type=hidden name=participant value='")
+                .Append(Escape(who)).Append("'>");
 
-            page.Append("<h2>2. Questionnaires — before</h2><p>");
+            page.Append("<h2>1. Questionnaires — before</h2><p>");
             foreach (var form in questionnaires != null ? questionnaires.Due("before") : new List<QuestionForm>())
                 page.Append("<a href='/form?id=").Append(Escape(form.id)).Append("'>")
                     .Append(Escape(form.title)).Append("</a> &nbsp; ");
             page.Append("</p>");
 
-            page.Append("<h2>3. Fit the headset, then start</h2>");
+            page.Append("<h2>2. Fit the headset, then start</h2>");
             page.Append("<div class=bar><button type=submit")
                 .Append(running ? " disabled" : "")
                 .Append(">").Append(running ? "Running…" : "START THE ROOMS")
                 .Append("</button></div></form>");
 
-            page.Append("<h2>4. Questionnaires — after</h2><p>");
+            page.Append("<h2>3. Questionnaires — after</h2><p>");
             foreach (var form in questionnaires != null ? questionnaires.Due("after") : new List<QuestionForm>())
                 page.Append("<a href='/form?id=").Append(Escape(form.id)).Append("'>")
                     .Append(Escape(form.title)).Append("</a> &nbsp; ");

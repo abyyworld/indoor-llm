@@ -122,6 +122,47 @@ namespace EmotionRooms.EditorTools
                                      UnityWebRequest.EscapeURL(participant)), onDone);
         }
 
+        /// <summary>
+        /// Push the participant and the mode to the app running on the headset.
+        ///
+        /// The panel is where these are set, so they are sent rather than asked for
+        /// again on the other side. Two places to set a participant id is two places to
+        /// get it different, and a mismatched id is a session whose files never join up.
+        /// </summary>
+        public static void PushToHeadset(string headsetIp, string participant,
+                                         bool practiceOnly, Action<bool> onDone)
+        {
+            if (string.IsNullOrEmpty(headsetIp))
+            {
+                if (onDone != null) onDone(false);
+                return;
+            }
+
+            string url = "http://" + headsetIp + ":8752/set?participant=" +
+                         UnityWebRequest.EscapeURL(participant ?? "") +
+                         "&practice=" + (practiceOnly ? "1" : "0");
+            Send(UnityWebRequest.Get(url), body =>
+            {
+                if (onDone != null) onDone(body != null);
+            });
+        }
+
+        public static void StartOnHeadset(string headsetIp, string participant,
+                                          Action<bool> onDone)
+        {
+            if (string.IsNullOrEmpty(headsetIp))
+            {
+                if (onDone != null) onDone(false);
+                return;
+            }
+            string url = "http://" + headsetIp + ":8752/start?participant=" +
+                         UnityWebRequest.EscapeURL(participant ?? "");
+            Send(UnityWebRequest.Get(url), body =>
+            {
+                if (onDone != null) onDone(body != null);
+            });
+        }
+
         public static string FormUrl(string group, string participant)
         {
             return Base + "/form.html?group=" + group +
