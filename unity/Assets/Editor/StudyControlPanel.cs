@@ -69,6 +69,7 @@ namespace EmotionRooms.EditorTools
         int cachedPacks;
         string[] cachedDevices = new string[0];
         string cachedHeadsetIp;
+        HeadsetState headsetApp;   // what the app on the headset reports, or null
 
         void Probe(bool force = false)
         {
@@ -81,6 +82,11 @@ namespace EmotionRooms.EditorTools
             // Two adb processes. Worth it every few seconds, ruinous every frame.
             cachedDevices = StudyBuild.ConnectedDevices();
             cachedHeadsetIp = cachedDevices.Length > 0 ? StudyBuild.HeadsetAddress() : null;
+            if (cachedHeadsetIp != null)
+                StudyServerLink.QueryHeadset(cachedHeadsetIp,
+                    state => { headsetApp = state; Repaint(); });
+            else
+                headsetApp = null;
         }
 
         void OnInspectorUpdate()
@@ -281,6 +287,100 @@ namespace EmotionRooms.EditorTools
         {
             PollServer();
 
+            Section("Running a session", "One step at a time. Do the highlighted one.");
+
+            if (cachedDevices.Length > 0) DrawApkSession();
+            else DrawBrowserSession();
+
+            EndSection();
+        }
+
+        /// <summary>
+        /// The cable route: the app runs on the headset and this laptop drives it.
+        /// Everything here rides on the app's own /set endpoint, so the runbook follows
+        /// what the headset is actually doing rather than a counter kept here.
+        /// </summary>
+        void DrawApkSession()
+        {
+            bool app = headsetApp != null;
+            bool running = app && headsetApp.running;
+            bool finished = app && !headsetApp.running && headsetApp.trial >= 8;
+            bool haveId = !string.IsNullOrEmpty(participant);
+
+            int live = !app ? 0 : running ? 2 : finished ? 3 : 1;
+
+            Step(0, live, "Study app on the headset",
+                app ? "Running and reachable at " + cachedHeadsetIp + "."
+                    : "Installed but not running, or the headset is asleep.");
+            if (live == 0)
+            {
+                EditorGUILayout.BeginHorizontal();
+                if (GUILayout.Button("Install on the headset", GUILayout.Height(26f)))
+                    Later(StudyBuild.BuildAndDeploy);
+                if (GUILayout.Button("Launch it", GUILayout.Height(26f), GUILayout.Width(90f)))
+                    Later(StudyBuild.LaunchOnHeadset);
+                if (GUILayout.Button("Check again", GUILayout.Height(26f), GUILayout.Width(100f)))
+                    Probe(true);
+                EditorGUILayout.EndHorizontal();
+                EditorGUILayout.LabelField(
+                    "If the headset is asleep, put it on for a moment to wake it.",
+                    EditorStyles.wordWrappedMiniLabel);
+            }
+
+            Step(1, live, "First questionnaires, then start",
+                "One page, on this laptop, headset off. Then fit the headset and start.");
+            if (live == 1)
+            {
+                using (new EditorGUI.DisabledScope(!haveId))
+                {
+                    if (GUILayout.Button("Open the first questionnaires", GUILayout.Height(26f)))
+                        Later(() => Application.OpenURL(
+                            StudyServerLink.HeadsetPage(cachedHeadsetIp, "group?when=before")));
+
+                    EditorGUILayout.Space(4f);
+                    if (GUILayout.Button(practiceOnly
+                            ? "Fit the headset, then START THE PRACTICE"
+                            : "Fit the headset, then START THE ROOMS",
+                            GUILayout.Height(32f)))
+                        Later(() =>
+                        {
+                            PushSettings();
+                            StudyServerLink.StartOnHeadset(cachedHeadsetIp, participant, null);
+                        });
+                }
+                if (!haveId)
+                    EditorGUILayout.HelpBox("Type a participant id at the top first.",
+                        MessageType.Warning);
+            }
+
+            Step(2, live, "The rooms are running",
+                running
+                    ? (headsetApp.reviewing
+                        ? "Review block. Nothing to do."
+                        : "Trial " + headsetApp.trial + " of " + headsetApp.of + ". Nothing to do.")
+                    : "About 27 minutes once started.");
+            if (live == 2)
+                EditorGUILayout.LabelField(
+                    "If they want to stop, they take the headset off. Everything recorded " +
+                    "so far is kept.", EditorStyles.wordWrappedMiniLabel);
+
+            Step(3, live, "Last questionnaires",
+                "Headset off, back on this laptop. The debrief is in here.");
+            if (live == 3)
+            {
+                if (GUILayout.Button("Open the last questionnaires", GUILayout.Height(26f)))
+                    Later(() => Application.OpenURL(
+                        StudyServerLink.HeadsetPage(cachedHeadsetIp, "group?when=after")));
+                if (GUILayout.Button("Pull the data to this Mac", GUILayout.Height(26f)))
+                    Later(StudyBuild.PullData);
+                EditorGUILayout.LabelField(
+                    "Brings every response, log and the combined file into " +
+                    "runs/headset-data/.", EditorStyles.wordWrappedMiniLabel);
+            }
+        }
+
+        void DrawBrowserSession()
+        {
             bool up = WebServer.IsRunning && server != null;
             bool headsetIn = up && server.connected &&
                              (server.headset == "in_vr" || server.headset == "running" ||
@@ -291,9 +391,10 @@ namespace EmotionRooms.EditorTools
 
             int live = !up ? 0 : !headsetIn ? 1 : running ? 3 : finished ? 4 : 2;
 
-            Section("Running a session", "One step at a time. Do the highlighted one.");
+            EditorGUILayout.HelpBox(
+                "No headset over USB — this is the browser route. Plug the headset in " +
+                "and wake it for the simpler cable route.", MessageType.None);
 
-            // 0 -- server
             Step(0, live, "Start the study server", up
                 ? "Running."
                 : "Not running. Everything else needs it.");
@@ -312,37 +413,6 @@ namespace EmotionRooms.EditorTools
                     });
             }
 
-            // 1a -- the cable route, when the headset allows it.
-            //
-            // Both of these come from the cache. Calling adb here directly spawned a
-            // process on every repaint, which is what made the window crawl.
-            if (cachedDevices.Length > 0)
-            {
-                EditorGUILayout.Space(4f);
-                EditorGUILayout.HelpBox(
-                    "Headset visible over USB. Install the study on it, then run the whole " +
-                    "session from the control page it serves back to this laptop — nothing " +
-                    "is ever pressed inside the headset.", MessageType.Info);
-                EditorGUILayout.BeginHorizontal();
-                if (GUILayout.Button("Install on the headset", GUILayout.Height(26f)))
-                    Later(StudyBuild.BuildAndDeploy);
-                if (GUILayout.Button("Launch it", GUILayout.Height(26f), GUILayout.Width(90f)))
-                    Later(StudyBuild.LaunchOnHeadset);
-                EditorGUILayout.EndHorizontal();
-
-                string headsetIp = cachedHeadsetIp;
-                if (headsetIp != null)
-                {
-                    EditorGUILayout.LabelField("Open this on the laptop to run the session:",
-                        EditorStyles.wordWrappedMiniLabel);
-                    EditorGUILayout.SelectableLabel("http://" + headsetIp + ":8752/",
-                        EditorStyles.textField, GUILayout.Height(20f));
-                    if (GUILayout.Button("Open the session control page"))
-                        Later(() => Application.OpenURL("http://" + headsetIp + ":8752/"));
-                }
-            }
-
-            // 1 -- headset
             Step(1, live, "Point the headset at the study",
                 headsetIn ? "Headset is connected."
                           : "In the headset's Browser, type the address below. Nothing " +
@@ -351,22 +421,10 @@ namespace EmotionRooms.EditorTools
             {
                 EditorGUILayout.SelectableLabel(WebServer.ShortUrl,
                     EditorStyles.textField, GUILayout.Height(20f));
-                EditorGUILayout.LabelField(
-                    "Accept the certificate warning (Advanced, then Proceed), press " +
-                    "Enter VR, and put the headset down.",
-                    EditorStyles.wordWrappedMiniLabel);
-                EditorGUILayout.HelpBox(
-                    "Type it in the headset's own Browser app, with the headset ON. " +
-                    "Opening this address on the laptop will load the page but never " +
-                    "offer VR, because the laptop has no headset attached.\n\n" +
-                    "The cable is irrelevant here — there is no Quest Link for macOS. " +
-                    "The headset reaches the laptop over Wi-Fi, so both have to be on " +
-                    "the same network.", MessageType.Info);
                 if (GUILayout.Button("Copy address"))
                     EditorGUIUtility.systemCopyBuffer = WebServer.ShortUrl;
             }
 
-            // 2 -- before forms and start
             Step(2, live, "First questionnaires, then start",
                 "Consent and how they feel, on this laptop with the headset off.");
             if (live == 2)
@@ -378,46 +436,27 @@ namespace EmotionRooms.EditorTools
                             StudyServerLink.FormUrl("before", participant)));
 
                     EditorGUILayout.Space(4f);
-                    if (GUILayout.Button(practiceOnly
-                            ? "Fit the headset, then START THE PRACTICE"
-                            : "Fit the headset, then START THE ROOMS",
-                            GUILayout.Height(32f)))
+                    if (GUILayout.Button("Fit the headset, then START THE ROOMS",
+                                         GUILayout.Height(32f)))
                         Later(() =>
                         {
                             PushSettings();
-                            if (!string.IsNullOrEmpty(cachedHeadsetIp))
-                                StudyServerLink.StartOnHeadset(cachedHeadsetIp, participant, null);
-                            else
-                                StudyServerLink.StartRooms(participant, null);
+                            StudyServerLink.StartRooms(participant, null);
                         });
                 }
-                if (!haveId)
-                    EditorGUILayout.HelpBox("Type a participant id at the top first.",
-                        MessageType.Warning);
             }
 
-            // 3 -- running
             Step(3, live, "The rooms are running",
                 running ? "Trial " + server.trial + " of " + server.of + ". Nothing to do."
                         : "About 27 minutes once started.");
-            if (live == 3)
-                EditorGUILayout.LabelField(
-                    "If they want to stop, they take the headset off. Everything recorded " +
-                    "so far is kept.", EditorStyles.wordWrappedMiniLabel);
 
-            // 4 -- after
             Step(4, live, "Last questionnaires", "Headset off. The debrief is in here.");
             if (live == 4)
             {
                 if (GUILayout.Button("Open the last questionnaires", GUILayout.Height(26f)))
                     Later(() => Application.OpenURL(
                         StudyServerLink.FormUrl("after", participant)));
-                EditorGUILayout.LabelField(
-                    "The combined file was written automatically when the rooms finished.",
-                    EditorStyles.wordWrappedMiniLabel);
             }
-
-            EndSection();
         }
 
         /// <summary>One row of the runbook: current, done, or still to come.</summary>

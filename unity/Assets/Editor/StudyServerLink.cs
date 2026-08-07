@@ -27,6 +27,17 @@ namespace EmotionRooms.EditorTools
         public bool connected;
     }
 
+    [Serializable]
+    public class HeadsetState
+    {
+        public string participant;
+        public bool practice;
+        public bool running;
+        public bool reviewing;
+        public int trial;
+        public int of;
+    }
+
     public static class StudyServerLink
     {
         /// <summary>
@@ -161,6 +172,25 @@ namespace EmotionRooms.EditorTools
             {
                 if (onDone != null) onDone(body != null);
             });
+        }
+
+        /// <summary>What the app on the headset is doing right now, or null.</summary>
+        public static void QueryHeadset(string headsetIp, Action<HeadsetState> onDone)
+        {
+            if (string.IsNullOrEmpty(headsetIp)) { onDone(null); return; }
+
+            // /set with no parameters changes nothing and reports everything.
+            Send(UnityWebRequest.Get("http://" + headsetIp + ":8752/set"), body =>
+            {
+                if (body == null) { onDone(null); return; }
+                try { onDone(JsonUtility.FromJson<HeadsetState>(body)); }
+                catch (Exception) { onDone(null); }
+            });
+        }
+
+        public static string HeadsetPage(string headsetIp, string path)
+        {
+            return "http://" + headsetIp + ":8752/" + path;
         }
 
         public static string FormUrl(string group, string participant)

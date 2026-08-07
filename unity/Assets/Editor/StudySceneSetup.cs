@@ -111,6 +111,7 @@ namespace EmotionRooms.EditorTools
             var server = root.AddComponent<FormServer>();
             server.questionnaires = forms;
             server.trialRunner = runner;
+            server.review = review;
 
             var messageBoard = root.AddComponent<MessageBoard>();
             messageBoard.viewer = camera;

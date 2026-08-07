@@ -281,6 +281,34 @@ namespace EmotionRooms.EditorTools
             Adb("shell am start -n " + activity, "launched on the headset");
         }
 
+        /// <summary>
+        /// Copy every file the study wrote on the headset to this machine.
+        ///
+        /// On the APK route the data lives in the headset's own storage, and a headset
+        /// is the worst place to archive anything: it gets factory-reset, borrowed, and
+        /// updated. One button brings the whole folder back -- responses, telemetry,
+        /// events, questionnaires and the combined bundles.
+        /// </summary>
+        [MenuItem("Emotion Rooms/Advanced/Pull the data from the headset", priority = 116)]
+        public static void PullData()
+        {
+            if (ConnectedDevices().Length == 0)
+            {
+                EditorUtility.DisplayDialog("No headset",
+                    "adb cannot see the headset. Plug it in and wake it first.", "OK");
+                return;
+            }
+
+            string dest = Path.Combine(
+                Directory.GetParent(Application.dataPath).Parent.FullName,
+                "runs", "headset-data");
+            Directory.CreateDirectory(dest);
+
+            if (Adb("pull /sdcard/Android/data/" + Package + "/files "" + dest + """,
+                    "data pulled to " + dest))
+                EditorUtility.RevealInFinder(dest);
+        }
+
         [MenuItem("Emotion Rooms/Advanced/Stop the app on the headset", priority = 115)]
         public static void StopOnHeadset()
         {

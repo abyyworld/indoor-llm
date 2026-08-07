@@ -42,6 +42,7 @@ namespace EmotionRooms
                  "the only thing that can start itself -- but it can be told to.")]
         public StudyBootstrap bootstrap;
         public TrialRunner trialRunner;
+        public OversightReview review;
 
         /// <summary>Address for a browser on this machine.</summary>
         public string Root { get { return "http://localhost:" + port + "/"; } }
@@ -186,8 +187,9 @@ namespace EmotionRooms
             if (method == "POST" && path == "/submit")
             {
                 var fields = ParseForm(body);
-                string formId;
+                string formId, group;
                 fields.TryGetValue("__form", out formId);
+                fields.TryGetValue("__group", out group);
 
                 // State changes and file writes happen on the main thread, so the panel
                 // can never read a half-updated questionnaire.
@@ -196,7 +198,30 @@ namespace EmotionRooms
                 {
                     mainThread.Enqueue(() =>
                     {
-                        try { if (questionnaires != null) questionnaires.SubmitFromWeb(formId, fields); }
+                        try
+                        {
+                            if (questionnaires == null) return;
+
+                            if (!string.IsNullOrEmpty(group))
+                            {
+                                // A grouped page: input names are form::item, split back
+                                // into one submission per instrument so scoring and the
+                                // stored files stay per-instrument.
+                                foreach (var form in questionnaires.Due(group))
+                                {
+                                    var sub = new Dictionary<string, string>();
+                                    string prefix = form.id + "::";
+                                    foreach (var pair in fields)
+                                        if (pair.Key.StartsWith(prefix))
+                                            sub[pair.Key.Substring(prefix.Length)] = pair.Value;
+                                    questionnaires.SubmitFromWeb(form.id, sub);
+                                }
+                            }
+                            else
+                            {
+                                questionnaires.SubmitFromWeb(formId, fields);
+                            }
+                        }
                         finally { done.Set(); }
                     });
                 }
@@ -236,8 +261,18 @@ namespace EmotionRooms
                     });
                 }
                 applied.WaitOne(5000);
+
+                // State rides back on the same request, so the panel can follow the
+                // session without a second endpoint: is it running, which trial, and
+                // whether the review block is still going.
+                bool running = trialRunner != null && trialRunner.IsRunning;
+                bool reviewing = review != null && review.IsRunning;
+                int done = trialRunner != null ? trialRunner.CompletedTrials : 0;
                 return "{\"participant\":\"" + Escape(bootstrap != null ? bootstrap.participantId : "") +
-                       "\",\"practice\":" + (bootstrap != null && bootstrap.practiceOnly ? "true" : "false") + "}";
+                       "\",\"practice\":" + (bootstrap != null && bootstrap.practiceOnly ? "true" : "false") +
+                       ",\"running\":" + ((running || reviewing) ? "true" : "false") +
+                       ",\"reviewing\":" + (reviewing ? "true" : "false") +
+                       ",\"trial\":" + done.ToString(CultureInfo.InvariantCulture) + ",\"of\":8}";
             }
 
             if (path == "/start")
@@ -268,6 +303,14 @@ namespace EmotionRooms
                 }
                 done.WaitOne(5000);
                 return ControlPage("Started. Put the headset on the participant.");
+            }
+
+            if (path == "/group")
+            {
+                var values = ParseForm(query);
+                string when;
+                values.TryGetValue("when", out when);
+                return GroupPage(when == "after" ? "after" : "before");
             }
 
             if (path == "/form")
@@ -417,11 +460,8 @@ namespace EmotionRooms
             page.Append("<input type=hidden name=participant value='")
                 .Append(Escape(who)).Append("'>");
 
-            page.Append("<h2>1. Questionnaires — before</h2><p>");
-            foreach (var form in questionnaires != null ? questionnaires.Due("before") : new List<QuestionForm>())
-                page.Append("<a href='/form?id=").Append(Escape(form.id)).Append("'>")
-                    .Append(Escape(form.title)).Append("</a> &nbsp; ");
-            page.Append("</p>");
+            page.Append("<h2>1. Questionnaires — before</h2>");
+            page.Append("<p><a href='/group?when=before'><b>Open them all on one page</b></a></p>");
 
             page.Append("<h2>2. Fit the headset, then start</h2>");
             page.Append("<div class=bar><button type=submit")
@@ -429,11 +469,8 @@ namespace EmotionRooms
                 .Append(">").Append(running ? "Running…" : "START THE ROOMS")
                 .Append("</button></div></form>");
 
-            page.Append("<h2>3. Questionnaires — after</h2><p>");
-            foreach (var form in questionnaires != null ? questionnaires.Due("after") : new List<QuestionForm>())
-                page.Append("<a href='/form?id=").Append(Escape(form.id)).Append("'>")
-                    .Append(Escape(form.title)).Append("</a> &nbsp; ");
-            page.Append("</p>");
+            page.Append("<h2>3. Questionnaires — after</h2>");
+            page.Append("<p><a href='/group?when=after'><b>Open them all on one page</b></a></p>");
 
             page.Append("<p class=cite>Served by the app on the headset; refreshes every ")
                 .Append("ten seconds. Answers are written the moment a form is submitted, ")
@@ -470,6 +507,49 @@ namespace EmotionRooms
             return page.ToString();
         }
 
+        /// <summary>
+        /// Every instrument due at one point in the session, on one page with one
+        /// submit. Separate instruments are kept separate in storage -- scoring and
+        /// citations depend on it -- but a participant answers them in one sitting.
+        /// Twelve tabs was twelve chances to lose their attention.
+        /// </summary>
+        string GroupPage(string when)
+        {
+            var forms = questionnaires != null
+                ? questionnaires.Due(when)
+                : new List<QuestionForm>();
+
+            var page = new StringBuilder();
+            page.Append("<!doctype html><meta charset=utf-8><title>Emotion Rooms</title>");
+            page.Append("<meta name=viewport content='width=device-width,initial-scale=1'>");
+            page.Append(Style);
+            page.Append("<h1>").Append(when == "after" ? "A few last questions" : "Before we start")
+                .Append("</h1>");
+
+            if (forms.Count == 0)
+            {
+                page.Append("<p class=intro>Nothing to show.</p>");
+                return page.ToString();
+            }
+
+            page.Append("<form method=post action=/submit>");
+            page.Append("<input type=hidden name=__group value='").Append(Escape(when)).Append("'>");
+
+            foreach (var form in forms)
+            {
+                page.Append("<h2 style='margin:2.2rem 0 .2rem'>").Append(Escape(form.title)).Append("</h2>");
+                if (!string.IsNullOrEmpty(form.instruction))
+                    page.Append("<div class=intro>").Append(Escape(form.instruction)).Append("</div>");
+                foreach (var item in form.items)
+                    AppendItem(page, form.id + "::" + item.id, item);
+                if (!string.IsNullOrEmpty(form.citation))
+                    page.Append("<div class=cite>").Append(Escape(form.citation)).Append("</div>");
+            }
+
+            page.Append("<div class=bar><button type=submit>Submit</button></div></form>");
+            return page.ToString();
+        }
+
         string FormPage(QuestionForm form)
         {
             var page = new StringBuilder();
@@ -486,46 +566,7 @@ namespace EmotionRooms
             page.Append("<input type=hidden name=__form value='").Append(Escape(form.id)).Append("'>");
 
             foreach (var item in form.items)
-            {
-                page.Append("<div class=q>");
-                if (!string.IsNullOrEmpty(item.text))
-                    page.Append("<div class=t>").Append(Escape(item.text)).Append("</div>");
-                if (!string.IsNullOrEmpty(item.help))
-                    page.Append("<div class=help>").Append(Escape(item.help)).Append("</div>");
-
-                switch (item.type)
-                {
-                    case "choice":
-                        page.Append("<div class=opts>");
-                        foreach (var option in item.options)
-                            page.Append("<label class=opt><input type=radio name='")
-                                .Append(Escape(item.id)).Append("' value='")
-                                .Append(Escape(option)).Append("'>")
-                                .Append(Escape(option)).Append("</label>");
-                        page.Append("</div>");
-                        break;
-
-                    case "scale":
-                        page.Append("<div class=opts>");
-                        for (int v = item.min; v <= item.max; v += item.Step)
-                            page.Append("<label class=opt><input type=radio name='")
-                                .Append(Escape(item.id)).Append("' value='").Append(v)
-                                .Append("'>").Append(v).Append("</label>");
-                        page.Append("</div><div class=ends><span>")
-                            .Append(Escape(item.min_label ?? "")).Append("</span><span>")
-                            .Append(Escape(item.max_label ?? "")).Append("</span></div>");
-                        break;
-
-                    case "paragraph":
-                        page.Append("<textarea name='").Append(Escape(item.id)).Append("'></textarea>");
-                        break;
-
-                    default:
-                        page.Append("<input type=text name='").Append(Escape(item.id)).Append("'>");
-                        break;
-                }
-                page.Append("</div>");
-            }
+                AppendItem(page, item.id, item);
 
             if (!string.IsNullOrEmpty(form.citation))
                 page.Append("<div class=cite>").Append(Escape(form.citation)).Append("</div>");
@@ -536,6 +577,50 @@ namespace EmotionRooms
             page.Append("<div class=bar><button type=submit>Submit</button></div>");
             page.Append("</form>");
             return page.ToString();
+        }
+
+        /// <summary>One question, rendered under whatever input name the page needs --
+        /// the bare item id on a single form, form::item on a grouped page.</summary>
+        static void AppendItem(StringBuilder page, string name, QuestionItem item)
+        {
+            page.Append("<div class=q>");
+            if (!string.IsNullOrEmpty(item.text))
+                page.Append("<div class=t>").Append(Escape(item.text)).Append("</div>");
+            if (!string.IsNullOrEmpty(item.help))
+                page.Append("<div class=help>").Append(Escape(item.help)).Append("</div>");
+
+            switch (item.type)
+            {
+                case "choice":
+                    page.Append("<div class=opts>");
+                    foreach (var option in item.options)
+                        page.Append("<label class=opt><input type=radio name='")
+                            .Append(Escape(name)).Append("' value='")
+                            .Append(Escape(option)).Append("'>")
+                            .Append(Escape(option)).Append("</label>");
+                    page.Append("</div>");
+                    break;
+
+                case "scale":
+                    page.Append("<div class=opts>");
+                    for (int v = item.min; v <= item.max; v += item.Step)
+                        page.Append("<label class=opt><input type=radio name='")
+                            .Append(Escape(name)).Append("' value='").Append(v)
+                            .Append("'>").Append(v).Append("</label>");
+                    page.Append("</div><div class=ends><span>")
+                        .Append(Escape(item.min_label ?? "")).Append("</span><span>")
+                        .Append(Escape(item.max_label ?? "")).Append("</span></div>");
+                    break;
+
+                case "paragraph":
+                    page.Append("<textarea name='").Append(Escape(name)).Append("'></textarea>");
+                    break;
+
+                default:
+                    page.Append("<input type=text name='").Append(Escape(name)).Append("'>");
+                    break;
+            }
+            page.Append("</div>");
         }
 
         static string ThanksPage(string formId)
