@@ -88,6 +88,9 @@ namespace EmotionRooms
                  "during the gap so they are not left in an empty void.")]
         public GameObject restScreen;
 
+        [Tooltip("Tells the participant what is happening between rooms.")]
+        public MessageBoard board;
+
         [Header("Timing, seconds")]
         [Tooltip("Mengkai, 1 Aug 2026: 20 s. Was 30 s in the original spec.")]
         public float exposureSeconds = 20f;

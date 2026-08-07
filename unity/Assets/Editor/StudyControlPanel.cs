@@ -49,21 +49,28 @@ namespace EmotionRooms.EditorTools
         // faster than a person can act on it.
         double probedAt;
         int cachedPacks;
+        string[] cachedDevices = new string[0];
+        string cachedHeadsetIp;
 
         void Probe(bool force = false)
         {
-            if (!force && EditorApplication.timeSinceStartup - probedAt < 3.0) return;
+            if (!force && EditorApplication.timeSinceStartup - probedAt < 5.0) return;
             probedAt = EditorApplication.timeSinceStartup;
 
             string packs = Path.Combine(Application.streamingAssetsPath, "participants");
             cachedPacks = Directory.Exists(packs) ? Directory.GetDirectories(packs).Length : 0;
+
+            // Two adb processes. Worth it every few seconds, ruinous every frame.
+            cachedDevices = StudyBuild.ConnectedDevices();
+            cachedHeadsetIp = cachedDevices.Length > 0 ? StudyBuild.HeadsetAddress() : null;
         }
 
         void OnInspectorUpdate()
         {
-            // Once a second, not ten times. The only thing that needs to be live is
-            // whether a session is running, and a second is fast enough to act on.
-            if (Application.isPlaying) Repaint();
+            // Only while something is actually moving. Repainting an idle window ten
+            // times a second costs the same as repainting a busy one.
+            if (Application.isPlaying || (server != null && server.headset == "running"))
+                Repaint();
         }
 
         void OnGUI()
@@ -227,7 +234,7 @@ namespace EmotionRooms.EditorTools
 
         void PollServer()
         {
-            if (EditorApplication.timeSinceStartup - serverPolledAt < 1.0) return;
+            if (EditorApplication.timeSinceStartup - serverPolledAt < 2.0) return;
             serverPolledAt = EditorApplication.timeSinceStartup;
             StudyServerLink.FetchState(state => { server = state; Repaint(); });
         }
@@ -276,20 +283,33 @@ namespace EmotionRooms.EditorTools
             }
 
             // 1a -- the cable route, when the headset allows it.
-            var devices = StudyBuild.ConnectedDevices();
-            if (devices.Length > 0)
+            //
+            // Both of these come from the cache. Calling adb here directly spawned a
+            // process on every repaint, which is what made the window crawl.
+            if (cachedDevices.Length > 0)
             {
                 EditorGUILayout.Space(4f);
                 EditorGUILayout.HelpBox(
-                    "Headset visible over USB. You can put the study on it and launch it " +
-                    "from here — nothing is typed or pressed in the headset at all.",
-                    MessageType.Info);
+                    "Headset visible over USB. Install the study on it, then run the whole " +
+                    "session from the control page it serves back to this laptop — nothing " +
+                    "is ever pressed inside the headset.", MessageType.Info);
                 EditorGUILayout.BeginHorizontal();
                 if (GUILayout.Button("Install on the headset", GUILayout.Height(26f)))
                     Later(StudyBuild.BuildAndDeploy);
                 if (GUILayout.Button("Launch it", GUILayout.Height(26f), GUILayout.Width(90f)))
                     Later(StudyBuild.LaunchOnHeadset);
                 EditorGUILayout.EndHorizontal();
+
+                string headsetIp = cachedHeadsetIp;
+                if (headsetIp != null)
+                {
+                    EditorGUILayout.LabelField("Open this on the laptop to run the session:",
+                        EditorStyles.wordWrappedMiniLabel);
+                    EditorGUILayout.SelectableLabel("http://" + headsetIp + ":8752/",
+                        EditorStyles.textField, GUILayout.Height(20f));
+                    if (GUILayout.Button("Open the session control page"))
+                        Later(() => Application.OpenURL("http://" + headsetIp + ":8752/"));
+                }
             }
 
             // 1 -- headset

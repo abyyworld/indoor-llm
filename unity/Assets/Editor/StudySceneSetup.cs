@@ -110,9 +110,15 @@ namespace EmotionRooms.EditorTools
 
             var server = root.AddComponent<FormServer>();
             server.questionnaires = forms;
+            server.trialRunner = runner;
+
+            var messageBoard = root.AddComponent<MessageBoard>();
+            messageBoard.viewer = camera;
 
             var bootstrap = root.AddComponent<StudyBootstrap>();
+            bootstrap.board = messageBoard;
             bootstrap.questionnaires = forms;
+            server.bootstrap = bootstrap;
             bootstrap.detectionPanel = detection;
             bootstrap.attributionPanel = attribution;
             bootstrap.correctionPanel = correction;

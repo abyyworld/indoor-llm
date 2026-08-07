@@ -90,9 +90,19 @@ namespace EmotionRooms
             // tracking is applied relative to a parent anchor rather than by moving the
             // camera in world space, so a participant's height and pose never change
             // where the study says they are standing.
+            // The anchor goes on the FLOOR, not at the camera.
+            //
+            // The camera sits at eye height so the scene is usable without a headset. A
+            // floor-referenced XR pose already carries the participant's own eye height,
+            // so anchoring at the camera added it twice: 1.6 m of scene plus 1.6 m of
+            // person put the viewpoint at 3.2 m, above a 2.4 m ceiling. The room was
+            // rendering correctly the whole time and being viewed from the roof, which
+            // is why it read as "white ground and nothing else".
             var anchor = new GameObject("XR Origin").transform;
             anchor.SetParent(headCamera.transform.parent, false);
-            anchor.position = headCamera.transform.position;
+            anchor.position = new Vector3(headCamera.transform.position.x,
+                                          RoomDimensions.StandingPosition.y,
+                                          headCamera.transform.position.z);
             anchor.rotation = headCamera.transform.rotation;
             headCamera.transform.SetParent(anchor, true);
 
@@ -108,9 +118,37 @@ namespace EmotionRooms
             pointer = hand;
         }
 
+        /// <summary>
+        /// Ask for floor-referenced tracking, so a pose is measured from the floor the
+        /// participant is standing on rather than from wherever the headset happened to
+        /// be when it woke. Without it a participant's height is whatever the runtime
+        /// last calibrated, and the standing position stops meaning anything.
+        /// </summary>
+        void UseFloorOrigin()
+        {
+            var subsystems = new List<XRInputSubsystem>();
+            SubsystemManager.GetSubsystems(subsystems);
+            foreach (var subsystem in subsystems)
+            {
+                if (subsystem.GetTrackingOriginMode() == TrackingOriginModeFlags.Floor) continue;
+                if (!subsystem.TrySetTrackingOriginMode(TrackingOriginModeFlags.Floor))
+                    Debug.LogWarning("[XRRig] The runtime refused floor-referenced " +
+                                     "tracking; heights will be measured from the " +
+                                     "headset's own origin instead.");
+            }
+        }
+
+        bool askedForFloor;
+
         void Update()
         {
             HeadsetPresent = IsHeadsetRunning();
+
+            if (HeadsetPresent && !askedForFloor)
+            {
+                askedForFloor = true;
+                UseFloorOrigin();
+            }
 
             if (!HeadsetPresent || pointerDriver == null) return;
 

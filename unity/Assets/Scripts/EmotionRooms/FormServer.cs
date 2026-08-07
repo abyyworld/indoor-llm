@@ -37,6 +37,12 @@ namespace EmotionRooms
 
         public QuestionnaireRunner questionnaires;
 
+        [Tooltip("So the researcher's laptop can start the session. On a standalone " +
+                 "headset build there is no editor panel and no keyboard, and the app is " +
+                 "the only thing that can start itself -- but it can be told to.")]
+        public StudyBootstrap bootstrap;
+        public TrialRunner trialRunner;
+
         /// <summary>Address for a browser on this machine.</summary>
         public string Root { get { return "http://localhost:" + port + "/"; } }
 
@@ -198,6 +204,36 @@ namespace EmotionRooms
                 return ThanksPage(formId);
             }
 
+            if (path == "/start")
+            {
+                var values = ParseForm(query);
+                string who;
+                values.TryGetValue("participant", out who);
+
+                var done = new ManualResetEvent(false);
+                lock (mainThread)
+                {
+                    mainThread.Enqueue(() =>
+                    {
+                        try
+                        {
+                            if (bootstrap != null)
+                            {
+                                if (!string.IsNullOrEmpty(who))
+                                {
+                                    bootstrap.participantId = who;
+                                    bootstrap.ApplyParticipantId();
+                                }
+                                bootstrap.BeginStudy();
+                            }
+                        }
+                        finally { done.Set(); }
+                    });
+                }
+                done.WaitOne(5000);
+                return ControlPage("Started. Put the headset on the participant.");
+            }
+
             if (path == "/form")
             {
                 var values = ParseForm(query);
@@ -207,7 +243,7 @@ namespace EmotionRooms
                 return form == null ? NotFound(id) : FormPage(form);
             }
 
-            return IndexPage();
+            return ControlPage(null);
         }
 
         static string ReadLine(NetworkStream stream)
@@ -304,6 +340,72 @@ namespace EmotionRooms
   ul { padding-left: 1.2rem; }
   a { color: #3b82f6; }
 </style>";
+
+        /// <summary>
+        /// The researcher panel, served by the headset to the laptop.
+        ///
+        /// A standalone build has no editor window and no keyboard, and IMGUI does not
+        /// render into an immersive view, so there is no interface inside the headset at
+        /// all -- which is correct, because nothing should be operated from in there. The
+        /// app therefore serves its own controls to whatever browser the researcher has.
+        /// </summary>
+        string ControlPage(string note)
+        {
+            var page = new StringBuilder();
+            page.Append("<!doctype html><meta charset=utf-8><title>Emotion Rooms</title>");
+            page.Append("<meta name=viewport content='width=device-width,initial-scale=1'>");
+            // The refresh is on the CONTROL page only, never on a form. A questionnaire
+            // that reloaded under someone would lose whatever they had typed, so the
+            // forms are static pages that only leave when they are submitted.
+            page.Append("<meta http-equiv=refresh content='10'>");
+            page.Append(Style);
+            page.Append("<h1>Emotion Rooms</h1>");
+
+            if (!string.IsNullOrEmpty(note))
+                page.Append("<p style='color:#4ade80;font-weight:600'>")
+                    .Append(Escape(note)).Append("</p>");
+
+            string who = bootstrap != null ? bootstrap.participantId : "";
+            bool running = trialRunner != null && trialRunner.IsRunning;
+
+            page.Append("<p>Participant <b>").Append(Escape(who)).Append("</b>. ")
+                .Append(running
+                    ? "Running — trial " + (trialRunner != null ? trialRunner.CompletedTrials : 0) + " of 8."
+                    : "Not started.")
+                .Append("</p>");
+
+            page.Append("<h2>1. Set the participant</h2>");
+            page.Append("<form method=get action=/start><div class=opts>");
+            foreach (var id in ParticipantPacks.Available())
+                page.Append("<label class=opt><input type=radio name=participant value='")
+                    .Append(Escape(id)).Append("'")
+                    .Append(id == who ? " checked" : "").Append("> ")
+                    .Append(Escape(id)).Append("</label>");
+            page.Append("</div>");
+
+            page.Append("<h2>2. Questionnaires — before</h2><p>");
+            foreach (var form in questionnaires != null ? questionnaires.Due("before") : new List<QuestionForm>())
+                page.Append("<a href='/form?id=").Append(Escape(form.id)).Append("'>")
+                    .Append(Escape(form.title)).Append("</a> &nbsp; ");
+            page.Append("</p>");
+
+            page.Append("<h2>3. Fit the headset, then start</h2>");
+            page.Append("<div class=bar><button type=submit")
+                .Append(running ? " disabled" : "")
+                .Append(">").Append(running ? "Running…" : "START THE ROOMS")
+                .Append("</button></div></form>");
+
+            page.Append("<h2>4. Questionnaires — after</h2><p>");
+            foreach (var form in questionnaires != null ? questionnaires.Due("after") : new List<QuestionForm>())
+                page.Append("<a href='/form?id=").Append(Escape(form.id)).Append("'>")
+                    .Append(Escape(form.title)).Append("</a> &nbsp; ");
+            page.Append("</p>");
+
+            page.Append("<p class=cite>Served by the app on the headset; refreshes every ")
+                .Append("ten seconds. Answers are written the moment a form is submitted, ")
+                .Append("so nothing here can lose them.</p>");
+            return page.ToString();
+        }
 
         string IndexPage()
         {

@@ -32,7 +32,7 @@ namespace EmotionRooms.EditorTools
             { "bookshelf",   "bookcaseOpen" },
         };
 
-        [MenuItem("Emotion Rooms/Import Furniture Models", priority = 1)]
+        [MenuItem("Emotion Rooms/Advanced/Import Furniture Models", priority = 120)]
         public static void Import()
         {
             var set = AssetDatabase.LoadAssetAtPath<FurnitureSet>(AssetPath);

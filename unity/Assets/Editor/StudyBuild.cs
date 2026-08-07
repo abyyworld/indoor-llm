@@ -18,19 +18,19 @@ namespace EmotionRooms.EditorTools
 {
     public static class StudyBuild
     {
-        [MenuItem("Emotion Rooms/Build for Windows (for Mengkai)", priority = 2)]
+        [MenuItem("Emotion Rooms/Advanced/Build for Windows (for Mengkai)", priority = 121)]
         public static void BuildWindows()
         {
             Build(BuildTarget.StandaloneWindows64, "Windows", "EmotionRooms.exe");
         }
 
-        [MenuItem("Emotion Rooms/Build for this Mac", priority = 3)]
+        [MenuItem("Emotion Rooms/Advanced/Build for this Mac", priority = 122)]
         public static void BuildMac()
         {
             Build(BuildTarget.StandaloneOSX, "Mac", "EmotionRooms.app");
         }
 
-        [MenuItem("Emotion Rooms/Build for the Quest (standalone APK)", priority = 5)]
+        [MenuItem("Emotion Rooms/Advanced/Build the Quest APK only", priority = 124)]
         public static void BuildQuest()
         {
             // A standalone APK runs on the headset with no PC, which is the better
@@ -154,7 +154,7 @@ namespace EmotionRooms.EditorTools
             }
         }
 
-        [MenuItem("Emotion Rooms/Build and put it on the headset", priority = 4)]
+        [MenuItem("Emotion Rooms/Advanced/Build and put it on the headset", priority = 123)]
         public static void BuildAndDeploy()
         {
             var devices = ConnectedDevices();
@@ -176,6 +176,12 @@ namespace EmotionRooms.EditorTools
             EditorUserBuildSettings.SwitchActiveBuildTarget(
                 BuildTargetGroup.Android, BuildTarget.Android);
             ConfigureForQuest();
+
+            // Enable the OpenXR loader as part of building rather than as a step to
+            // remember. Without it the APK builds, installs and launches perfectly, and
+            // then shows a flat window with no tracking -- which looks like a broken
+            // study rather than a missing checkbox.
+            XRSetup.Run();
 
             string apk = Path.Combine(Path.GetTempPath(), "EmotionRooms.apk");
             string scene = EditorSceneManagerScenePath();
@@ -206,6 +212,41 @@ namespace EmotionRooms.EditorTools
         const string Package = "com.emotionrooms.study";
 
         /// <summary>
+        /// The headset's own Wi-Fi address, so the laptop can open the control page the
+        /// app serves. Asked of the device rather than guessed: it is on the same network
+        /// as the laptop but not at a predictable address.
+        /// </summary>
+        public static string HeadsetAddress()
+        {
+            string adb = AdbPath();
+            if (adb == null) return null;
+
+            try
+            {
+                var info = new System.Diagnostics.ProcessStartInfo(adb, "shell ip route")
+                {
+                    UseShellExecute = false, RedirectStandardOutput = true,
+                    RedirectStandardError = true, CreateNoWindow = true,
+                };
+                using (var process = System.Diagnostics.Process.Start(info))
+                {
+                    string output = process.StandardOutput.ReadToEnd();
+                    process.WaitForExit();
+
+                    int at = output.IndexOf("src ");
+                    if (at < 0) return null;
+                    string rest = output.Substring(at + 4).Trim();
+                    int end = rest.IndexOfAny(new[] { ' ', '\r', '\n' });
+                    return end < 0 ? rest : rest.Substring(0, end);
+                }
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
         /// Start the study on the headset from here.
         ///
         /// This is what makes the headset a display rather than a thing to operate: with
@@ -213,7 +254,7 @@ namespace EmotionRooms.EditorTools
         /// already running and never opens a browser, types an address or presses a menu.
         /// Everything else in the session is already on the laptop.
         /// </summary>
-        [MenuItem("Emotion Rooms/Launch on the headset", priority = 5)]
+        [MenuItem("Emotion Rooms/Advanced/Launch on the headset", priority = 125)]
         public static void LaunchOnHeadset()
         {
             if (ConnectedDevices().Length == 0)
@@ -223,14 +264,57 @@ namespace EmotionRooms.EditorTools
                     "OK");
                 return;
             }
-            Adb("shell am start -n " + Package + "/com.unity3d.player.UnityPlayerActivity",
-                "launched on the headset");
+            // Ask the headset which activity to start rather than naming one.
+            //
+            // Unity 6 defaults to GameActivity, so the class is UnityPlayerGameActivity,
+            // not the UnityPlayerActivity every guide still names. Hardcoding either one
+            // breaks on the other, and the failure -- "Activity class does not exist" --
+            // reads like a failed install when the app is sitting there installed
+            // perfectly well.
+            string activity = Resolve();
+            if (activity == null)
+            {
+                Debug.LogError("Study: " + Package + " is not installed on the headset. " +
+                               "Use Install on the headset first.");
+                return;
+            }
+            Adb("shell am start -n " + activity, "launched on the headset");
         }
 
         [MenuItem("Emotion Rooms/Advanced/Stop the app on the headset", priority = 115)]
         public static void StopOnHeadset()
         {
             Adb("shell am force-stop " + Package, "stopped on the headset");
+        }
+
+        /// <summary>The installed app's launcher activity, or null if it is not there.</summary>
+        static string Resolve()
+        {
+            string adb = AdbPath();
+            if (adb == null) return null;
+
+            try
+            {
+                var info = new System.Diagnostics.ProcessStartInfo(adb,
+                    "shell cmd package resolve-activity --brief " + Package)
+                {
+                    UseShellExecute = false, RedirectStandardOutput = true,
+                    RedirectStandardError = true, CreateNoWindow = true,
+                };
+                using (var process = System.Diagnostics.Process.Start(info))
+                {
+                    string output = process.StandardOutput.ReadToEnd();
+                    process.WaitForExit();
+
+                    foreach (var line in output.Split('\n'))
+                    {
+                        string trimmed = line.Trim();
+                        if (trimmed.StartsWith(Package + "/")) return trimmed;
+                    }
+                }
+            }
+            catch (Exception) { }
+            return null;
         }
 
         /// <summary>Run an adb command and report what it said.</summary>

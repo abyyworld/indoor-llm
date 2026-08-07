@@ -29,14 +29,23 @@ namespace EmotionRooms.EditorTools
         const string LoaderType = "UnityEngine.XR.OpenXR.OpenXRLoader";
         const string SettingsKey = "com.unity.xr.management.loader_settings";
 
-        // Quest controllers. Without an interaction profile the runtime reports no
+        // Two different things, both enabled the same way.
+        //
+        // MetaQuestFeature is what makes the build an immersive app rather than a flat
+        // panel: it injects the VR category and the head-tracking feature into the
+        // Android manifest, and without it the Quest launches the app in a 1280x800
+        // window floating in the shell. It builds, installs and runs perfectly, and looks
+        // completely broken.
+        //
+        // The controller profile is separate: without one the runtime reports no
         // controller at all, which looks exactly like a flat battery.
-        static readonly string[] Profiles =
+        static readonly string[] Features =
         {
+            "UnityEngine.XR.OpenXR.Features.MetaQuestSupport.MetaQuestFeature",
             "UnityEngine.XR.OpenXR.Features.Interactions.OculusTouchControllerProfile",
         };
 
-        [MenuItem("Emotion Rooms/Set Up XR", priority = 4)]
+        [MenuItem("Emotion Rooms/Advanced/Set Up XR", priority = 126)]
         public static void Run()
         {
             var targets = new[] { BuildTargetGroup.Standalone, BuildTargetGroup.Android };
@@ -83,7 +92,7 @@ namespace EmotionRooms.EditorTools
 
                 if (!AssignLoader(manager, group)) return "OpenXR package not installed";
 
-                EnableProfiles(group);
+                EnableFeatures(group);
                 return "ready";
             }
             catch (Exception e)
@@ -128,7 +137,7 @@ namespace EmotionRooms.EditorTools
             return result is bool ? (bool)result : true;
         }
 
-        static void EnableProfiles(BuildTargetGroup group)
+        static void EnableFeatures(BuildTargetGroup group)
         {
             var settingsType = FindType("UnityEngine.XR.OpenXR.OpenXRSettings");
             if (settingsType == null) return;
@@ -145,20 +154,27 @@ namespace EmotionRooms.EditorTools
                                      m.GetParameters().Length == 0);
             if (getFeature == null) return;
 
-            foreach (var name in Profiles)
+            foreach (var name in Features)
             {
-                var profileType = FindType(name);
-                if (profileType == null) continue;
+                var featureType = FindType(name);
+                if (featureType == null)
+                {
+                    Debug.LogWarning("Emotion Rooms: OpenXR feature not found: " + name +
+                                     ". If this is MetaQuestFeature the build will run as " +
+                                     "a flat panel rather than in VR.");
+                    continue;
+                }
 
-                var feature = getFeature.MakeGenericMethod(profileType).Invoke(settings, null);
+                var feature = getFeature.MakeGenericMethod(featureType).Invoke(settings, null);
                 if (feature == null) continue;
 
-                var enabled = profileType.GetProperty("enabled",
+                var enabled = featureType.GetProperty("enabled",
                     BindingFlags.Public | BindingFlags.Instance | BindingFlags.FlattenHierarchy);
                 if (enabled != null && enabled.CanWrite)
                 {
                     enabled.SetValue(feature, true);
                     EditorUtility.SetDirty((UnityEngine.Object)feature);
+                    Debug.Log("Emotion Rooms: enabled " + featureType.Name + " for " + group);
                 }
             }
         }

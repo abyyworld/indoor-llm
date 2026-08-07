@@ -81,9 +81,13 @@ echo "Would push $(find "$WORK" -type f | wc -l | tr -d ' ') files:"
 # script -- silently, after printing the listing and before pushing anything. It only
 # started biting once the export grew past forty files. Sort to a variable first so
 # nothing is reading from a pipe that gets closed underneath it.
+# sed, not head: head closes the pipe when it has enough, and under pipefail that
+# aborts the whole script before it pushes anything. It looked like a successful run.
 LISTING="$(find "$WORK" -type f | sed "s|$WORK/|  |" | sort)"
-echo "$LISTING" | head -40
-[ "$(echo "$LISTING" | wc -l)" -gt 40 ] && echo "  ... and $(($(echo "$LISTING" | wc -l) - 40)) more"
+TOTAL="$(printf '%s\n' "$LISTING" | wc -l | tr -d ' ')"
+printf '%s\n' "$LISTING" | sed -n '1,40p'
+[ "$TOTAL" -gt 40 ] && echo "  ... and $((TOTAL - 40)) more"
+true
 echo
 
 if [ "${1:-}" != "--push" ]; then
