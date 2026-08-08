@@ -40,6 +40,52 @@ namespace EmotionRooms
         /// participant expects to be running that, and silently preferring the shipped
         /// copy would hand them a session they thought they had replaced.
         /// </summary>
+        /// <summary>
+        /// Which shipped pack a typed id should use.
+        ///
+        /// The id is the researcher's to choose -- "09", "p09", "pilot2", a name -- and it
+        /// is what every output file is named after. The packs, meanwhile, are thirty
+        /// pre-built counterbalancing orders. Tying the two together meant an id outside
+        /// p01..p30 had no rooms and the session did nothing, which is a restriction the
+        /// study never needed.
+        ///
+        /// So they are resolved rather than required to match:
+        ///   an exact pack name wins            p07  -> p07
+        ///   otherwise any digits in the id     09   -> p09,  pilot2 -> p02
+        ///   otherwise a stable hash of it      bob  -> one of the thirty
+        ///
+        /// Counterbalancing survives because thirty distinct orders remain in play, and
+        /// the resolved pack is written to the event log so the analysis knows which
+        /// order a participant actually saw.
+        /// </summary>
+        public static string PackFor(string participant)
+        {
+            var available = ShippedAssets.Participants;
+            if (available == null || available.Count == 0) return participant;
+            if (string.IsNullOrEmpty(participant)) return available[0];
+
+            for (int i = 0; i < available.Count; i++)
+                if (available[i] == participant) return participant;
+
+            var digits = new System.Text.StringBuilder();
+            foreach (char c in participant) if (char.IsDigit(c)) digits.Append(c);
+
+            int index;
+            if (digits.Length > 0 && int.TryParse(digits.ToString(), out index))
+            {
+                // 1-based, because a researcher typing "09" means the ninth, not the tenth.
+                index = (index - 1) % available.Count;
+                if (index < 0) index += available.Count;
+            }
+            else
+            {
+                int hash = 17;
+                foreach (char c in participant) hash = hash * 31 + c;
+                index = (hash & 0x7fffffff) % available.Count;
+            }
+            return available[index];
+        }
+
         public static string Read(string participant, string fileName)
         {
             // The loose file in the data folder wins. Someone who has just regenerated
@@ -49,7 +95,7 @@ namespace EmotionRooms
             if (File.Exists(loose)) return File.ReadAllText(loose);
 
             if (string.IsNullOrEmpty(participant)) return null;
-            return ShippedAssets.Get("participants/" + participant + "/" + fileName);
+            return ShippedAssets.Get("participants/" + PackFor(participant) + "/" + fileName);
         }
 
         public static bool Has(string participant)

@@ -70,8 +70,9 @@ namespace EmotionRooms
         /// <summary>True once this participant's rooms are in memory.</summary>
         public static bool HasParticipant(string id)
         {
-            return !string.IsNullOrEmpty(id) &&
-                   cache.ContainsKey("participants/" + id + "/session.json");
+            if (string.IsNullOrEmpty(id)) return false;
+            return cache.ContainsKey(
+                "participants/" + ParticipantPacks.PackFor(id) + "/session.json");
         }
 
         /// <summary>
@@ -82,13 +83,14 @@ namespace EmotionRooms
         {
             if (string.IsNullOrEmpty(id)) yield break;
 
-            yield return Load("participants/" + id + "/session.json");
-            yield return Load("participants/" + id + "/oversight.json");
-            yield return Load("participants/" + id + "/rationale.json");
-            yield return Load("participants/" + id + "/practice.json");
+            string pack = ParticipantPacks.PackFor(id);
+            yield return Load("participants/" + pack + "/session.json");
+            yield return Load("participants/" + pack + "/oversight.json");
+            yield return Load("participants/" + pack + "/rationale.json");
+            yield return Load("participants/" + pack + "/practice.json");
 
-            Debug.Log("ShippedAssets: rooms for " + id +
-                      (HasParticipant(id) ? " loaded." : " NOT FOUND in the shipped packs."));
+            Debug.Log("ShippedAssets: " + id + " runs order " + pack +
+                      (HasParticipant(id) ? "." : " -- NOT FOUND."));
         }
 
         /// <summary>The instance in the scene, for callers that need a coroutine host.</summary>

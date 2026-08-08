@@ -285,29 +285,25 @@ namespace EmotionRooms
             if (board != null) board.Show("Just a moment…");
             yield return ShippedAssets.Instance.LoadParticipant(participantId);
 
-            // Say so, in the headset, if there are no rooms for this id.
-            //
-            // Until now this failed into logcat, which nobody wearing a headset can read,
-            // so a mistyped participant id looked exactly like an app that does nothing.
-            // The commonest cause is an id that is not one of the shipped ones -- they are
-            // p01..p30, and "9" or "09" matches none of them.
+            // Any id resolves to one of the shipped counterbalancing orders, so the only
+            // way to get here empty is a build with no packs at all.
             if (!ShippedAssets.HasParticipant(participantId) &&
                 !System.IO.File.Exists(System.IO.Path.Combine(
                     Application.persistentDataPath, "session.json")))
             {
-                string known = ShippedAssets.Participants.Count > 0
-                    ? ShippedAssets.Participants[0] + " to " +
-                      ShippedAssets.Participants[ShippedAssets.Participants.Count - 1]
-                    : "none shipped";
-
-                string message = "No rooms for \"" + participantId + "\".\n\n" +
-                                 "This build has " + known + ".\n" +
-                                 "Set the id on the laptop and press Start again.";
+                string message = "This build has no rooms in it.\n\n" +
+                                 "Rebuild and reinstall from the laptop.";
                 if (board != null) board.Show(message);
                 Debug.LogError("StudyBootstrap: " + message.Replace("\n", " "));
                 RoomsMissing = true;
                 yield break;
             }
+
+            // Which order this participant saw. The id is theirs; the order is one of
+            // thirty, and analysis needs to know which without anyone writing it down.
+            if (trialRunner != null && trialRunner.events != null)
+                trialRunner.events.WriteValues("counterbalance_order",
+                    participantId, ParticipantPacks.PackFor(participantId), null);
 
             RoomsMissing = false;
             StartPhases();
