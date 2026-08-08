@@ -124,7 +124,6 @@ namespace EmotionRooms.EditorTools
 
             var bootstrap = root.AddComponent<StudyBootstrap>();
             bootstrap.board = messageBoard;
-            root.GetComponent<XRDiagnostics>().board = messageBoard;
             bootstrap.rationaleReview = rationale;
             rationale.board = messageBoard;
             bootstrap.questionnaires = forms;
@@ -157,6 +156,7 @@ namespace EmotionRooms.EditorTools
             var diagnostics = root.AddComponent<XRDiagnostics>();
             diagnostics.rig = xr;
             diagnostics.headCamera = camera;
+            diagnostics.board = messageBoard;
 
             var runtimePanel = root.AddComponent<RuntimeControlPanel>();
             runtimePanel.bootstrap = bootstrap;
