@@ -28,3 +28,6 @@ kenney_furniture-kit/
 runs/web-data/
 runs/study-cert.pem
 runs/study-key.pem
+
+# Unity native-build temp: machine-specific absolute paths baked in, never committed
+unity/.utmp/

@@ -319,6 +319,11 @@ namespace EmotionRooms.EditorTools
                 "Library/PlayerDataCache",
                 "Library/il2cpp_cache",
                 "Library/Il2cppBuildCache",
+                // Native-compile temp. Its cmake caches bake in the project's ABSOLUTE
+                // path, so a moved project folder leaves fingerprints pointing at a
+                // directory that no longer exists. Cleared like the rest: a cache that
+                // can survive a rename is a cache that can lie.
+                ".utmp",
             };
 
             foreach (var relative in caches)
