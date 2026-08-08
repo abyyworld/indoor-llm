@@ -284,5 +284,25 @@ illuminance manipulation check has nothing to test. `emotion_illuminance_bands` 
 null, every cell reports "no locked range", and `match_rate` is None rather than 1.0 so
 an absent check cannot read as a passing one. Worth stating plainly in the write-up.
 
-Still outstanding: her eight-cell config file, which is the medoid output over her
-sampling runs. Nothing else.
+**Her config has landed and the study runs on it.** `runs/handoff_n30_v2.json`, 8 Aug:
+one appearance sampled per emotion, rendered in both shapes, aggregated with
+`mode_then_medoid`. Import it with
+
+```bash
+python3 -m pipeline.cli import-handoff runs/handoff_n30_v2.json   # -> configs/study_8cell.json
+```
+
+That translation is the only place the two vocabularies meet: her `hue` is a Munsell
+family and ours is degrees, her `saturation_pct` is a percentage and ours a fraction, her
+`material`/`material_type` are our `roughness`/`texture`. Values are hers; only names and
+units change, and the result goes through the same validator as any other stimulus.
+
+Separability on the imported config is 0.4667 at its closest cross-emotion pair, against a
+0.25 threshold. The three too-close pairs in her first run are gone, and the two cells of
+an emotion are now identical apart from shape -- which is what makes the shape contrast a
+test of geometry rather than a comparison of unrelated rooms.
+
+`pipeline/aggregate.py` still implements plain medoid. That is deliberate: it is no longer
+the method of record, but it is what `make-study-config.py` produces, and running it gives
+the sensitivity check -- if both methods pick the same rooms, the choice of summary did
+not matter and the write-up can say so in a sentence.

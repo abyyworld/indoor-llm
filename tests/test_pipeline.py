@@ -956,6 +956,79 @@ class TestCounterbalancing(unittest.TestCase):
                           variants_per_emotion=1, counterbalance="latin")
 
 
+class TestHandoffImport(unittest.TestCase):
+    """Her vocabulary into ours. The two sides named the same five variables
+    differently, and this translation is the only place that can get it wrong."""
+
+    DOC = {
+        "format": "emotion-rooms-handoff-v1",
+        "variables": {
+            "hue": {"type": "enum", "values": ["R", "Y", "B", "BG"]},
+            "hue_category": {"type": "enum", "values": ["warm", "cool", "neutral"]},
+            "saturation_pct": {"type": "enum", "values": [0, 20, 40]},
+            "material": {"type": "enum", "values": ["rough", "smooth"]},
+            "material_type": {"type": "enum", "values": ["plaster", "concrete", "textile"]},
+            "brightness_lux": {"type": "enum", "values": [150, 300, 500, 750]},
+        },
+        "cells": [
+            {"target_emotion": "calm", "shape": shape, "hue": "Y", "hue_category": "warm",
+             "saturation_pct": 20, "material": "smooth", "material_type": "plaster",
+             "brightness_lux": 300, "hue_detail": "pale straw plaster"}
+            for shape in ("linear", "curved")
+        ],
+    }
+
+    def test_units_and_names_are_translated(self):
+        from pipeline.handoff import to_room_configs
+
+        room = to_room_configs(self.DOC)[0]
+        self.assertEqual(room["hue"], 60)          # Munsell Y -> 60 degrees
+        self.assertEqual(room["saturation"], 0.2)  # percent -> fraction
+        self.assertEqual(room["texture"], "plaster")   # material_type -> texture
+        self.assertEqual(room["roughness"], "smooth")  # material -> roughness
+        self.assertEqual(room["brightness"], 300.0)
+
+    def test_converted_rooms_pass_the_same_validator_as_any_stimulus(self):
+        from pipeline.handoff import to_room_configs
+        from pipeline.validate import format_violations, validate_batch
+
+        accepted, rejected = validate_batch(to_room_configs(self.DOC))
+        self.assertEqual(rejected, [],
+                         "\n".join(format_violations(v) for _, v in rejected))
+        self.assertEqual(len(accepted), 2)
+
+    def test_the_two_shapes_of_an_emotion_stay_identical(self):
+        # The whole point of her resample. If the translation broke it, the shape
+        # contrast would compare unrelated rooms again.
+        from pipeline.handoff import to_room_configs
+
+        linear, curved = to_room_configs(self.DOC)
+        for field in ("hue", "saturation", "brightness", "texture", "roughness"):
+            self.assertEqual(linear[field], curved[field], field)
+        self.assertNotEqual(linear["shape"], curved["shape"])
+
+    def test_an_achromatic_cell_is_refused_rather_than_given_a_colour(self):
+        # Her achromatic rule says hue is meaningless at zero saturation, and this
+        # repo's pool has no zero. Inventing a hue would put colour in a room
+        # specified as having none.
+        from pipeline.handoff import HandoffError, to_room_configs
+
+        doc = json.loads(json.dumps(self.DOC))
+        doc["cells"][0]["hue"] = "black"
+        doc["cells"][0]["saturation_pct"] = 0
+        with self.assertRaises(HandoffError):
+            to_room_configs(doc)
+
+    def test_provenance_travels_beside_the_rooms_not_inside_them(self):
+        # An unknown key on a room would weaken the validator that keeps unvalidated
+        # fields out of a stimulus.
+        from pipeline.handoff import provenance, to_room_configs
+
+        for room in to_room_configs(self.DOC):
+            self.assertNotIn("_source_cell", room)
+        self.assertEqual(len(provenance(self.DOC)), 2)
+
+
 class TestPhaseBMeasurement(unittest.TestCase):
     """The four things that made Phase B uninterpretable, as invariants.
 

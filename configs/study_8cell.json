@@ -1,0 +1,173 @@
+{
+  "meta": {
+    "converted_from": "runs/handoff_n30_v2.json",
+    "produced_by": "Mengkai Chen",
+    "date": "2026-08-08",
+    "aggregation": "mode_then_medoid",
+    "note": "Vocabulary translated by import-handoff. Values are hers; only the field names and units differ (Munsell family to HSV degrees, percent to fraction).",
+    "cells": [
+      {
+        "id": "calm_linear",
+        "hue_family": "Y",
+        "hue_category": "warm",
+        "n_samples": 30,
+        "aggregation": "mode_then_medoid",
+        "consistency": 0.5
+      },
+      {
+        "id": "calm_curved",
+        "hue_family": "Y",
+        "hue_category": "warm",
+        "n_samples": 30,
+        "aggregation": "mode_then_medoid",
+        "consistency": 0.5
+      },
+      {
+        "id": "excited_linear",
+        "hue_family": "Y",
+        "hue_category": "warm",
+        "n_samples": 30,
+        "aggregation": "mode_then_medoid",
+        "consistency": 0.5417
+      },
+      {
+        "id": "excited_curved",
+        "hue_family": "Y",
+        "hue_category": "warm",
+        "n_samples": 30,
+        "aggregation": "mode_then_medoid",
+        "consistency": 0.5417
+      },
+      {
+        "id": "depressed_linear",
+        "hue_family": "B",
+        "hue_category": "cool",
+        "n_samples": 30,
+        "aggregation": "mode_then_medoid",
+        "consistency": 0.45
+      },
+      {
+        "id": "depressed_curved",
+        "hue_family": "B",
+        "hue_category": "cool",
+        "n_samples": 30,
+        "aggregation": "mode_then_medoid",
+        "consistency": 0.45
+      },
+      {
+        "id": "tense_linear",
+        "hue_family": "BG",
+        "hue_category": "cool",
+        "n_samples": 30,
+        "aggregation": "mode_then_medoid",
+        "consistency": 0.5
+      },
+      {
+        "id": "tense_curved",
+        "hue_family": "BG",
+        "hue_category": "cool",
+        "n_samples": 30,
+        "aggregation": "mode_then_medoid",
+        "consistency": 0.5
+      }
+    ]
+  },
+  "rooms": [
+    {
+      "id": "calm_linear",
+      "target_emotion": "calm",
+      "source": "llm",
+      "shape": "linear",
+      "hue": 60,
+      "saturation": 0.2,
+      "brightness": 300.0,
+      "texture": "plaster",
+      "roughness": "smooth",
+      "rationale": "pale warm cream, faintly buttery"
+    },
+    {
+      "id": "calm_curved",
+      "target_emotion": "calm",
+      "source": "llm",
+      "shape": "curved",
+      "hue": 60,
+      "saturation": 0.2,
+      "brightness": 300.0,
+      "texture": "plaster",
+      "roughness": "smooth",
+      "rationale": "pale warm cream, faintly buttery"
+    },
+    {
+      "id": "excited_linear",
+      "target_emotion": "excited",
+      "source": "llm",
+      "shape": "linear",
+      "hue": 60,
+      "saturation": 0.4,
+      "brightness": 750.0,
+      "texture": "concrete",
+      "roughness": "smooth",
+      "rationale": "electric acid yellow on a hard slick surface"
+    },
+    {
+      "id": "excited_curved",
+      "target_emotion": "excited",
+      "source": "llm",
+      "shape": "curved",
+      "hue": 60,
+      "saturation": 0.4,
+      "brightness": 750.0,
+      "texture": "concrete",
+      "roughness": "smooth",
+      "rationale": "electric acid yellow on a hard slick surface"
+    },
+    {
+      "id": "depressed_linear",
+      "target_emotion": "depressed",
+      "source": "llm",
+      "shape": "linear",
+      "hue": 240,
+      "saturation": 0.4,
+      "brightness": 150.0,
+      "texture": "textile",
+      "roughness": "rough",
+      "rationale": "deep cold denim blue, heavy and airless"
+    },
+    {
+      "id": "depressed_curved",
+      "target_emotion": "depressed",
+      "source": "llm",
+      "shape": "curved",
+      "hue": 240,
+      "saturation": 0.4,
+      "brightness": 150.0,
+      "texture": "textile",
+      "roughness": "rough",
+      "rationale": "deep cold denim blue, heavy and airless"
+    },
+    {
+      "id": "tense_linear",
+      "target_emotion": "tense",
+      "source": "llm",
+      "shape": "linear",
+      "hue": 180,
+      "saturation": 0.2,
+      "brightness": 150.0,
+      "texture": "concrete",
+      "roughness": "rough",
+      "rationale": "cold damp blue-green concrete, basement tone"
+    },
+    {
+      "id": "tense_curved",
+      "target_emotion": "tense",
+      "source": "llm",
+      "shape": "curved",
+      "hue": 180,
+      "saturation": 0.2,
+      "brightness": 150.0,
+      "texture": "concrete",
+      "roughness": "rough",
+      "rationale": "cold damp blue-green concrete, basement tone"
+    }
+  ]
+}

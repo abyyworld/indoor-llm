@@ -102,7 +102,7 @@
     "wall_value": 1.0
   },
   "_researcher_set_notes": {
-    "shapes": "Between-subjects, one per participant. Never an LLM output, never in the pool.",
+    "shapes": "UPDATED 2 Aug 2026: WITHIN-subjects. Every participant sees both shapes (8 trials: 4 emotions x 2 shapes). Never an LLM output, never in the pool.",
     "wall_value": [
       "Wall HSV *value*, fixed at 100% per her diagram, dimension 3. Was 0.85 here.",
       "Her two reasons are sound and worth not re-litigating: fixing V avoids a",
@@ -173,13 +173,20 @@
   "roughness_required": true,
   "aggregation": {
     "_comment": [
-      "FINAL, 3 Aug 2026 (Mengkai). Medoid selection over the N samples per cell: keep the",
-      "single real sample closest to the middle of the batch, so the result is always one",
-      "of the model's actual outputs and never a per-variable blend. Satisfies the",
-      "constraint she set on 31 Jul by construction. Implemented in pipeline/aggregate.py."
+      "UPDATED 8 Aug 2026 (Mengkai). One appearance sampled per EMOTION, not per",
+      "emotion x shape cell -- the model never sees shape, so sampling separately per",
+      "shape produced two independent draws and recorded the difference as design.",
+      "The same appearance is now rendered in both shapes, so the shape contrast",
+      "isolates geometry. mode_then_medoid: plurality vote on brightness_lux first,",
+      "then categorical (equality-based) medoid on the remaining fields within that",
+      "subset -- corrects plain medoid's bias toward mid-pool brightness_lux and its",
+      "sensitivity to achromatic contamination on saturation_pct (see simulation notes).",
+      "Supersedes the 3 Aug entry, which used plain medoid over 8 independently-sampled",
+      "cells."
     ],
-    "method": "medoid",
-    "samples_per_cell": 30,
+    "method": "mode_then_medoid",
+    "samples_per_emotion": 30,
+    "emotions": 4,
     "cells": 8,
     "field_weights": "equal",
     "_weights_note": "Equal across the five fields; no literature basis to weight one over another."

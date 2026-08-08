@@ -9,7 +9,7 @@ set -euo pipefail
 PARTICIPANT="${1:-p00}"
 SEED="${2:-42}"
 INDEX="${3:-0}"
-BATCH="${BATCH:-configs/pilot_8cell.json}"
+BATCH="${BATCH:-configs/study_8cell.json}"
 
 # Where the app reads. Passed in by the control panel, which knows Unity's
 # persistentDataPath; the fallback is only for running this by hand.

@@ -21,6 +21,17 @@ all the others. The output is a genuine sample by construction, so her constrain
 without needing to be checked.
 """
 
+#: NOT the method of record as of 8 Aug 2026.
+#:
+#: configs/pools.json declares `mode_then_medoid`, which is Mengkai's own script
+#: (`Sample_and_aggregate.py`) -- a plurality vote on brightness_lux, then a categorical
+#: medoid on the rest within that subset. The stimuli the study actually runs on came
+#: from that, imported via `pipeline.cli import-handoff`.
+#:
+#: Plain medoid stays here and stays correct. It is what `make-study-config.py` produces,
+#: and its role now is the sensitivity check: if both methods pick the same rooms, the
+#: choice of summary did not matter and the write-up can say so in a sentence.
+
 from __future__ import annotations
 
 from collections import Counter

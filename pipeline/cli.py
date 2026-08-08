@@ -7,6 +7,7 @@ Commands, in the order design-spec.md section 8 says to use them:
     pools              show the frozen pools and the design space size
     validate           gate a config, batch or session file
     build-practice     practice rooms shown before the real trials
+    import-handoff     convert her handoff into loadable room configs
     build-participants pre-build every participant's stimuli into the app
     bundle-participant join one participant's files into a single record
     emit-questionnaires write the in-app questionnaires for Unity
@@ -291,6 +292,59 @@ def _practice_rooms() -> list[dict]:
             "rationale": "Practice room. Not a study stimulus.",
         },
     ]
+
+
+def cmd_import_handoff(args: argparse.Namespace) -> int:
+    """Her cells, in this repo's vocabulary, validated before anything is written.
+
+    The two sides named the same five variables differently and neither had to read the
+    other's until the study came to run on her output. This is that translation, done
+    once and checked, rather than by hand into a config nobody can trace back.
+    """
+    from .handoff import HandoffError, provenance, to_room_configs, validate_handoff
+
+    doc = _load(args.file)
+
+    problems = validate_handoff(doc)
+    if problems:
+        print(f"error: {args.file} is not a valid handoff:", file=sys.stderr)
+        for problem in problems:
+            print(f"  {problem}", file=sys.stderr)
+        return 1
+
+    try:
+        rooms = to_room_configs(doc)
+    except HandoffError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+
+    accepted, rejected = validate_batch(rooms)
+    if rejected:
+        print("error: converted rooms failed validation; nothing written", file=sys.stderr)
+        for room, violations in rejected:
+            print(f"  {room.get('id')}\n{format_violations(violations)}", file=sys.stderr)
+        return 1
+
+    _write(args.out, {
+        "meta": {
+            "converted_from": args.file,
+            "produced_by": doc.get("produced_by"),
+            "date": doc.get("date"),
+            "aggregation": (doc.get("aggregation") or {}).get("method")
+                           or doc.get("cells", [{}])[0].get("aggregation"),
+            "note": "Vocabulary translated by import-handoff. Values are hers; only the "
+                    "field names and units differ (Munsell family to HSV degrees, "
+                    "percent to fraction).",
+            "cells": provenance(doc),
+        },
+        "rooms": rooms,
+    })
+
+    print(f"wrote {args.out} ({len(rooms)} rooms)")
+    for room in rooms:
+        print(f"  {room['id']:<18} hue={room['hue']:<4} sat={room['saturation']:<5} "
+              f"{room['brightness']:>5.0f} lux  {room['texture']}/{room['roughness']}")
+    return 0
 
 
 def cmd_build_participants(args: argparse.Namespace) -> int:
@@ -703,10 +757,18 @@ def build_parser() -> argparse.ArgumentParser:
     p.set_defaults(func=cmd_build_practice)
 
     p = sub.add_parser(
+        "import-handoff",
+        help="turn Mengkai's handoff into room configs this repo can load",
+    )
+    p.add_argument("file", help="her handoff JSON")
+    p.add_argument("--out", default="configs/study_8cell.json")
+    p.set_defaults(func=cmd_import_handoff)
+
+    p = sub.add_parser(
         "build-participants",
         help="pre-build N participants' stimuli into the Unity app itself",
     )
-    p.add_argument("--batch", default="configs/pilot_8cell.json")
+    p.add_argument("--batch", default="configs/study_8cell.json")
     p.add_argument("--count", type=int, default=30)
     p.add_argument("--seed", type=int, default=40)
     p.add_argument("--out", default="unity/Assets/StreamingAssets/participants")

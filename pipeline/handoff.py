@@ -231,3 +231,107 @@ def exploratory_cells(doc: dict) -> list[tuple]:
             if (spec.get("bands") or {}).get(cell.get("target_emotion"), "missing") is None:
                 out.append((cell.get("target_emotion"), cell.get("shape"), name, cell.get(name)))
     return out
+
+
+# --------------------------------------------------------------------------
+# Turning her handoff into rooms this repo can load
+# --------------------------------------------------------------------------
+
+#: Munsell family -> HSV hue in degrees.
+#:
+#: The ten families and the ten pool hues were chosen to correspond -- that is what
+#: "10 Munsell-calibrated categories" meant -- so this is a rename, not a colour
+#: conversion. Written out rather than computed so a wrong pairing is visible.
+MUNSELL_TO_DEGREES: dict[str, int] = {
+    "R": 0, "YR": 30, "Y": 60, "GY": 90, "G": 120,
+    "BG": 180, "B": 240, "PB": 270, "P": 300, "RP": 330,
+}
+
+#: Her field names to this repo's. The two vocabularies were never reconciled because
+#: neither side had to read the other's until now.
+FIELD_MAP: dict[str, str] = {
+    "saturation_pct": "saturation",
+    "material_type": "texture",
+    "material": "roughness",
+    "brightness_lux": "brightness",
+}
+
+
+class HandoffError(ValueError):
+    pass
+
+
+def to_room_configs(doc: dict) -> list[dict]:
+    """Her cells as room configs, in this repo's vocabulary.
+
+    Everything the loader and the validator need, and nothing invented: the free-text
+    `hue_detail` becomes the rationale because it is the only prose the model produced
+    about the room, and the aggregation metadata is carried through so a config can be
+    traced back to the run that produced it.
+    """
+    cells = doc.get("cells")
+    if not isinstance(cells, list) or not cells:
+        raise HandoffError("the handoff has no cells")
+
+    rooms: list[dict] = []
+    for index, cell in enumerate(cells):
+        where = f"cells[{index}]"
+
+        family = cell.get("hue")
+        if family in ("black", "white"):
+            # Achromatic: hue is meaningless at zero saturation, which is her own rule
+            # from 1 Aug. Nothing in the current handoff uses it, and guessing a hue
+            # here would put a colour into a room she specified as having none.
+            raise HandoffError(
+                f"{where}: achromatic hue {family!r} has no equivalent in this repo's "
+                f"pool, which has no zero-saturation value. Raise it rather than "
+                f"letting a colour be invented for it."
+            )
+        if family not in MUNSELL_TO_DEGREES:
+            raise HandoffError(f"{where}: unknown Munsell family {family!r}")
+
+        emotion = cell.get("target_emotion")
+        shape = cell.get("shape")
+        if not emotion or not shape:
+            raise HandoffError(f"{where}: needs target_emotion and shape")
+
+        saturation = cell.get("saturation_pct")
+        if saturation is None:
+            raise HandoffError(f"{where}: no saturation_pct")
+
+        rooms.append({
+            "id": f"{emotion}_{shape}",
+            "target_emotion": emotion,
+            "source": "llm",
+            "shape": shape,
+            "hue": MUNSELL_TO_DEGREES[family],
+            # Percent to fraction. Her 20 is this repo's 0.2.
+            "saturation": round(float(saturation) / 100.0, 4),
+            "brightness": float(cell["brightness_lux"]),
+            "texture": cell["material_type"],
+            "roughness": cell["material"],
+            "rationale": cell.get("hue_detail") or
+                         f"{family} at {saturation}% on {cell['material_type']}, "
+                         f"{cell['brightness_lux']} lux.",
+        })
+    return rooms
+
+
+def provenance(doc: dict) -> list[dict]:
+    """Where each cell came from, kept beside the rooms rather than inside them.
+
+    The validator rejects any field it does not know, which is the behaviour that keeps
+    an unvalidated key out of a stimulus -- so provenance travels in the batch metadata
+    instead of being smuggled onto the room and weakening that check.
+    """
+    return [
+        {
+            "id": f"{cell.get('target_emotion')}_{cell.get('shape')}",
+            "hue_family": cell.get("hue"),
+            "hue_category": cell.get("hue_category"),
+            "n_samples": cell.get("n_samples"),
+            "aggregation": cell.get("aggregation"),
+            "consistency": cell.get("consistency"),
+        }
+        for cell in doc.get("cells", [])
+    ]
