@@ -10,6 +10,7 @@ using System;
 using System.IO;
 using UnityEditor;
 using UnityEditor.Build;
+using UnityEditor.SceneManagement;
 using UnityEditor.Build.Reporting;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -459,6 +460,11 @@ namespace EmotionRooms.EditorTools
                 return;
             }
 
+            // Belt and braces on top of the save in scene setup: a build takes what is on
+            // disk, and an unsaved edit made between rebuilding and building would be left
+            // behind without a word.
+            SaveOpenScene();
+
             var options = new BuildPlayerOptions
             {
                 scenes = new[] { scene },
@@ -544,6 +550,18 @@ namespace EmotionRooms.EditorTools
             catch (Exception e)
             {
                 Debug.LogWarning("Study build: could not write the readme. " + e.Message);
+            }
+        }
+
+        /// <summary>Flush the open scene to disk, because the build reads from disk.</summary>
+        static void SaveOpenScene()
+        {
+            var scene = EditorSceneManager.GetActiveScene();
+            if (scene.isDirty && !string.IsNullOrEmpty(scene.path))
+            {
+                EditorSceneManager.SaveScene(scene);
+                Debug.Log("Study build: saved the open scene before building, so the build " +
+                          "contains the current one.");
             }
         }
 

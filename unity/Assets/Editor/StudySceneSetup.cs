@@ -174,7 +174,25 @@ namespace EmotionRooms.EditorTools
 
             Undo.RegisterCreatedObjectUndo(root, "Set Up Study Scene");
             Selection.activeGameObject = root;
-            EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
+            // SAVE IT. Marking dirty is not enough.
+            //
+            // BuildPipeline builds from the scene as it exists on disk, not from what is
+            // open in the editor. Rebuilding the scene and then building an APK without
+            // saving in between produced a build from whatever was last saved by hand --
+            // so every fix that lived in the generated scene silently never reached the
+            // headset, and each one looked like it had failed on its own merits.
+            var scene = EditorSceneManager.GetActiveScene();
+            EditorSceneManager.MarkSceneDirty(scene);
+            if (!string.IsNullOrEmpty(scene.path))
+            {
+                EditorSceneManager.SaveScene(scene);
+            }
+            else
+            {
+                EditorUtility.DisplayDialog("Save the scene",
+                    "This scene has never been saved, so a build cannot include it.\n\n" +
+                    "Save it once (Cmd-S), then rebuild.", "OK");
+            }
 
             Debug.Log(
                 "Study scene ready.\n" +

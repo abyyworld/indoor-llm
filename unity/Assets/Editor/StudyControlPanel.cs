@@ -14,6 +14,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Text.RegularExpressions;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.Networking;
 using Debug = UnityEngine.Debug;
@@ -235,9 +236,25 @@ namespace EmotionRooms.EditorTools
             bool sceneBuilt = bootstrap != null;
             bool current = sceneBuilt && stamp != null && stamp.IsCurrent;
 
-            Row(current, !sceneBuilt ? "Scene not built yet"
-                       : current ? "Scene built and up to date"
-                                 : "Scene is OUT OF DATE");
+            var openScene = EditorSceneManager.GetActiveScene();
+            bool unsaved = openScene.isDirty;
+
+            Row(current && !unsaved,
+                !sceneBuilt ? "Scene not built yet"
+                : unsaved ? "Scene has UNSAVED changes — a build would not include them"
+                : current ? "Scene built, saved and up to date"
+                          : "Scene is OUT OF DATE");
+
+            if (unsaved)
+            {
+                EditorGUILayout.HelpBox(
+                    "A build takes the scene from disk, not from the editor. Anything " +
+                    "unsaved here would silently be left out of the headset build — which " +
+                    "is exactly how a fix can look like it did not work.",
+                    MessageType.Error);
+                if (GUILayout.Button("Save the scene now", GUILayout.Height(24f)))
+                    Later(() => EditorSceneManager.SaveScene(EditorSceneManager.GetActiveScene()));
+            }
 
             if (sceneBuilt && !current)
                 EditorGUILayout.HelpBox(
