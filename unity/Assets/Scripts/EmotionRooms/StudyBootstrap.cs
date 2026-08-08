@@ -1,6 +1,6 @@
 // Starts the session and drives pointer input into the affect grid.
 //
-// AffectGrid exposes Hover() and TrySelect() but deliberately does not read input
+// AffectGrid exposes Hover(), TryMark() and Commit() but deliberately does not read input
 // itself: what counts as "pointing" differs between a controller ray, a gaze cursor and
 // a mouse in the editor, and burying one of those inside the instrument would make the
 // other two awkward. This is the piece that decides.
@@ -577,11 +577,39 @@ namespace EmotionRooms
                 return;
             }
 
-            if (grid == null || !grid.IsAwaitingResponse) return;
+            // Buttons come before the grid: the confirm button sits below the grid, and
+            // whichever the ray is actually on has to be the thing that responds.
             if (!TryBuildRay(out ray)) return;
+            if (PumpButtons(ray)) return;
+
+            if (grid == null || !grid.IsAwaitingResponse) return;
 
             grid.Hover(ray);
             if (useLegacyInput && Pressed()) Select();
+        }
+
+        /// <summary>
+        /// Hover and press whatever world buttons are up. True once a press is consumed,
+        /// so the same trigger pull cannot also land on the grid behind the button.
+        /// </summary>
+        bool PumpButtons(Ray ray)
+        {
+            bool pressed = useLegacyInput && Pressed();
+            bool consumed = false;
+
+            foreach (var button in Buttons())
+            {
+                if (button == null || !button.IsShowing) continue;
+                button.Hover(ray);
+                if (pressed && !consumed && button.TryPress(ray)) consumed = true;
+            }
+            return consumed;
+        }
+
+        System.Collections.Generic.IEnumerable<WorldButton> Buttons()
+        {
+            if (grid != null) yield return grid.confirmButton;
+            if (trialRunner != null) yield return trialRunner.nextButton;
         }
 
         bool warnedNoController;
@@ -635,11 +663,9 @@ namespace EmotionRooms
             Ray ray;
             if (!TryBuildRay(out ray)) return;
 
-            AffectResponse response;
-            if (grid.TrySelect(ray, out response))
-            {
-                Debug.Log("StudyBootstrap: response " + response);
-            }
+            // Marks, it does not commit. Commit belongs to the confirm button, so a
+            // rating can be moved as many times as the participant wants first.
+            grid.TryMark(ray);
         }
 
         bool primaryWasDown, secondaryWasDown;

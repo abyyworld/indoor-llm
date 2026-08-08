@@ -10,7 +10,11 @@
 // number that can only really be judged by pointing at something, and rebuilding an APK
 // to try another value costs ten minutes a guess.
 //
-// Toggle with the B button (or Y on the left controller). Off by default.
+// Toggle by HOLDING B (or Y on the left controller) for a second. Off by default, and a
+// hold rather than a tap because a tap is easy to hit by accident mid-session -- at which
+// point a participant is looking at a wall of yes/NO diagnostics that reads exactly like a
+// question they are being asked, with no way to answer it. Every line is now prefixed as a
+// readout for that reason.
 
 using System.Text;
 using UnityEngine;
@@ -24,12 +28,17 @@ namespace EmotionRooms
         public Camera headCamera;
         public MessageBoard board;
 
+        [Tooltip("Seconds the button must be held. A tap does nothing, so a participant " +
+                 "cannot open the readout by fumbling for the trigger.")]
+        public float holdSeconds = 1f;
+
         bool showing;
-        bool lastToggle;
+        bool wasDown;
+        float heldSince = -1f;
 
         void Update()
         {
-            if (Pressed(CommonUsages.secondaryButton, ref lastToggle))
+            if (HeldLongEnough())
             {
                 showing = !showing;
                 if (!showing && board != null) board.Hide();
@@ -46,6 +55,8 @@ namespace EmotionRooms
         string Report()
         {
             var report = new StringBuilder();
+            report.Append("DIAGNOSTIC READOUT  (researcher only)\n")
+                  .Append("Nothing here is a question. Nothing to answer.\n\n");
 
             var head = InputDevices.GetDeviceAtXRNode(XRNode.CenterEye);
             Vector3 headPosition = Vector3.zero;
@@ -66,8 +77,11 @@ namespace EmotionRooms
                       .Append(headCamera.transform.eulerAngles.y.ToString("0")).Append('\n');
                 // If the reported pose moves and the camera does not, nothing is applying
                 // it -- which is the difference between a dead runtime and a dead rig.
-                report.Append("  moving with head: ")
-                      .Append(CameraFollowsHead(headPosition) ? "yes" : "NO").Append('\n');
+                // Reads "still" rather than "NO" when the head simply has not moved:
+                // a stationary head and a dead rig used to print the same word, which is
+                // why this line looked like a question that could not be answered.
+                report.Append("  view tracks head: ").Append(TrackingState(headPosition))
+                      .Append('\n');
             }
 
             var right = InputDevices.GetDeviceAtXRNode(XRNode.RightHand);
@@ -83,13 +97,44 @@ namespace EmotionRooms
                     report.Append("  aiming    ").Append(Fmt(rig.pointer.forward)).Append('\n');
             }
 
-            report.Append("\nB hides this.");
+            report.Append("\nHold B to hide this.");
             return report.ToString();
+        }
+
+        /// <summary>True once, on the frame a long-enough hold completes.</summary>
+        bool HeldLongEnough()
+        {
+            bool down = Read(XRNode.RightHand, CommonUsages.secondaryButton) ||
+                        Read(XRNode.LeftHand, CommonUsages.secondaryButton);
+
+            if (!down)
+            {
+                wasDown = false;
+                heldSince = -1f;
+                return false;
+            }
+            if (!wasDown)
+            {
+                wasDown = true;
+                heldSince = Time.time;
+                return false;
+            }
+            if (heldSince < 0f || Time.time - heldSince < holdSeconds) return false;
+
+            // Consumed, so holding longer does not toggle repeatedly.
+            heldSince = -1f;
+            return true;
         }
 
         Vector3 lastHead;
         float lastHeadChange;
         bool everMoved;
+
+        string TrackingState(Vector3 reported)
+        {
+            if (!everMoved) return "unknown (hold still tells us nothing -- turn your head)";
+            return CameraFollowsHead(reported) ? "OK" : "STALE (moved, view did not)";
+        }
 
         bool CameraFollowsHead(Vector3 reported)
         {

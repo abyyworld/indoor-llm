@@ -75,12 +75,29 @@ namespace EmotionRooms
         float shownAt;
         int lastHoverValence = -1;
         int lastHoverArousal = -1;
+        int marks;
 
         void Awake()
         {
             area = GetComponent<BoxCollider>();
             area.isTrigger = true;
             Hide();
+        }
+
+        void OnEnable()
+        {
+            if (confirmButton != null) confirmButton.Pressed += OnConfirmPressed;
+        }
+
+        void OnDisable()
+        {
+            if (confirmButton != null) confirmButton.Pressed -= OnConfirmPressed;
+        }
+
+        void OnConfirmPressed()
+        {
+            AffectResponse ignored;
+            Commit(out ignored);
         }
 
         /// <summary>Present the grid and start accepting input.</summary>
@@ -91,6 +108,16 @@ namespace EmotionRooms
         [Tooltip("Axis names and the question. Shown and hidden with the grid, and " +
                  "kept outside it so the quad's scale does not stretch the text.")]
         public GameObject labels;
+
+        [Tooltip("Pressed to commit the chosen cell. Without a separate confirm step a " +
+                 "rating lands the instant the trigger goes down, with no way to change " +
+                 "it -- and no way to tell a considered answer from a slipped finger.")]
+        public WorldButton confirmButton;
+
+        /// <summary>Chosen but not yet committed. -1 when nothing is picked.</summary>
+        public int PendingValence { get; private set; }
+        public int PendingArousal { get; private set; }
+        public bool HasPending { get { return PendingValence > 0 && PendingArousal > 0; } }
 
         [Tooltip("Metres in front of the viewer.")]
         public float distance = 1.2f;
@@ -109,6 +136,11 @@ namespace EmotionRooms
 
             HasResponded = false;
             IsAwaitingResponse = true;
+            PendingValence = PendingArousal = -1;
+            marks = 0;
+            // Greyed rather than absent: a button that appears only once you have chosen
+            // gives no clue that choosing is a two-step act in the first place.
+            if (confirmButton != null) confirmButton.ShowDisabled();
             shownAt = Time.time;
             lastHoverValence = -1;
             lastHoverArousal = -1;
@@ -170,6 +202,7 @@ namespace EmotionRooms
             IsAwaitingResponse = false;
             if (hoverMarker != null) hoverMarker.gameObject.SetActive(false);
             if (labels != null) labels.SetActive(false);
+            if (confirmButton != null) confirmButton.Hide();
             gameObject.SetActive(false);
         }
 
@@ -199,13 +232,16 @@ namespace EmotionRooms
         }
 
         /// <summary>
-        /// Commit a response. Returns false if the ray missed, the grid is not up, a
-        /// response has already been given, or the input lock is still running.
+        /// Mark a cell without committing to it.
+        ///
+        /// Selection used to land the instant the trigger went down, wherever the beam
+        /// happened to be resting, with no way to change it. Marking and confirming are
+        /// now separate: the marker can be moved as often as the participant likes, and
+        /// nothing is recorded until they press the confirm button. That is the
+        /// difference between a considered rating and a slipped finger.
         /// </summary>
-        public bool TrySelect(Ray ray, out AffectResponse response)
+        public bool TryMark(Ray ray)
         {
-            response = default(AffectResponse);
-
             if (!IsAwaitingResponse || HasResponded) return false;
             if (Time.time - shownAt < inputLockSeconds) return false;
 
@@ -213,10 +249,39 @@ namespace EmotionRooms
             Vector3 point;
             if (!TryResolve(ray, out valence, out arousal, out point)) return false;
 
+            bool changed = valence != PendingValence || arousal != PendingArousal;
+            PendingValence = valence;
+            PendingArousal = arousal;
+
+            if (selectionMarker != null)
+            {
+                selectionMarker.gameObject.SetActive(true);
+                selectionMarker.position = CellCentre(valence, arousal);
+            }
+            if (confirmButton != null) confirmButton.Show();
+
+            // Every change of mind is logged. How often a rating moves before it is
+            // committed says something about how confident it was.
+            if (events != null && changed)
+                events.WriteGrid("grid_marked", valence, arousal, point.x, point.y,
+                    marks == 0 ? "first mark" : "changed from mark " + marks.ToString());
+            marks++;
+            return true;
+        }
+
+        /// <summary>
+        /// Commit whatever is marked. Does nothing while nothing is marked, which is why
+        /// the confirm button is shown greyed until the first mark lands.
+        /// </summary>
+        public bool Commit(out AffectResponse response)
+        {
+            response = default(AffectResponse);
+            if (!IsAwaitingResponse || HasResponded || !HasPending) return false;
+
             response = new AffectResponse
             {
-                valence = valence,
-                arousal = arousal,
+                valence = PendingValence,
+                arousal = PendingArousal,
                 durationMs = (long)((Time.time - shownAt) * 1000f),
             };
 
@@ -224,15 +289,11 @@ namespace EmotionRooms
             IsAwaitingResponse = false;
 
             if (events != null)
-                events.WriteGrid("grid_selected", valence, arousal, point.x, point.y,
-                    "dwell_ms=" + response.durationMs.ToString());
+                events.WriteGrid("grid_selected", response.valence, response.arousal, 0f, 0f,
+                    "dwell_ms=" + response.durationMs.ToString() + " marks=" + marks.ToString());
 
-            if (selectionMarker != null)
-            {
-                selectionMarker.gameObject.SetActive(true);
-                selectionMarker.position = CellCentre(valence, arousal);
-            }
             if (hoverMarker != null) hoverMarker.gameObject.SetActive(false);
+            if (confirmButton != null) confirmButton.Hide();
 
             var handler = Responded;
             if (handler != null) handler(response);

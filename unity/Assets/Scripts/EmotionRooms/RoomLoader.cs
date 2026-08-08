@@ -127,10 +127,18 @@ namespace EmotionRooms
         /// appears, because someone rating a room they can still see is describing what
         /// is in front of them rather than how it made them feel.
         /// </summary>
+        [Tooltip("Neutral ground raised whenever the rooms come down.\n\n" +
+                 "Owned here rather than by each caller because every phase hides the " +
+                 "room before it asks anything -- Phase A before the grid, Phase B " +
+                 "before all three questions -- and each one of them was leaving the " +
+                 "participant floating in an empty skybox.")]
+        public RatingStage ratingStage;
+
         public void HideRooms()
         {
             if (linearRoomRoot != null) linearRoomRoot.SetActive(false);
             if (curvedRoomRoot != null) curvedRoomRoot.SetActive(false);
+            if (ratingStage != null) ratingStage.Show();
         }
 
         public void LoadFromJson(string json)
@@ -195,6 +203,10 @@ namespace EmotionRooms
                 throw new RoomConfigException("Cannot load a null config.");
             }
             config.AssertValid();
+
+            // The stage comes down as the room goes up, so there is never a frame with
+            // both and never a frame with neither.
+            if (ratingStage != null) ratingStage.Hide();
 
             ApplyShape(config);
             ApplyWalls(config);
