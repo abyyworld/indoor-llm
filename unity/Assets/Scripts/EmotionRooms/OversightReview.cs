@@ -204,6 +204,24 @@ namespace EmotionRooms
         public event Action<OversightRecord> TrialCompleted;
         public event Action BlockFinished;
 
+        /// <summary>Pilot-only: abandon the block, firing BlockFinished as a completion.</summary>
+        public void SkipBlock()
+        {
+            if (!IsRunning) return;
+            StopAllCoroutines();
+            IsRunning = false;
+            if (detectionPanel != null) detectionPanel.Hide();
+            if (attributionPanel != null) attributionPanel.Hide();
+            if (correctionPanel != null) correctionPanel.Hide();
+            if (grid != null) grid.Hide();
+            if (loader != null) loader.HideRooms();
+            if (board != null) board.Hide();
+            if (events != null) events.Write("review_skipped", "pilot skip button");
+
+            var handler = BlockFinished;
+            if (handler != null) handler();
+        }
+
         public bool IsRunning { get; private set; }
 
         // Set by the UI before Commit* is called.

@@ -29,6 +29,12 @@ namespace EmotionRooms
 
         [Tooltip("Raw input stream target. Every trigger press lands here as a row.")]
         public EventLog events;
+
+        [Tooltip("Pilot sessions only, set from the control panel and never by default: " +
+                 "shows an overhead SKIP THIS PART button. It abandons the running part " +
+                 "and fires its normal completion, so chaining and bundling behave as if " +
+                 "the part had finished. Real sessions never see it.")]
+        public bool pilotMode;
         public OversightReview oversightReview;
 
         [Tooltip("The rationale check. Runs after the oversight block, ~3 minutes.")]
@@ -601,6 +607,9 @@ namespace EmotionRooms
             bool haveMouse = !xr && MouseRay(out mouseRay);
             bool mouseDown = useLegacyInput && haveMouse && Input.GetMouseButtonDown(0);
 
+            if (pilotMode && PumpSkipButton(rightDown, rightRay, leftDown, leftRay,
+                                            mouseDown, mouseRay)) return;
+
             // Raw input stream, decided 8 Aug 2026: every press is a row no matter how
             // often it repeats or whether it landed. What people pressed at and missed
             // is data the successful-selection rows silently discard.
@@ -638,6 +647,75 @@ namespace EmotionRooms
             if (rightDown) grid.TrySelect(rightRay, out response);
             else if (leftDown) grid.TrySelect(leftRay, out response);
             else if (mouseDown) grid.TrySelect(mouseRay, out response);
+        }
+
+        Transform skipButton;
+        Collider skipArea;
+
+        /// <summary>
+        /// The pilot skip control: overhead, out of every normal sightline, present only
+        /// while a part is running and only in pilot mode. Built at runtime like every
+        /// other interactive object -- nothing new is serialized into the scene.
+        /// </summary>
+        bool PumpSkipButton(bool rightDown, Ray rightRay, bool leftDown, Ray leftRay,
+                            bool mouseDown, Ray mouseRay)
+        {
+            bool active = (trialRunner != null && trialRunner.IsRunning) ||
+                          (oversightReview != null && oversightReview.IsRunning) ||
+                          (rationaleReview != null && rationaleReview.IsRunning);
+
+            if (skipButton == null && active) BuildSkipButton();
+            if (skipButton == null) return false;
+            if (skipButton.gameObject.activeSelf != active)
+                skipButton.gameObject.SetActive(active);
+            if (!active || skipArea == null) return false;
+
+            RaycastHit hit;
+            if (rightDown && skipArea.Raycast(rightRay, out hit, 100f)) return SkipActivePart();
+            if (leftDown && skipArea.Raycast(leftRay, out hit, 100f)) return SkipActivePart();
+            if (mouseDown && skipArea.Raycast(mouseRay, out hit, 100f)) return SkipActivePart();
+            return false;
+        }
+
+        void BuildSkipButton()
+        {
+            var anchor = xrRig != null && xrRig.Origin != null ? xrRig.Origin.position : Vector3.zero;
+
+            var slab = WorldLabel.Solid("Cube.fbx", "Pilot Skip Button", null);
+            // Near the ceiling, ahead of the standing point: findable when looked for,
+            // invisible to anyone doing the study.
+            slab.transform.position = anchor + new Vector3(0f, 2.2f, 1.5f);
+            slab.transform.rotation = Quaternion.LookRotation(
+                (slab.transform.position - (anchor + Vector3.up * 1.6f)).normalized);
+            slab.transform.localScale = new Vector3(0.6f, 0.16f, 0.02f);
+
+            var box = slab.AddComponent<BoxCollider>();
+            box.isTrigger = true;
+            skipArea = box;
+
+            var renderer = slab.GetComponent<Renderer>();
+            var shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
+            if (renderer != null && shader != null)
+                renderer.material = new Material(shader) { color = new Color(0.45f, 0.16f, 0.16f) };
+
+            var text = new GameObject("Pilot Skip Label").transform;
+            text.SetParent(slab.transform.parent, false);
+            text.position = slab.transform.position + slab.transform.rotation * new Vector3(0f, 0f, -0.02f);
+            text.rotation = slab.transform.rotation;
+            WorldLabel.Attach(text, "SKIP THIS PART (pilot)", 0.06f, Vector3.zero,
+                              TextAnchor.MiddleCenter);
+            text.SetParent(slab.transform, true);
+
+            skipButton = slab.transform;
+        }
+
+        bool SkipActivePart()
+        {
+            if (events != null) events.Write("pilot_skip_pressed", null);
+            if (trialRunner != null && trialRunner.IsRunning) trialRunner.SkipSession();
+            else if (oversightReview != null && oversightReview.IsRunning) oversightReview.SkipBlock();
+            else if (rationaleReview != null && rationaleReview.IsRunning) rationaleReview.SkipBlock();
+            return true;
         }
 
         void LogPress(string hand, Ray ray)

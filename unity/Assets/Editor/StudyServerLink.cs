@@ -164,6 +164,7 @@ namespace EmotionRooms.EditorTools
         /// </summary>
         public static void PushToHeadset(string headsetIp, string participant,
                                          bool practiceOnly, int sessionMode,
+                                         bool pilotSkip,
                                          Action<bool> onDone)
         {
             if (string.IsNullOrEmpty(headsetIp))
@@ -175,7 +176,8 @@ namespace EmotionRooms.EditorTools
             string url = "http://" + headsetIp + ":8752/set?participant=" +
                          UnityWebRequest.EscapeURL(participant ?? "") +
                          "&practice=" + (practiceOnly ? "1" : "0") +
-                         "&phases=" + sessionMode;
+                         "&phases=" + sessionMode +
+                         "&pilot=" + (pilotSkip ? "1" : "0");
             Send(UnityWebRequest.Get(url), body =>
             {
                 if (onDone != null) onDone(body != null);

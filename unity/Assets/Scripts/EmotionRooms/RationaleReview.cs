@@ -70,6 +70,20 @@ namespace EmotionRooms
         public string responsesFileName = "rationale_responses.csv";
 
         public event Action BlockFinished;
+
+        /// <summary>Pilot-only: abandon the block, firing BlockFinished as a completion.</summary>
+        public void SkipBlock()
+        {
+            if (!IsRunning) return;
+            StopAllCoroutines();
+            IsRunning = false;
+            if (loader != null) loader.HideRooms();
+            if (board != null) board.Hide();
+            if (events != null) events.Write("rationale_skipped", "pilot skip button");
+
+            var handler = BlockFinished;
+            if (handler != null) handler();
+        }
         public bool IsRunning { get; private set; }
 
         [NonSerialized] public bool pendingMatches;

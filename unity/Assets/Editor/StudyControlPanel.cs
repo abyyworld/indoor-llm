@@ -25,11 +25,13 @@ namespace EmotionRooms.EditorTools
     {
         const string RepoKey = "EmotionRooms.RepoPath";
         const string PracticeKey = "EmotionRooms.PracticeOnly";
+        const string PilotKey = "EmotionRooms.PilotSkip";
         const string ModeKey = "EmotionRooms.SessionMode";
 
         int sessionMode;   // 0 both, 1 Phase A only, 2 Phase B only
 
         bool practiceOnly;
+        bool pilotSkip;
 
         /// <summary>
         /// Send the participant and the mode to wherever the study is running.
@@ -48,7 +50,7 @@ namespace EmotionRooms.EditorTools
             StudyServerLink.SetParticipant(participant);
             if (!string.IsNullOrEmpty(cachedHeadsetIp))
                 StudyServerLink.PushToHeadset(cachedHeadsetIp, participant, practiceOnly,
-                                              sessionMode, null);
+                                              sessionMode, pilotSkip, null);
         }
 
         string participant = "";
@@ -70,6 +72,7 @@ namespace EmotionRooms.EditorTools
         {
             repoPath = EditorPrefs.GetString(RepoKey, GuessRepoPath());
             practiceOnly = EditorPrefs.GetBool(PracticeKey, false);
+            pilotSkip = EditorPrefs.GetBool(PilotKey, false);
             sessionMode = EditorPrefs.GetInt(ModeKey, 0);
             Probe(true);
         }
@@ -232,6 +235,19 @@ namespace EmotionRooms.EditorTools
             {
                 practiceOnly = picked == 1;
                 EditorPrefs.SetBool(PracticeKey, practiceOnly);
+                PushSettings();
+            }
+
+            bool pilotNow = EditorGUILayout.ToggleLeft(
+                new GUIContent("Pilot: show a SKIP THIS PART button overhead in the headset",
+                    "For piloting only. Adds an overhead button that abandons the running " +
+                    "part and jumps to the next. Leave OFF for real participants; the " +
+                    "button cannot appear unless this is on."),
+                pilotSkip);
+            if (pilotNow != pilotSkip)
+            {
+                pilotSkip = pilotNow;
+                EditorPrefs.SetBool(PilotKey, pilotSkip);
                 PushSettings();
             }
 

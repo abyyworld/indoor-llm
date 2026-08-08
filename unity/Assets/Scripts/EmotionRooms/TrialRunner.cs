@@ -144,6 +144,25 @@ namespace EmotionRooms
         public event Action<TrialRecord> TrialCompleted;
         public event Action SessionFinished;
 
+        /// <summary>
+        /// Abandon the running phase and fire SessionFinished as if it had completed.
+        /// Pilot tool only: the skip button that calls this exists solely in pilot
+        /// sessions, so a real participant can never reach it.
+        /// </summary>
+        public void SkipSession()
+        {
+            if (!IsRunning) return;
+            StopAllCoroutines();
+            IsRunning = false;
+            if (grid != null) grid.Hide();
+            if (loader != null) loader.HideRooms();
+            if (message != null) message.Hide();
+            if (events != null) events.Write("phase_skipped", "pilot skip button");
+
+            var handler = SessionFinished;
+            if (handler != null) handler();
+        }
+
         public bool IsRunning { get; private set; }
 
         /// <summary>True while the practice rooms are running.</summary>

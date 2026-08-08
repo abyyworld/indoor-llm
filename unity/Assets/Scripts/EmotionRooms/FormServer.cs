@@ -264,6 +264,9 @@ namespace EmotionRooms
                                 }
                                 if (!string.IsNullOrEmpty(practice))
                                     bootstrap.practiceOnly = practice == "1";
+                                string pilot;
+                                if (values.TryGetValue("pilot", out pilot))
+                                    bootstrap.pilotMode = pilot == "1";
                                 int mode;
                                 if (!string.IsNullOrEmpty(phases) &&
                                     int.TryParse(phases, out mode))
