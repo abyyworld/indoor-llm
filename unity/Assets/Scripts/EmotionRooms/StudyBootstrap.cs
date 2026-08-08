@@ -267,6 +267,28 @@ namespace EmotionRooms
             // opens while the headset is still off, so the app has nothing to wait for --
             // and a session that waited on a form would be a session a skipped form could
             // stall.
+            // Fetch this participant's rooms first if they are not in memory yet. They
+            // are loaded on demand rather than at startup, so pressing Begin is the first
+            // moment we know which three files are actually needed.
+            if (!ShippedAssets.HasParticipant(participantId) &&
+                ShippedAssets.Instance != null)
+            {
+                StartCoroutine(BeginWhenRoomsLoaded());
+                return;
+            }
+
+            StartPhases();
+        }
+
+        System.Collections.IEnumerator BeginWhenRoomsLoaded()
+        {
+            if (board != null) board.Show("Just a moment…");
+            yield return ShippedAssets.Instance.LoadParticipant(participantId);
+            StartPhases();
+        }
+
+        void StartPhases()
+        {
             if (board != null) board.Hide();
 
             if (!DoesPhaseA)

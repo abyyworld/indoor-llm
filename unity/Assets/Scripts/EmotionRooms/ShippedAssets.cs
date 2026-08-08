@@ -8,8 +8,15 @@
 // It also cannot be enumerated inside an APK, which is why build-participants writes an
 // index.json listing the participants -- a directory listing is a desktop luxury.
 //
-// Everything is pulled into memory once at startup. It is under a megabyte for the whole
-// sample, and a synchronous read is worth avoiding at the moment a session begins.
+// Only what is needed, when it is needed. Startup loads the questionnaires and the
+// participant index -- two files -- and a participant's three room files are fetched when
+// that participant is chosen.
+//
+// The first version loaded all ninety-one at startup. Under a megabyte in total, so it
+// looked harmless, but each one is a separate request into the APK archive and on a Quest
+// that is slow enough that the app sat on "Loading participants" long enough to look
+// hung. Ninety of those files belong to participants who will never be run in this
+// session.
 
 using System.Collections;
 using System.Collections.Generic;
@@ -39,6 +46,7 @@ namespace EmotionRooms
 
         void Awake()
         {
+            Instance = this;
             if (Ready) return;
             StartCoroutine(LoadAll());
         }
@@ -46,29 +54,45 @@ namespace EmotionRooms
         IEnumerator LoadAll()
         {
             yield return Load("questionnaires.json");
-
             yield return Load("participants/index.json");
+
             string index = Get("participants/index.json");
-
-            if (index != null)
-            {
-                var listed = ParseIds(index);
-                foreach (var id in listed)
-                {
-                    yield return Load("participants/" + id + "/session.json");
-                    yield return Load("participants/" + id + "/oversight.json");
-                    yield return Load("participants/" + id + "/practice.json");
-
-                    if (Get("participants/" + id + "/session.json") != null)
-                        participants.Add(id);
-                }
-            }
+            if (index != null) participants.AddRange(ParseIds(index));
 
             Ready = true;
-            Debug.Log("ShippedAssets: " + participants.Count + " participants and " +
-                      (Get("questionnaires.json") != null ? "the questionnaires" : "NO questionnaires") +
-                      " loaded from inside the app.");
+            Debug.Log("ShippedAssets: index lists " + participants.Count +
+                      " participants; " +
+                      (Get("questionnaires.json") != null ? "questionnaires loaded"
+                                                          : "NO questionnaires") +
+                      ". Room files load per participant.");
         }
+
+        /// <summary>True once this participant's rooms are in memory.</summary>
+        public static bool HasParticipant(string id)
+        {
+            return !string.IsNullOrEmpty(id) &&
+                   cache.ContainsKey("participants/" + id + "/session.json");
+        }
+
+        /// <summary>
+        /// Fetch one participant's three room files. Safe to call repeatedly: anything
+        /// already cached is skipped, so this costs nothing after the first time.
+        /// </summary>
+        public IEnumerator LoadParticipant(string id)
+        {
+            if (string.IsNullOrEmpty(id)) yield break;
+
+            yield return Load("participants/" + id + "/session.json");
+            yield return Load("participants/" + id + "/oversight.json");
+            yield return Load("participants/" + id + "/rationale.json");
+            yield return Load("participants/" + id + "/practice.json");
+
+            Debug.Log("ShippedAssets: rooms for " + id +
+                      (HasParticipant(id) ? " loaded." : " NOT FOUND in the shipped packs."));
+        }
+
+        /// <summary>The instance in the scene, for callers that need a coroutine host.</summary>
+        public static ShippedAssets Instance { get; private set; }
 
         IEnumerator Load(string relativePath)
         {

@@ -150,7 +150,7 @@ namespace EmotionRooms
             {
                 GUILayout.Label(ShippedAssets.Ready
                     ? "No participant packs found in this build."
-                    : "Loading participants…", Fine());
+                    : "Reading the participant index…", Fine());
                 return;
             }
 

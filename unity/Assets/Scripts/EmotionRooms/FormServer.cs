@@ -135,7 +135,14 @@ namespace EmotionRooms
                 catch (Exception) { return; }   // Stop() closing the listener lands here.
 
                 try { using (client) Handle(client); }
-                catch (Exception e) { Debug.LogWarning("FormServer: " + e.Message); }
+                catch (Exception e)
+                {
+                    // A browser that opens a connection and closes it without sending
+                    // anything is normal traffic, not a fault worth a line in the log.
+                    if (e.Message.IndexOf("would block", StringComparison.OrdinalIgnoreCase) < 0 &&
+                        e.Message.IndexOf("closed", StringComparison.OrdinalIgnoreCase) < 0)
+                        Debug.LogWarning("FormServer: " + e.Message);
+                }
             }
         }
 
