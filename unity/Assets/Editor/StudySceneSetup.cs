@@ -112,8 +112,7 @@ namespace EmotionRooms.EditorTools
                 new[] { "yes", "no" }, true);
             var attribution = BuildPanel(root, camera, "Attribution Panel",
                 AttributionLabels(), true);
-            var correction = BuildPanel(root, camera, "Correction Panel",
-                PoolValueLabels(), false);
+            var correction = BuildCorrectionPanel(root, camera);
 
             review.detectionPanel = detection;
             review.attributionPanel = attribution;
@@ -419,6 +418,23 @@ namespace EmotionRooms.EditorTools
                 AssetDatabase.GUIDToAssetPath(guids[0]));
         }
 
+        /// <summary>
+        /// Plain-language button faces for canonical values. Decided 8 Aug 2026: the
+        /// data keeps the technical name, the participant reads a word they know.
+        /// </summary>
+        static string FaceFor(string value)
+        {
+            switch (value)
+            {
+                case "hue": return "the colour";
+                case "saturation": return "colour strength";
+                case "texture": return "wall material";
+                case "material": return "wall material";
+                case "nothing_wrong": return "nothing was changed";
+                default: return value;
+            }
+        }
+
         static string[] AttributionLabels()
         {
             // Field names exactly as RoomConfig.With and the block file's swapped_field
@@ -429,26 +445,83 @@ namespace EmotionRooms.EditorTools
             return labels.ToArray();
         }
 
-        static string[] PoolValueLabels()
+        /// <summary>
+        /// The correction panel: one cell per (field, value), grouped by field.
+        ///
+        /// Values collide as strings across pools -- 300 is both a hue (purple) and an
+        /// illuminance -- so a deduplicated list cannot carry readable faces. Each
+        /// field's values get their own cells, the panel shows only the attributed
+        /// field's group, and every face is a word rather than a number.
+        /// </summary>
+        static QuestionPanel BuildCorrectionPanel(GameObject root, Camera camera)
         {
-            // Every value a participant could propose, across all five variables. Built
-            // from the same ValuesFor the correction panel narrows by, so the strings
-            // match exactly -- a near-miss here would show an empty correction screen.
-            var labels = new System.Collections.Generic.List<string>();
+            var values = new System.Collections.Generic.List<string>();
+            var groups = new System.Collections.Generic.List<string>();
+            var faces = new System.Collections.Generic.List<string>();
             foreach (var field in PoolConstants.Attributable)
             {
-                var values = PoolConstants.ValuesFor(field);
-                if (values == null) continue;
-                foreach (var v in values)
+                var pool = PoolConstants.ValuesFor(field);
+                if (pool == null) continue;
+                foreach (var v in pool)
                 {
-                    if (!labels.Contains(v)) labels.Add(v);
+                    values.Add(v);
+                    groups.Add(field);
+                    faces.Add(ValueFace(field, v));
                 }
             }
-            return labels.ToArray();
+            return BuildPanel(root, camera, "Correction Panel",
+                              values.ToArray(), false, groups.ToArray(), faces.ToArray());
+        }
+
+        /// <summary>Participant-facing name for a pool value, per field. Hue angles and
+        /// builders' material names both assume vocabulary the sample will not share.</summary>
+        static string ValueFace(string field, string value)
+        {
+            switch (field)
+            {
+                case "hue":
+                    switch (value)
+                    {
+                        case "0": return "red";
+                        case "30": return "orange";
+                        case "60": return "yellow";
+                        case "90": return "yellow-green";
+                        case "120": return "green";
+                        case "180": return "blue-green";
+                        case "240": return "blue";
+                        case "270": return "blue-violet";
+                        case "300": return "purple";
+                        case "330": return "pink";
+                    }
+                    break;
+                case "saturation":
+                    if (value == "0.2") return "weak colour";
+                    if (value == "0.4") return "strong colour";
+                    break;
+                case "brightness":
+                    if (value == "150") return "dim";
+                    if (value == "300") return "medium bright";
+                    if (value == "500") return "bright";
+                    if (value == "750") return "very bright";
+                    break;
+                case "texture":
+                    if (value == "plaster") return "painted wall";
+                    if (value == "concrete") return "stone-like wall";
+                    if (value == "textile") return "fabric wall";
+                    break;
+            }
+            return value;   // rough/smooth are already words
         }
 
         static QuestionPanel BuildPanel(GameObject root, Camera camera, string name,
                                         string[] values, bool withConfidence)
+        {
+            return BuildPanel(root, camera, name, values, withConfidence, null, null);
+        }
+
+        static QuestionPanel BuildPanel(GameObject root, Camera camera, string name,
+                                        string[] values, bool withConfidence,
+                                        string[] groups, string[] faces)
         {
             var go = new GameObject(name);
             go.transform.SetParent(root.transform, false);
@@ -480,18 +553,22 @@ namespace EmotionRooms.EditorTools
                 collider.isTrigger = true;   // must not push the rig around
 
                 var material = new Material(DefaultShader()) { name = values[i] };
-                material.color = new Color(0.85f, 0.85f, 0.85f);
+                material.color = new Color(0.16f, 0.17f, 0.20f);
                 cell.GetComponent<Renderer>().sharedMaterial = material;
 
-                // The face of the button says what it is. Named only in the hierarchy,
-                // these were identical grey boxes to the person being asked.
-                WorldLabel.Attach(cell.transform, values[i], 0.03f,
+                // The face of the button says what it is -- in plain words. The value
+                // in the data stays canonical; only the face is translated, because
+                // "saturation" means nothing to most participants and less to someone
+                // whose first language is not English.
+                WorldLabel.Attach(cell.transform,
+                                  faces != null ? faces[i] : FaceFor(values[i]), 0.03f,
                                   new Vector3(0f, 0f, -0.6f));
 
                 panel.options.Add(new QuestionPanel.Option
                 {
                     value = values[i],
                     target = cell.transform,
+                    group = groups != null ? groups[i] : null,
                 });
             }
 
@@ -541,7 +618,7 @@ namespace EmotionRooms.EditorTools
                     step.GetComponent<BoxCollider>().isTrigger = true;
 
                     var material = new Material(DefaultShader()) { name = step.name };
-                    material.color = new Color(0.85f, 0.85f, 0.85f);
+                    material.color = new Color(0.16f, 0.17f, 0.20f);
                     step.GetComponent<Renderer>().sharedMaterial = material;
 
                     WorldLabel.Attach(step.transform,

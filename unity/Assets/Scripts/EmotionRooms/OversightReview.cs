@@ -82,6 +82,10 @@ namespace EmotionRooms
         public bool detected;
         public float detectionConfidence;
         public string attributedField;
+
+        /// <summary>Extra rounds of "anything else wrong": field=value@confidence,
+        /// semicolon-joined. Perception data; the primary answer stays the scored one.</summary>
+        public string extraAttributions;
         public float attributionConfidence;
         public string correctedValue;
 
@@ -122,6 +126,7 @@ namespace EmotionRooms
                 valenceAfter.ToString(CultureInfo.InvariantCulture),
                 arousalAfter.ToString(CultureInfo.InvariantCulture),
                 correctionApplied ? "1" : "0",
+                extraAttributions ?? "",
             };
             var row = new StringBuilder();
             for (int i = 0; i < fields.Length; i++)
@@ -140,7 +145,7 @@ namespace EmotionRooms
                    "corrected_value,applied_value,correction_source," +
                    "duration_ms,swapped_field,started_utc," +
                    "valence_before,arousal_before,valence_after,arousal_after," +
-                   "correction_applied";
+                   "correction_applied,extra_attributions";
         }
     }
 
@@ -316,6 +321,22 @@ namespace EmotionRooms
         [Tooltip("Where the briefing is drawn. Wired by scene setup.")]
         public MessageBoard board;
 
+        static string PlainField(string field)
+        {
+            switch (field)
+            {
+                case "hue": return "the colour";
+                case "saturation": return "the colour strength";
+                case "brightness": return "the brightness";
+                case "texture": return "the wall material";
+                case "roughness": return "the roughness";
+                case null: return "it";
+                default: return "the " + field;
+            }
+        }
+
+        string pendingExtras = "";
+
         public void BeginBlock()
         {
             if (IsRunning) return;
@@ -466,7 +487,7 @@ namespace EmotionRooms
             {
                 attributionAnswered = false;
                 if (attributionPanel != null)
-                    attributionPanel.Show("Which one is wrong for " + trial.target_emotion_shown + "?");
+                    attributionPanel.Show("Which setting was changed?");
                 if (telemetry != null) { telemetry.SetReviewSegment(false, true, false); telemetry.Mark("attribution_shown"); }
                 if (events != null) events.Write("attribution_shown", null);
                 while (!attributionAnswered) yield return null;
@@ -485,8 +506,9 @@ namespace EmotionRooms
                 correctionAnswered = false;
                 if (pendingAttributedField == null) correctionAnswered = true;
                 else if (correctionPanel != null)
-                    correctionPanel.Show("What should " + (pendingAttributedField ?? "it") +
-                                         " be instead?", PoolConstants.ValuesFor(pendingAttributedField));
+                    correctionPanel.Show("What should " + PlainField(pendingAttributedField) +
+                                         " be instead?", PoolConstants.ValuesFor(pendingAttributedField),
+                                         pendingAttributedField);
                 if (telemetry != null) { telemetry.SetReviewSegment(false, false, true); telemetry.Mark("correction_shown"); }
                 if (events != null) events.Write("correction_shown", null);
                 while (!correctionAnswered) yield return null;
@@ -495,6 +517,81 @@ namespace EmotionRooms
                 if (events != null)
                     events.WriteValues("correction_answered", pendingCorrectedValue, null, null);
             }
+
+            // Anything else? A participant may believe several settings are off even
+            // though the ground truth changes exactly one, and the primary answer above
+            // stays the scored one. Extra rounds are perception data: how much MORE
+            // wrong a room looks than it is. Each round re-asks attribution (minus the
+            // fields already named, with confidence) and a correction, recorded to the
+            // event log and the extras column, never applied to the room -- the yoked
+            // control below is designed around a single applied correction.
+            string primaryCorrection = pendingCorrectedValue;
+            if (pendingDetected && !string.IsNullOrEmpty(pendingAttributedField))
+            {
+                var named = new List<string> { pendingAttributedField };
+                var extras = new StringBuilder();
+
+                while (named.Count < PoolConstants.Attributable.Length)
+                {
+                    detectionAnswered = false;
+                    if (detectionPanel != null)
+                    {
+                        // Single press: the strip is confidence about the DETECTION,
+                        // and this follow-up is a gate, not a measurement.
+                        if (detectionPanel.confidenceStrip != null)
+                            detectionPanel.confidenceStrip.gameObject.SetActive(false);
+                        detectionPanel.Show("Is anything else wrong with this room?");
+                    }
+                    if (events != null) events.Write("extra_detection_shown", null);
+                    while (!detectionAnswered) yield return null;
+                    if (detectionPanel != null)
+                    {
+                        detectionPanel.Hide();
+                        if (detectionPanel.confidenceStrip != null)
+                            detectionPanel.confidenceStrip.gameObject.SetActive(true);
+                    }
+                    if (!pendingDetected) break;
+
+                    var remaining = new List<string>();
+                    foreach (var field in PoolConstants.Attributable)
+                        if (!named.Contains(field)) remaining.Add(field);
+                    remaining.Add("nothing_wrong");
+
+                    attributionAnswered = false;
+                    if (attributionPanel != null)
+                        attributionPanel.Show("Which other setting was changed?", remaining);
+                    if (events != null) events.Write("extra_attribution_shown", null);
+                    while (!attributionAnswered) yield return null;
+                    if (attributionPanel != null) attributionPanel.Hide();
+
+                    if (pendingAttributedField == "nothing_wrong" ||
+                        string.IsNullOrEmpty(pendingAttributedField)) break;
+                    string extraField = pendingAttributedField;
+                    named.Add(extraField);
+
+                    correctionAnswered = false;
+                    if (correctionPanel != null)
+                        correctionPanel.Show("What should " + PlainField(extraField) +
+                                             " be instead?", PoolConstants.ValuesFor(extraField),
+                                             extraField);
+                    else correctionAnswered = true;
+                    while (!correctionAnswered) yield return null;
+                    if (correctionPanel != null) correctionPanel.Hide();
+
+                    if (extras.Length > 0) extras.Append(';');
+                    extras.Append(extraField).Append('=').Append(pendingCorrectedValue ?? "")
+                          .Append('@').Append(pendingAttributionConfidence.ToString("0.##"));
+                    if (events != null)
+                        events.WriteValues("extra_round", extraField, pendingCorrectedValue,
+                            "confidence=" + pendingAttributionConfidence.ToString("0.##"));
+                }
+
+                pendingExtras = extras.ToString();
+                // Restore the primary answers for the record and the applied correction.
+                pendingAttributedField = named[0];
+                pendingCorrectedValue = primaryCorrection;
+            }
+            else pendingExtras = "";
 
             // The correction loop. Apply what they chose, show it, and let them rate the
             // room they themselves produced.
@@ -580,6 +677,7 @@ namespace EmotionRooms
                 detected = pendingDetected,
                 detectionConfidence = pendingDetectionConfidence,
                 attributedField = pendingAttributedField,
+                extraAttributions = pendingExtras,
                 attributionConfidence = pendingAttributionConfidence,
                 correctedValue = pendingCorrectedValue,
                 appliedValue = appliedValue,

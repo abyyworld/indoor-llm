@@ -21,6 +21,13 @@ namespace EmotionRooms
         {
             public string value;          // what gets logged
             public Transform target;      // the collider the pointer hits
+
+            // Which variable this value belongs to, or null for ungrouped panels.
+            // Exists because pool values collide as strings: 300 is both a hue (purple)
+            // and an illuminance (300 lx). One shared "300" cell cannot wear both
+            // faces, so the correction panel builds one cell per (field, value) and
+            // shows only the attributed field's group.
+            public string group;
         }
 
         [Tooltip("Question text. Set at runtime and rendered above the options.")]
@@ -58,7 +65,11 @@ namespace EmotionRooms
         bool confidenceChosen;
         Transform chosenOption, chosenConfidence;
 
-        static readonly Color IdleTint = new Color(0.85f, 0.85f, 0.85f);
+        // Dark, not light. Idle cells were light grey with white labels: near-zero
+        // contrast, and unreadable the moment a 750-lux room sat behind them. The
+        // chosen-green state was the only readable one, which is how the problem was
+        // finally noticed. A dark face carries white text over any room.
+        static readonly Color IdleTint = new Color(0.16f, 0.17f, 0.20f);
         static readonly Color HoverTint = new Color(0.35f, 0.75f, 1f);
         static readonly Color ChosenTint = new Color(0.30f, 0.85f, 0.42f);
 
@@ -84,6 +95,12 @@ namespace EmotionRooms
         /// </summary>
         public void Show(string questionText, ICollection<string> allowed)
         {
+            Show(questionText, allowed, null);
+        }
+
+        /// <summary>Show with only <paramref name="group"/>'s options selectable.</summary>
+        public void Show(string questionText, ICollection<string> allowed, string group)
+        {
             prompt = questionText ?? prompt;
             pendingValue = null;
             confidenceChosen = false;
@@ -102,7 +119,9 @@ namespace EmotionRooms
             foreach (var option in options)
             {
                 if (option.target == null) continue;
-                option.target.gameObject.SetActive(allowed == null || allowed.Contains(option.value));
+                bool inGroup = group == null || option.group == group;
+                option.target.gameObject.SetActive(
+                    inGroup && (allowed == null || allowed.Contains(option.value)));
             }
 
             gameObject.SetActive(true);
