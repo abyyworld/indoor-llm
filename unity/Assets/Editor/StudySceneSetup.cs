@@ -124,6 +124,7 @@ namespace EmotionRooms.EditorTools
 
             var bootstrap = root.AddComponent<StudyBootstrap>();
             bootstrap.board = messageBoard;
+            root.GetComponent<XRDiagnostics>().board = messageBoard;
             bootstrap.rationaleReview = rationale;
             rationale.board = messageBoard;
             bootstrap.questionnaires = forms;
@@ -152,6 +153,10 @@ namespace EmotionRooms.EditorTools
             var xr = root.AddComponent<XRRig>();
             xr.headCamera = camera;
             bootstrap.xrRig = xr;
+
+            var diagnostics = root.AddComponent<XRDiagnostics>();
+            diagnostics.rig = xr;
+            diagnostics.headCamera = camera;
 
             var runtimePanel = root.AddComponent<RuntimeControlPanel>();
             runtimePanel.bootstrap = bootstrap;
@@ -247,12 +252,22 @@ namespace EmotionRooms.EditorTools
             labels.localPosition = quad.transform.localPosition;
             labels.localRotation = quad.transform.localRotation;
 
-            WorldLabel.Attach(labels, "How did that room make you feel?", 0.05f,
-                              new Vector3(0f, 0.78f, 0f));
-            WorldLabel.Attach(labels, "unpleasant", 0.04f, new Vector3(-0.82f, 0f, 0f));
-            WorldLabel.Attach(labels, "pleasant", 0.04f, new Vector3(0.82f, 0f, 0f));
-            WorldLabel.Attach(labels, "worked up", 0.04f, new Vector3(0f, 0.62f, 0f));
-            WorldLabel.Attach(labels, "calm", 0.04f, new Vector3(0f, -0.62f, 0f));
+            // Anchored away from the grid rather than centred on a point beside it.
+            //
+            // Centred text grows in both directions, so "unpleasant" and "pleasant" each
+            // reached inward and collided over the middle of the grid. Right-aligning the
+            // left label and left-aligning the right one makes them grow outward, away
+            // from the cells, however long the word is.
+            WorldLabel.Attach(labels, "How did that room make you feel?", 0.035f,
+                              new Vector3(0f, 0.72f, 0f));
+            WorldLabel.Attach(labels, "unpleasant", 0.028f, new Vector3(-0.62f, 0f, 0f),
+                              TextAnchor.MiddleRight);
+            WorldLabel.Attach(labels, "pleasant", 0.028f, new Vector3(0.62f, 0f, 0f),
+                              TextAnchor.MiddleLeft);
+            WorldLabel.Attach(labels, "worked up", 0.028f, new Vector3(0f, 0.58f, 0f),
+                              TextAnchor.LowerCenter);
+            WorldLabel.Attach(labels, "calm", 0.028f, new Vector3(0f, -0.58f, 0f),
+                              TextAnchor.UpperCenter);
             grid.labels = labels.gameObject;
             grid.cells = 9;
             grid.hoverMarker = Marker(quad, "Hover Marker", new Color(1f, 1f, 1f, 0.9f), 0.05f);
@@ -400,7 +415,7 @@ namespace EmotionRooms.EditorTools
 
                 // The face of the button says what it is. Named only in the hierarchy,
                 // these were identical grey boxes to the person being asked.
-                WorldLabel.Attach(cell.transform, values[i], 0.045f,
+                WorldLabel.Attach(cell.transform, values[i], 0.03f,
                                   new Vector3(0f, 0f, -0.6f));
 
                 panel.options.Add(new QuestionPanel.Option
@@ -414,7 +429,7 @@ namespace EmotionRooms.EditorTools
             var prompt = new GameObject("Prompt").transform;
             prompt.SetParent(go.transform, false);
             prompt.localPosition = new Vector3(0f, 0.46f, 0f);
-            panel.promptLabel = WorldLabel.Attach(prompt, "", 0.05f);
+            panel.promptLabel = WorldLabel.Attach(prompt, "", 0.035f);
 
             if (withConfidence)
             {
@@ -440,7 +455,7 @@ namespace EmotionRooms.EditorTools
 
                     WorldLabel.Attach(step.transform,
                         i == 0 ? "not sure" : i == panel.confidenceSteps - 1 ? "certain" : "",
-                        0.03f, new Vector3(0f, -1.2f, 0f));
+                        0.022f, new Vector3(0f, -1.6f, 0f));
                 }
             }
 

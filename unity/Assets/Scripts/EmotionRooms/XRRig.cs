@@ -230,6 +230,12 @@ namespace EmotionRooms
             return InputDevices.GetDeviceAtXRNode(pointerDriver.node).isValid;
         }
 
+        /// <summary>Push the current pitch onto the live pointer, for in-headset tuning.</summary>
+        public void ApplyPointerPitch()
+        {
+            if (pointerDriver != null) pointerDriver.pitchOffset = gripToAimDegrees;
+        }
+
         public static bool IsHeadsetRunning()
         {
             SubsystemManager.GetSubsystems(displays);
