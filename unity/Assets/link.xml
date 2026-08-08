@@ -1,0 +1,18 @@
+<!--
+  Keep the study's own code out of the managed stripper.
+
+  The player deserializes scenes positionally: level0 carries no type tree, so the
+  engine reads each MonoBehaviour's fields in the exact order the shipped assembly
+  declares them. If IL2CPP strips a type or a field that the editor did serialize,
+  every subsequent field in that object is read at the wrong offset. The first string
+  it reaches then takes a garbage length and runs off the end of the file, which
+  surfaces as a native crash in CachedReader::OutOfBoundsError on the Loading.Preload
+  thread - no managed exception, no log line, the app simply vanishes at startup.
+
+  Preserving the whole assembly costs a small amount of APK size and removes the
+  possibility entirely. This assembly is one folder of study code, so the size is
+  not worth the risk of a session dying on the headset.
+-->
+<linker>
+  <assembly fullname="Assembly-CSharp" preserve="all"/>
+</linker>

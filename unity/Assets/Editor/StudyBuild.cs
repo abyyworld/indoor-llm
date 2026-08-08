@@ -162,6 +162,60 @@ namespace EmotionRooms.EditorTools
         [MenuItem("Emotion Rooms/Advanced/Build and put it on the headset", priority = 123)]
         public static void BuildAndDeploy()
         {
+            BuildAndDeploy(false);
+        }
+
+        /// <summary>
+        /// Throw away every cached Android build artefact, then build.
+        ///
+        /// Unity builds the player incrementally, and the scene it writes carries no type
+        /// tree: the engine reads each MonoBehaviour's fields positionally, in the order
+        /// the shipped assembly declares them. When a cached artefact survives a change to
+        /// a serialized field, the data and the layout disagree by a few bytes, the first
+        /// string read afterwards takes a nonsense length, and the player dies in
+        /// CachedReader::OutOfBoundsError on the Loading.Preload thread. There is no
+        /// managed exception and nothing in the log -- the app just disappears while the
+        /// loading screen is up.
+        ///
+        /// A clean build costs several minutes and removes the whole class of failure, so
+        /// it is the right thing to reach for the moment a build stops starting.
+        /// </summary>
+        public static void CleanBuildAndDeploy()
+        {
+            BuildAndDeploy(true);
+        }
+
+        static void ClearBuildCache()
+        {
+            // Bee holds the compiled player data, including the serialized scene and the
+            // IL2CPP metadata that has to agree with it. Both are regenerated.
+            var caches = new[]
+            {
+                "Library/Bee",
+                "Library/PlayerDataCache",
+                "Library/il2cpp_cache",
+                "Library/Il2cppBuildCache",
+            };
+
+            foreach (var relative in caches)
+            {
+                var path = Path.Combine(Directory.GetCurrentDirectory(), relative);
+                if (!Directory.Exists(path)) continue;
+                try
+                {
+                    Directory.Delete(path, true);
+                    Debug.Log("Study build: cleared " + relative);
+                }
+                catch (IOException error)
+                {
+                    Debug.LogWarning("Study build: could not clear " + relative + ": " +
+                                     error.Message);
+                }
+            }
+        }
+
+        static void BuildAndDeploy(bool clean)
+        {
             var devices = ConnectedDevices();
             if (devices.Length == 0)
             {
@@ -187,6 +241,8 @@ namespace EmotionRooms.EditorTools
             // then shows a flat window with no tracking -- which looks like a broken
             // study rather than a missing checkbox.
             XRSetup.Run();
+
+            if (clean) ClearBuildCache();
 
             string apk = Path.Combine(Path.GetTempPath(), "EmotionRooms.apk");
             string scene = EditorSceneManagerScenePath();

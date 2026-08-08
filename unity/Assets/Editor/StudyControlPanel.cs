@@ -375,6 +375,14 @@ namespace EmotionRooms.EditorTools
                 EditorGUILayout.BeginHorizontal();
                 if (GUILayout.Button("Install on the headset", GUILayout.Height(26f)))
                     Later(StudyBuild.BuildAndDeploy);
+                // The one to reach for when a build installs but will not start. Slower,
+                // and the only reliable answer to a player that dies during scene load.
+                if (GUILayout.Button(new GUIContent("Clean rebuild",
+                        "Throws away every cached build artefact first. Several minutes, " +
+                        "but it is what fixes a build that installs and then vanishes on " +
+                        "the loading screen."),
+                        GUILayout.Height(26f), GUILayout.Width(110f)))
+                    Later(StudyBuild.CleanBuildAndDeploy);
                 if (GUILayout.Button("Launch it", GUILayout.Height(26f), GUILayout.Width(90f)))
                     Later(StudyBuild.LaunchOnHeadset);
                 if (GUILayout.Button("Check again", GUILayout.Height(26f), GUILayout.Width(100f)))
