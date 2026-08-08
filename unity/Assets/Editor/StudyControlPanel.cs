@@ -186,6 +186,12 @@ namespace EmotionRooms.EditorTools
                     "Type the participant id before anything else. Everything written " +
                     "this session is filed under it, and reusing one appends a second " +
                     "session onto the first with neither recoverable.", MessageType.Warning);
+            else if (!IsShippedId(participant))
+                EditorGUILayout.HelpBox(
+                    "\"" + participant + "\" is not one of the ids built into the app. " +
+                    "They are p01 to p30 — note the p. A different id will start and then " +
+                    "do nothing, because there are no rooms under that name.",
+                    MessageType.Warning);
             else if (HasDataAlready(participant))
                 EditorGUILayout.HelpBox(
                     "There is already data filed under " + participant + ". Use a " +
@@ -702,6 +708,14 @@ namespace EmotionRooms.EditorTools
         }
 
         // ------------------------------------------------------------------ helpers
+
+        /// <summary>Is this one of the participants whose rooms ship in the build?</summary>
+        static bool IsShippedId(string id)
+        {
+            string index = Path.Combine(Application.streamingAssetsPath,
+                                        "participants", id ?? "", "session.json");
+            return File.Exists(index);
+        }
 
         static bool HasDataAlready(string id)
         {

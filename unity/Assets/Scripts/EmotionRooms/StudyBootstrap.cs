@@ -284,8 +284,37 @@ namespace EmotionRooms
         {
             if (board != null) board.Show("Just a moment…");
             yield return ShippedAssets.Instance.LoadParticipant(participantId);
+
+            // Say so, in the headset, if there are no rooms for this id.
+            //
+            // Until now this failed into logcat, which nobody wearing a headset can read,
+            // so a mistyped participant id looked exactly like an app that does nothing.
+            // The commonest cause is an id that is not one of the shipped ones -- they are
+            // p01..p30, and "9" or "09" matches none of them.
+            if (!ShippedAssets.HasParticipant(participantId) &&
+                !System.IO.File.Exists(System.IO.Path.Combine(
+                    Application.persistentDataPath, "session.json")))
+            {
+                string known = ShippedAssets.Participants.Count > 0
+                    ? ShippedAssets.Participants[0] + " to " +
+                      ShippedAssets.Participants[ShippedAssets.Participants.Count - 1]
+                    : "none shipped";
+
+                string message = "No rooms for \"" + participantId + "\".\n\n" +
+                                 "This build has " + known + ".\n" +
+                                 "Set the id on the laptop and press Start again.";
+                if (board != null) board.Show(message);
+                Debug.LogError("StudyBootstrap: " + message.Replace("\n", " "));
+                RoomsMissing = true;
+                yield break;
+            }
+
+            RoomsMissing = false;
             StartPhases();
         }
+
+        /// <summary>Set when the last Begin found no rooms, so the panel can say so.</summary>
+        public bool RoomsMissing { get; private set; }
 
         void StartPhases()
         {
