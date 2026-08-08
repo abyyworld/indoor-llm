@@ -266,6 +266,22 @@ namespace EmotionRooms.EditorTools
             box.isTrigger = true;
             box.size = new Vector3(1f, 1f, 0.01f);
 
+            // A drawn lattice, baked into a texture.
+            //
+            // The 9x9 grid existed only in OnDrawGizmosSelected, which is editor-only --
+            // so in a build this was a blank white square with four words around it and
+            // nothing to aim at. Gizmos are for the person authoring the scene, not the
+            // person wearing the headset.
+            var gridTexture = BuildGridTexture(9, 512);
+            AssetDatabase.CreateAsset(gridTexture, "Assets/EmotionRooms/Materials/AffectGrid.asset");
+
+            var gridShader = Shader.Find("Unlit/Transparent") ?? Shader.Find("Unlit/Texture")
+                             ?? DefaultShader();
+            var gridMaterial = new Material(gridShader) { name = "Affect Grid" };
+            gridMaterial.mainTexture = gridTexture;
+            AssetDatabase.CreateAsset(gridMaterial, "Assets/EmotionRooms/Materials/AffectGrid.mat");
+            quad.GetComponent<Renderer>().sharedMaterial = gridMaterial;
+
             var grid = quad.AddComponent<AffectGrid>();
             grid.viewer = camera;
 
@@ -490,6 +506,50 @@ namespace EmotionRooms.EditorTools
 
             go.SetActive(false);
             return panel;
+        }
+
+        /// <summary>
+        /// The affect grid as an image: a dark panel, light cell borders, and a brighter
+        /// cross through the middle so the neutral point is findable at a glance.
+        /// Unlit when applied, so a dim room does not make the instrument unreadable.
+        /// </summary>
+        static Texture2D BuildGridTexture(int cells, int size)
+        {
+            var texture = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            texture.name = "Affect Grid";
+            texture.wrapMode = TextureWrapMode.Clamp;
+
+            var background = new Color(0.10f, 0.10f, 0.13f, 0.92f);
+            var line = new Color(0.55f, 0.58f, 0.65f, 1f);
+            var axis = new Color(0.85f, 0.88f, 0.95f, 1f);
+
+            var pixels = new Color[size * size];
+            for (int i = 0; i < pixels.Length; i++) pixels[i] = background;
+
+            float step = size / (float)cells;
+            for (int i = 0; i <= cells; i++)
+            {
+                int at = Mathf.Clamp(Mathf.RoundToInt(i * step), 0, size - 1);
+                // The centre lines are the axes of the circumplex; everything else is a
+                // cell border.
+                bool isAxis = i == cells / 2 || i == (cells + 1) / 2;
+                var colour = isAxis ? axis : line;
+                int thickness = isAxis ? 3 : 1;
+
+                for (int t = -thickness; t <= thickness; t++)
+                {
+                    int x = Mathf.Clamp(at + t, 0, size - 1);
+                    for (int y = 0; y < size; y++)
+                    {
+                        pixels[y * size + x] = colour;   // vertical
+                        pixels[x * size + y] = colour;   // horizontal
+                    }
+                }
+            }
+
+            texture.SetPixels(pixels);
+            texture.Apply();
+            return texture;
         }
 
         static Transform Marker(GameObject parent, string name, Color colour, float size)

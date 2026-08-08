@@ -87,7 +87,17 @@ namespace EmotionRooms
                  "line a person thinks they are pointing along can only really be judged " +
                  "by pointing at something. Adjustable live with the thumbstick under the " +
                  "diagnostics overlay if a different headset needs another value.")]
-        public float gripToAimDegrees = 60f;
+        public float gripToAimDegrees = GripToAim;
+
+        /// <summary>
+        /// Fixed. 60 degrees from the grip pose to where a hand appears to point.
+        ///
+        /// Settled by aiming in the headset, and deliberately not adjustable at runtime
+        /// any more: a pointer that can drift mid-session means two participants are not
+        /// pointing at the same thing, and a stick that both walks you across the room
+        /// and re-aims your beam is worse than either alone.
+        /// </summary>
+        public const float GripToAim = 60f;
 
         [Tooltip("Preferred hand. Falls back to the other one if it is not tracking, so a " +
                  "left-handed participant is not stuck holding the wrong controller.")]
@@ -144,7 +154,7 @@ namespace EmotionRooms
             pointerDriver = hand.gameObject.AddComponent<XRPoseDriver>();
             pointerDriver.node = rightHanded ? XRNode.RightHand : XRNode.LeftHand;
             pointerDriver.origin = anchor;
-            pointerDriver.pitchOffset = gripToAimDegrees;
+            pointerDriver.pitchOffset = GripToAim;
             pointer = hand;
             Origin = anchor;
 
@@ -239,10 +249,11 @@ namespace EmotionRooms
             return InputDevices.GetDeviceAtXRNode(pointerDriver.node).isValid;
         }
 
-        /// <summary>Push the current pitch onto the live pointer, for in-headset tuning.</summary>
+        /// <summary>Put the pointer back on the fixed angle, whatever the inspector says.</summary>
         public void ApplyPointerPitch()
         {
-            if (pointerDriver != null) pointerDriver.pitchOffset = gripToAimDegrees;
+            gripToAimDegrees = GripToAim;
+            if (pointerDriver != null) pointerDriver.pitchOffset = GripToAim;
         }
 
         public static bool IsHeadsetRunning()

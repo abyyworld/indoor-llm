@@ -24,11 +24,8 @@ namespace EmotionRooms
         public Camera headCamera;
         public MessageBoard board;
 
-        [Tooltip("Degrees added or removed per press when tuning the ray.")]
-        public float pitchStep = 5f;
-
         bool showing;
-        bool lastToggle, lastUp, lastDown;
+        bool lastToggle;
 
         void Update()
         {
@@ -39,25 +36,11 @@ namespace EmotionRooms
             }
             if (!showing) return;
 
-            // Thumbstick up/down nudges the pointer pitch, so it can be aimed by pointing
-            // at something and adjusting until the beam lands on it.
-            if (Axis(out float vertical))
-            {
-                if (vertical > 0.7f && !lastUp) { Nudge(-pitchStep); lastUp = true; }
-                else if (vertical <= 0.7f) lastUp = false;
-
-                if (vertical < -0.7f && !lastDown) { Nudge(pitchStep); lastDown = true; }
-                else if (vertical >= -0.7f) lastDown = false;
-            }
+            // The thumbsticks belong to walking now, and the ray is settled at 60, so
+            // this no longer competes for them: a stick that both moves you and re-aims
+            // your pointer is worse than either alone.
 
             if (board != null) board.Show(Report());
-        }
-
-        void Nudge(float degrees)
-        {
-            if (rig == null) return;
-            rig.gripToAimDegrees += degrees;
-            rig.ApplyPointerPitch();
         }
 
         string Report()
@@ -94,13 +77,13 @@ namespace EmotionRooms
 
             if (rig != null)
             {
-                report.Append("  ray pitch ").Append(rig.gripToAimDegrees.ToString("0"))
-                      .Append(" deg\n");
+                report.Append("  ray pitch ").Append(XRRig.GripToAim.ToString("0"))
+                      .Append(" deg (fixed)\n");
                 if (rig.pointer != null)
                     report.Append("  aiming    ").Append(Fmt(rig.pointer.forward)).Append('\n');
             }
 
-            report.Append("\nThumbstick up/down changes ray pitch.\nB hides this.");
+            report.Append("\nB hides this.");
             return report.ToString();
         }
 
@@ -141,22 +124,5 @@ namespace EmotionRooms
             return device.isValid && device.TryGetFeatureValue(button, out value) && value;
         }
 
-        static bool Axis(out float vertical)
-        {
-            vertical = 0f;
-            foreach (var node in new[] { XRNode.RightHand, XRNode.LeftHand })
-            {
-                var device = InputDevices.GetDeviceAtXRNode(node);
-                Vector2 stick;
-                if (device.isValid &&
-                    device.TryGetFeatureValue(CommonUsages.primary2DAxis, out stick) &&
-                    Mathf.Abs(stick.y) > 0.2f)
-                {
-                    vertical = stick.y;
-                    return true;
-                }
-            }
-            return false;
-        }
     }
 }
