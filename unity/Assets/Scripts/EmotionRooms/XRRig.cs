@@ -90,6 +90,7 @@ namespace EmotionRooms
 
         public bool HeadsetPresent { get; private set; }
 
+        XRPoseDriver headDriver;
         XRPoseDriver pointerDriver;
         static readonly List<XRDisplaySubsystem> displays = new List<XRDisplaySubsystem>();
 
@@ -118,15 +119,17 @@ namespace EmotionRooms
             anchor.rotation = headCamera.transform.rotation;
             headCamera.transform.SetParent(anchor, true);
 
-            // NOTHING drives the camera here.
+            // The camera IS driven here, deliberately.
             //
-            // Unity's XR system already applies the head pose to the main camera every
-            // frame when a display is running. Adding a pose driver on top of that meant
-            // two writers fighting over one transform: the view stopped responding to
-            // head movement, and camera.transform.position became a value nobody could
-            // rely on -- which is why the affect grid, placed relative to the camera,
-            // ended up somewhere the participant was not looking. The camera only needs
-            // a parent at floor level; XR does the rest.
+            // With the plain OpenXR plugin and no pose driver, nothing moves the camera:
+            // the engine renders stereo from a static pose, so the world turns with the
+            // head and looking around shows the same wall forever. Removing this driver
+            // (on the theory that Unity applied the head pose itself) is exactly what
+            // produced that. Unity only auto-drives the camera through a TrackedPoseDriver
+            // component, which comes from packages this project deliberately does not use.
+            headDriver = headCamera.gameObject.AddComponent<XRPoseDriver>();
+            headDriver.node = XRNode.CenterEye;
+            headDriver.origin = anchor;
 
             var hand = new GameObject("Pointer").transform;
             hand.SetParent(anchor, false);

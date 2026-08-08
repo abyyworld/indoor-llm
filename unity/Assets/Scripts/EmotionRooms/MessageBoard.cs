@@ -28,8 +28,9 @@ namespace EmotionRooms
             board.SetParent(transform, false);
 
             text = board.gameObject.AddComponent<TextMesh>();
-            text.characterSize = 0.05f;
+            // Same sizing rule as WorldLabel: characterSize is not metres. 0.045 m lines.
             text.fontSize = 96;
+            text.characterSize = 0.045f * 10f / text.fontSize;
             text.anchor = TextAnchor.MiddleCenter;
             text.alignment = TextAlignment.Center;
             text.color = new Color(0.96f, 0.96f, 0.98f);

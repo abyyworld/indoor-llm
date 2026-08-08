@@ -35,8 +35,12 @@ namespace EmotionRooms
 
             var mesh = go.AddComponent<TextMesh>();
             mesh.text = text;
-            mesh.characterSize = height;
+            // TextMesh's characterSize is not a height: rendered line height is roughly
+            // characterSize * fontSize / 10. Passing metres straight into characterSize
+            // made every label ten times too large -- half-metre letters filling the
+            // room. Solve for characterSize so `height` really is metres.
             mesh.fontSize = 96;
+            mesh.characterSize = height * 10f / mesh.fontSize;
             mesh.anchor = anchor;
             mesh.alignment = TextAlignment.Center;
             mesh.color = new Color(0.97f, 0.97f, 0.99f);
