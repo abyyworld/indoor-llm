@@ -314,9 +314,13 @@ namespace EmotionRooms.EditorTools
                               TextAnchor.MiddleRight);
             WorldLabel.Attach(labels, "pleasant", 0.028f, new Vector3(0.62f, 0f, 0f),
                               TextAnchor.MiddleLeft);
+            // Russell, Weiss and Mendelsohn's own anchors for the arousal axis. The
+            // bottom one said "calm", which collided with calm being one of the four
+            // target emotions -- a participant read the axis as describing the room
+            // ("obviously it's calm, there's no horror") rather than their own state.
             WorldLabel.Attach(labels, "worked up", 0.028f, new Vector3(0f, 0.58f, 0f),
                               TextAnchor.LowerCenter);
-            WorldLabel.Attach(labels, "calm", 0.028f, new Vector3(0f, -0.58f, 0f),
+            WorldLabel.Attach(labels, "sleepy", 0.028f, new Vector3(0f, -0.58f, 0f),
                               TextAnchor.UpperCenter);
             grid.labels = labels.gameObject;
             // Hidden until the grid is shown. Saved active, the four axis words floated

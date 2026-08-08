@@ -181,8 +181,10 @@ namespace EmotionRooms
 
             var floorVerts = new List<Vector3> { Vector3.zero };
             var floorTris = new List<int>();
+            var floorUvs = new List<Vector2> { Vector2.zero };
             var ceilVerts = new List<Vector3> { new Vector3(0, height, 0) };
             var ceilTris = new List<int>();
+            var ceilUvs = new List<Vector2> { Vector2.zero };
 
             // Sweep 0..pi so the arc runs from the right springline round to the left.
             for (int i = 0; i <= VaultSegments; i++)
@@ -199,6 +201,10 @@ namespace EmotionRooms
 
                 floorVerts.Add(new Vector3(x, 0f, z));
                 ceilVerts.Add(new Vector3(x, height, z));
+                // Planar map in metres, same scale as every wall, so the caps carry the
+                // same grain instead of a single smeared texel that read as an opening.
+                floorUvs.Add(new Vector2(x, z));
+                ceilUvs.Add(new Vector2(x, z));
 
                 if (i < VaultSegments)
                 {
@@ -215,8 +221,8 @@ namespace EmotionRooms
             }
 
             AddMesh(go, "Vault Wall", wallVerts, wallTris, wallUvs);
-            AddMesh(go, "Vault Floor", floorVerts, floorTris, null);
-            AddMesh(go, "Vault Ceiling", ceilVerts, ceilTris, null);
+            AddMesh(go, "Vault Floor", floorVerts, floorTris, floorUvs);
+            AddMesh(go, "Vault Ceiling", ceilVerts, ceilTris, ceilUvs);
             return go;
         }
 
@@ -243,13 +249,70 @@ namespace EmotionRooms
 
         static void AddSurface(GameObject parent, string name, Vector3 centre, Vector3 size)
         {
-            var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            go.name = name;
+            // A generated slab, not a scaled cube. The built-in cube maps each face
+            // 0..1, so the same texture rendered on a 4.2 m wall and a 2.2 m wall had
+            // visibly different grain -- one room, three sampling scales, and a
+            // participant flagged the walls as "non-uniform material", which for a
+            // study manipulating material type is a confound rather than a nitpick.
+            // These UVs are in metres, matching the vault wall and caps, so every
+            // surface in both shells shows the material at the same world scale.
+            var go = new GameObject(name);
             go.transform.SetParent(parent.transform, false);
             go.transform.localPosition = centre;
-            go.transform.localScale = size;
-            go.GetComponent<Renderer>().sharedMaterial = DefaultSurface();
+
+            var mesh = SlabMesh(size);
+            go.AddComponent<MeshFilter>().sharedMesh = mesh;
+            var renderer = go.AddComponent<MeshRenderer>();
+            renderer.sharedMaterial = DefaultSurface();
+            go.AddComponent<BoxCollider>().size = size;
             go.AddComponent<TintableSurface>();
+        }
+
+        /// <summary>A box with planar per-face UVs scaled in metres.</summary>
+        static Mesh SlabMesh(Vector3 size)
+        {
+            var mesh = new Mesh { name = "Slab " + size.ToString() };
+            var half = size / 2f;
+
+            var verts = new List<Vector3>();
+            var uvs = new List<Vector2>();
+            var tris = new List<int>();
+
+            // Each face: outward normal n, and the face's two in-plane axes u/v whose
+            // world lengths give the UV extents.
+            AddFace(verts, uvs, tris, new Vector3(0, 0, -half.z), Vector3.right * half.x, Vector3.up * half.y);
+            AddFace(verts, uvs, tris, new Vector3(0, 0, half.z), Vector3.left * half.x, Vector3.up * half.y);
+            AddFace(verts, uvs, tris, new Vector3(-half.x, 0, 0), Vector3.forward * half.z, Vector3.up * half.y);
+            AddFace(verts, uvs, tris, new Vector3(half.x, 0, 0), Vector3.back * half.z, Vector3.up * half.y);
+            AddFace(verts, uvs, tris, new Vector3(0, half.y, 0), Vector3.right * half.x, Vector3.forward * half.z);
+            AddFace(verts, uvs, tris, new Vector3(0, -half.y, 0), Vector3.right * half.x, Vector3.back * half.z);
+
+            mesh.SetVertices(verts);
+            mesh.SetUVs(0, uvs);
+            mesh.SetTriangles(tris, 0);
+            mesh.RecalculateNormals();
+            mesh.RecalculateBounds();
+            return mesh;
+        }
+
+        static void AddFace(List<Vector3> verts, List<Vector2> uvs, List<int> tris,
+                            Vector3 centre, Vector3 uAxis, Vector3 vAxis)
+        {
+            int b = verts.Count;
+            verts.Add(centre - uAxis - vAxis);
+            verts.Add(centre - uAxis + vAxis);
+            verts.Add(centre + uAxis + vAxis);
+            verts.Add(centre + uAxis - vAxis);
+
+            float uLen = uAxis.magnitude * 2f, vLen = vAxis.magnitude * 2f;
+            uvs.Add(new Vector2(0, 0));
+            uvs.Add(new Vector2(0, vLen));
+            uvs.Add(new Vector2(uLen, vLen));
+            uvs.Add(new Vector2(uLen, 0));
+
+            // Front face is the clockwise side seen from outside along the normal
+            // (u cross v). The vault wall's winding bug is the cautionary tale here.
+            tris.AddRange(new[] { b, b + 1, b + 2, b, b + 2, b + 3 });
         }
 
         /// <summary>
