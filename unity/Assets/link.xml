@@ -16,14 +16,4 @@
 <linker>
   <assembly fullname="Assembly-CSharp" preserve="all"/>
 
-  <!-- Engine classes created only from code. The rating stage builds its floor with
-       CreatePrimitive(Cylinder), which attaches a CapsuleCollider; nothing in the saved
-       scene carries one, so engine stripping removed the class and every cylinder logged
-       "Can't add component because class 'CapsuleCollider' doesn't exist" at runtime.
-       Harmless there because the collider is destroyed anyway, but preserved so a future
-       primitive that does want its collider gets it. -->
-  <assembly fullname="UnityEngine.PhysicsModule">
-    <type fullname="UnityEngine.CapsuleCollider" preserve="all"/>
-    <type fullname="UnityEngine.MeshCollider" preserve="all"/>
-  </assembly>
 </linker>

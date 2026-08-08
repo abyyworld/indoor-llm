@@ -158,19 +158,15 @@ namespace EmotionRooms
             {
                 for (int a = 1; a <= cells; a++)
                 {
-                    var tile = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                    tile.name = "Cell " + v.ToString() + "," + a.ToString();
-                    tile.transform.SetParent(transform, false);
+                    var tile = WorldLabel.Solid("Cube.fbx",
+                        "Cell " + v.ToString() + "," + a.ToString(), transform);
                     // A little smaller than the cell, so the gaps draw the lattice.
                     tile.transform.localScale = new Vector3(span * 0.88f, span * 0.88f, 0.04f);
                     tile.transform.localPosition = new Vector3(
                         (v - 0.5f) * span - 0.5f, (a - 0.5f) * span - 0.5f, -0.03f);
 
-                    // The grid's own BoxCollider resolves the ray. A collider per tile
-                    // would just be 81 more things for the pointer to catch on.
-                    var collider = tile.GetComponent<Collider>();
-                    if (collider != null) Destroy(collider);
-
+                    // No collider on a tile, by construction: the grid's own BoxCollider
+                    // resolves the ray, and 81 tile colliders would only catch the pointer.
                     var renderer = tile.GetComponent<Renderer>();
                     if (renderer != null && shader != null)
                         renderer.material = new Material(shader) { color = Idle };

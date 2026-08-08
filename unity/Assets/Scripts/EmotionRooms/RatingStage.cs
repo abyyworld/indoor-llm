@@ -52,23 +52,18 @@ namespace EmotionRooms
         {
             var shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
 
-            var floor = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            floor.name = "Rating Floor";
-            floor.transform.SetParent(transform, false);
+            // Built-in meshes, no CreatePrimitive: see WorldLabel.Solid. Colliders were
+            // never wanted here -- locomotion is bounded by Locomotion.Clamp, and a
+            // collider would only give the pointer something to hit in front of the grid.
+            var floor = WorldLabel.Solid("New-Cylinder.fbx", "Rating Floor", transform);
             floor.transform.localScale = new Vector3(radius * 2f, 0.05f, radius * 2f);
             floor.transform.localPosition = new Vector3(0f, -0.025f, 0f);
             Paint(floor, shader, Ground);
-            // No collider: locomotion is bounded by Locomotion.Clamp, and a collider here
-            // would only give the pointer something else to hit in front of the grid.
-            Strip(floor);
 
-            var wall = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            wall.name = "Rating Surround";
-            wall.transform.SetParent(transform, false);
+            var wall = WorldLabel.Solid("New-Cylinder.fbx", "Rating Surround", transform);
             wall.transform.localScale = new Vector3(radius * 2.4f, wallHeight * 0.5f, radius * 2.4f);
             wall.transform.localPosition = new Vector3(0f, wallHeight * 0.5f, 0f);
             Paint(wall, shader, Surround);
-            Strip(wall);
             // Seen from the inside, so the outward-facing hull has to be flipped.
             Invert(wall);
 
@@ -94,12 +89,6 @@ namespace EmotionRooms
             if (material.HasProperty("_Smoothness")) material.SetFloat("_Smoothness", 0.05f);
             if (material.HasProperty("_Glossiness")) material.SetFloat("_Glossiness", 0.05f);
             renderer.sharedMaterial = material;
-        }
-
-        static void Strip(GameObject target)
-        {
-            var collider = target.GetComponent<Collider>();
-            if (collider != null) DestroyImmediate(collider);
         }
 
         static void Invert(GameObject target)

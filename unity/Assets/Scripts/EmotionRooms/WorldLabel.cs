@@ -15,6 +15,30 @@ namespace EmotionRooms
 {
     public static class WorldLabel
     {
+        /// <summary>
+        /// A mesh object built without GameObject.CreatePrimitive.
+        ///
+        /// CreatePrimitive attaches a collider, and the collider class is whatever the
+        /// primitive implies -- a Cylinder wants a CapsuleCollider. With engine stripping
+        /// on, a collider class nothing in the saved scene uses is stripped from the
+        /// build, and every such primitive logs an error at spawn. Preserving the class
+        /// through link.xml turned out worse: builds carrying that preserve died during
+        /// scene load. So runtime construction takes the mesh directly from the built-in
+        /// resources and attaches no collider at all -- every caller here was destroying
+        /// the collider anyway.
+        /// </summary>
+        public static GameObject Solid(string meshResource, string name, Transform parent)
+        {
+            var go = new GameObject(name);
+            if (parent != null) go.transform.SetParent(parent, false);
+
+            var filter = go.AddComponent<MeshFilter>();
+            filter.sharedMesh = Resources.GetBuiltinResource<Mesh>(meshResource);
+            go.AddComponent<MeshRenderer>();
+            return go;
+        }
+
+
         /// <summary>Attach text to a transform, sized in metres of character height.</summary>
         public static TextMesh Attach(Transform parent, string text, float height = 0.05f,
                                       Vector3 offset = default(Vector3),
