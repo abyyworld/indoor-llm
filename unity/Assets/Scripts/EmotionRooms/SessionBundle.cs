@@ -39,6 +39,11 @@ namespace EmotionRooms
             Collect(rows, columns, Path.Combine(dir, "rationale_responses.csv"), "rationale", participant);
             Collect(rows, columns, Path.Combine(dir, "consent_log.csv"), "consent", participant);
 
+            // Event logs come in; telemetry stays out. The 20 Hz stream turned one
+            // participant's bundle into 108 MB of padded columns while its own file
+            // was 2.5 MB -- the wide format multiplies continuous streams. Telemetry
+            // and the raw event files sit next to the bundle for anyone who wants
+            // them; the bundle is the analysis-grade join, not an archive format.
             string logs = Path.Combine(dir, "logs");
             if (Directory.Exists(logs))
             {
@@ -46,8 +51,8 @@ namespace EmotionRooms
                 {
                     string name = Path.GetFileName(path);
                     if (!name.Contains(participant)) continue;
-                    Collect(rows, columns, path,
-                        name.Contains("telemetry") ? "telemetry" : "event", null);
+                    if (name.Contains("telemetry")) continue;
+                    Collect(rows, columns, path, "event", null);
                 }
             }
 

@@ -31,3 +31,7 @@ runs/study-key.pem
 
 # Unity native-build temp: machine-specific absolute paths baked in, never committed
 unity/.utmp/
+
+# Compiled builds never belong in the repo
+*.app/
+unity/*.app/

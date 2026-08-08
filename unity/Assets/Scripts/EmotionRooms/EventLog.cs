@@ -45,13 +45,7 @@ namespace EmotionRooms
                  "logging entirely.")]
         public Transform headTransform;
 
-        [Tooltip("Samples per second. 10 is plenty for 'where were they looking' and " +
-                 "keeps the file readable; raise it if you want motion detail.")]
-        public float poseSampleHz = 10f;
 
-        [Tooltip("Also write a row when the head moves more than this many degrees " +
-                 "between samples, so a fast turn is not lost between ticks.")]
-        public float poseChangeDegrees = 5f;
 
         [Header("Robustness")]
         [Tooltip("Flush to disk every this many rows. Lower is safer, higher is faster.")]
@@ -64,9 +58,6 @@ namespace EmotionRooms
         float sessionStart;
         int sequence;
         int sinceFlush;
-        float nextPoseSample;
-        Quaternion lastPoseRotation;
-        bool havePose;
 
         static readonly string[] Columns =
         {
@@ -172,24 +163,10 @@ namespace EmotionRooms
                 openedFor = participantId;
             }
 
-            if (writer == null || headTransform == null || poseSampleHz <= 0f) return;
-
-            bool due = Time.realtimeSinceStartup >= nextPoseSample;
-            bool moved = havePose &&
-                         Quaternion.Angle(lastPoseRotation, headTransform.rotation) >= poseChangeDegrees;
-
-            if (!due && !moved) return;
-
-            nextPoseSample = Time.realtimeSinceStartup + (1f / poseSampleHz);
-            lastPoseRotation = headTransform.rotation;
-            havePose = true;
-
-            var row = NewRow("head_pose", moved && !due ? "change" : "sample");
-            Vector3 p = headTransform.position;
-            Vector3 e = headTransform.rotation.eulerAngles;
-            row["head_x"] = F(p.x); row["head_y"] = F(p.y); row["head_z"] = F(p.z);
-            row["head_yaw"] = F(e.y); row["head_pitch"] = F(e.x); row["head_roll"] = F(e.z);
-            Commit(row);
+            // No periodic head_pose rows. They were 4,170 rows of one pilot session,
+            // and every one duplicated the 20 Hz telemetry stream, which is the pose
+            // record. This file logs EVENTS, each already stamped with the pose at the
+            // moment it happened; continuous motion belongs to telemetry alone.
         }
 
         // ------------------------------------------------------------------ context

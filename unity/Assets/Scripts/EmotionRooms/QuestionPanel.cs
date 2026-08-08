@@ -151,10 +151,18 @@ namespace EmotionRooms
                 SetTint(hit, true);
             highlighted = hit;
 
-            if (events != null)
-                events.WriteValues("panel_hover", name, hit != null ? hit.name : "",
-                    Elapsed());
+            // Only landings on a real target, at most one row per 150 ms. The ray
+            // crossing a cell border jitters hover on and off many times a second and
+            // wrote thousands of rows that said nothing the next row did not.
+            if (events != null && hit != null &&
+                Time.time - lastHoverLogged >= 0.15f)
+            {
+                lastHoverLogged = Time.time;
+                events.WriteValues("panel_hover", name, hit.name, Elapsed());
+            }
         }
+
+        float lastHoverLogged;
 
         string Elapsed()
         {
