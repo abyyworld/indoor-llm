@@ -353,6 +353,30 @@ namespace EmotionRooms.EditorTools
         const string MaterialFolder = "Assets/EmotionRooms/Materials";
 
         /// <summary>
+        /// Delete the numbered duplicates left by every previous run.
+        ///
+        /// Anything matching "name N.mat" was minted by the old unique-path behaviour
+        /// and is referenced by nothing: the scene is rebuilt from scratch on the same
+        /// pass that calls this. Left alone they accumulate forever and inflate every
+        /// build's shared assets.
+        /// </summary>
+        static void SweepOrphanedMaterials()
+        {
+            if (!Directory.Exists(MaterialFolder)) return;
+
+            int removed = 0;
+            foreach (var file in Directory.GetFiles(MaterialFolder, "*.mat"))
+            {
+                var name = Path.GetFileNameWithoutExtension(file);
+                if (!System.Text.RegularExpressions.Regex.IsMatch(name, @" \d+$")) continue;
+                if (AssetDatabase.DeleteAsset(file.Replace('\\', '/'))) removed++;
+            }
+            if (removed > 0)
+                Debug.Log("Emotion Rooms: swept " + removed + " duplicate material assets " +
+                          "left by earlier runs.");
+        }
+
+        /// <summary>
         /// Replace every runtime-created material with a saved .mat asset.
         ///
         /// RoomBuilder builds materials with `new Material(...)`, which is correct for a
@@ -369,6 +393,7 @@ namespace EmotionRooms.EditorTools
         static void PersistMaterials(GameObject subject)
         {
             Directory.CreateDirectory(MaterialFolder);
+            SweepOrphanedMaterials();
 
             var byName = new System.Collections.Generic.Dictionary<string, Material>();
             foreach (var renderer in subject.GetComponentsInChildren<Renderer>(true))
@@ -383,10 +408,33 @@ namespace EmotionRooms.EditorTools
                     Material asset;
                     if (!byName.TryGetValue(material.name, out asset))
                     {
-                        string path = AssetDatabase.GenerateUniqueAssetPath(
-                            MaterialFolder + "/" + Sanitise(material.name) + ".mat");
-                        asset = new Material(material);
-                        AssetDatabase.CreateAsset(asset, path);
+                        // Fixed path, never GenerateUniqueAssetPath.
+                        //
+                        // The unique-path call is why this folder reached 2,966 assets:
+                        // scene setup runs on every install, and each run minted "0 1",
+                        // "0 2", ... "0 61" rather than reusing the material it wrote
+                        // last time. Nothing referenced the old ones and nothing deleted
+                        // them, so every build shipped a slightly larger sharedassets
+                        // file -- and once that file is split into 1 MB parts, a string
+                        // read landing across a part boundary is the OutOfBoundsError
+                        // that has been killing builds at load. That also explains why
+                        // deleting arbitrary objects appeared to "fix" it: shifting the
+                        // layout moved the string off the boundary, until the next build
+                        // grew it back over.
+                        string path = MaterialFolder + "/" + Sanitise(material.name) + ".mat";
+                        asset = AssetDatabase.LoadAssetAtPath<Material>(path);
+                        if (asset != null)
+                        {
+                            // Reuse in place: the GUID survives, so anything already
+                            // pointing at this material keeps pointing at it.
+                            asset.CopyPropertiesFromMaterial(material);
+                            EditorUtility.SetDirty(asset);
+                        }
+                        else
+                        {
+                            asset = new Material(material);
+                            AssetDatabase.CreateAsset(asset, path);
+                        }
                         byName[material.name] = asset;
                     }
                     slots[i] = asset;

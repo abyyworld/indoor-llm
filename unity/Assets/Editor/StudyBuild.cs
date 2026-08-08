@@ -406,6 +406,27 @@ namespace EmotionRooms.EditorTools
         /// app serves. Asked of the device rather than guessed: it is on the same network
         /// as the laptop but not at a predictable address.
         /// </summary>
+        /// <summary>Whether the study package exists on the connected headset.</summary>
+        public static bool IsInstalled()
+        {
+            return Run("shell pm list packages " + Package).Contains(Package);
+        }
+
+        /// <summary>
+        /// Start the app unless it is already running. Quiet by design: the panel calls
+        /// this on its probe cadence, and a launch that is already satisfied should not
+        /// say anything.
+        /// </summary>
+        public static void RelaunchIfNotRunning()
+        {
+            if (!string.IsNullOrEmpty(Run("shell pidof " + Package).Trim())) return;
+
+            string activity = Resolve();
+            if (activity == null) return;
+            Run("shell am start -n " + Package + "/" + activity);
+            Debug.Log("Study: app was not running; relaunched it on the headset.");
+        }
+
         public static string HeadsetAddress()
         {
             string adb = AdbPath();

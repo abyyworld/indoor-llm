@@ -99,6 +99,31 @@ namespace EmotionRooms.EditorTools
                     state => { headsetApp = state; Repaint(); });
             else
                 headsetApp = null;
+
+            ReviveIfDead();
+        }
+
+        double revivedAt;
+
+        /// <summary>
+        /// Relaunch the app when it is installed but not running.
+        ///
+        /// An idle headset sleeps and the OS kills the immersive app, so the sequence
+        /// "press Install, hand the headset over, wait for the panel" kept dying in the
+        /// gap: by the time the participant had it on, the app the install launched was
+        /// gone, and the panel could only report that truthfully and sit there. The
+        /// panel is the thing that knows; it should act. Twenty-second cooldown so a
+        /// headset that is genuinely asleep is not spammed with launch intents.
+        /// </summary>
+        void ReviveIfDead()
+        {
+            if (headsetApp != null) return;                        // reachable, nothing to do
+            if (cachedDevices.Length == 0) return;                 // no adb, cannot help
+            if (EditorApplication.timeSinceStartup - revivedAt < 20.0) return;
+            if (!StudyBuild.IsInstalled()) return;
+
+            revivedAt = EditorApplication.timeSinceStartup;
+            StudyBuild.RelaunchIfNotRunning();
         }
 
         void OnInspectorUpdate()
