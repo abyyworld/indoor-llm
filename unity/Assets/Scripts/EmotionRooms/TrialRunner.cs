@@ -176,10 +176,14 @@ namespace EmotionRooms
         /// <summary>Show that the answer landed, then move on.</summary>
         System.Collections.IEnumerator AcknowledgeAndContinue(int index)
         {
-            bool last = session != null && session.rooms != null && index + 1 >= session.rooms.Length;
+            // Trial indices arrive 1-based (RunSession passes i + 1), so the last room
+            // is index == Length, not index + 1 >= Length. The old check made the final
+            // TWO rooms both claim to be last. Practice indices are negative and can
+            // never trip it.
+            bool last = session != null && session.rooms != null && index >= session.rooms.Length;
 
             if (message != null)
-                message.Show(last ? "Answer recorded.\n\nThat was the last room."
+                message.Show(last ? "Answer recorded.\n\nThat is the end of this part."
                                   : "Answer recorded.\n\nThe next room is coming up.");
             if (events != null) events.Write("answer_acknowledged", "trial " + index.ToString());
 

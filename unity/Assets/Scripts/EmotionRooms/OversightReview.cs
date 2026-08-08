@@ -463,9 +463,16 @@ namespace EmotionRooms
             detectionAnswered = false;
             if (detectionPanel != null)
                 // Wording and the yes/no mapping in StudyBootstrap.OnDetectionAnswered
-                // are a pair: yes must always mean "changed", i.e. detected.
-                detectionPanel.Show("Designed to convey: " + trial.target_emotion_shown +
-                                    ".\nHas this room been changed from its design?");
+                // are a pair: yes must always mean "altered", i.e. detected.
+                //
+                // The question restates the frame every trial rather than leaning on the
+                // one-off briefing: "has this room been changed?" read as "changed since
+                // the previous room / since the first half", which on the very first
+                // room has no answer at all and confused everyone it was shown to.
+                detectionPanel.Show("The system designed this room to feel: " +
+                                    trial.target_emotion_shown + ".\n" +
+                                    "About half the rooms had one setting secretly altered.\n" +
+                                    "Was this room altered?");
             if (telemetry != null) { telemetry.SetReviewSegment(true, false, false); telemetry.Mark("detection_shown"); }
             if (events != null) events.Write("detection_shown", null);
             while (!detectionAnswered) yield return null;

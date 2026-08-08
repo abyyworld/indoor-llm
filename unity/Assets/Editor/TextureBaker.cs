@@ -120,8 +120,14 @@ namespace EmotionRooms.EditorTools
                     float across = warp ? (x % Thread) / (float)Thread : (y % Thread) / (float)Thread;
                     float round = Mathf.Sin(across * Mathf.PI);          // yarn is round
                     float slub = Fbm(x * 0.05f, y * 0.05f, 2, 404);
-                    float v = 0.66f + round * 0.16f + (slub - 0.5f) * 0.09f;
-                    if (!warp) v -= 0.04f;                                // weft sits lower
+                    // Contrast doubled 8 Aug 2026: at the old amplitude a pilot standing
+                    // in a textile room read it as paint. Half the textile rooms are the
+                    // dim ones, and a weave that vanishes below 300 lux means the
+                    // material variable is manipulated in the data and invisible in the
+                    // headset. The mean stays at 0.66 so material does not smuggle in a
+                    // brightness difference.
+                    float v = 0.66f + round * 0.30f + (slub - 0.5f) * 0.12f;
+                    if (!warp) v -= 0.08f;                                // weft sits lower
                     Set(pixels, x, y, v);
                 }
         }
