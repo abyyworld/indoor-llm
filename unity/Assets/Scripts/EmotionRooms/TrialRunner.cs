@@ -171,6 +171,7 @@ namespace EmotionRooms
         /// <summary>Hold on the neutral stage until the participant asks for the next room.</summary>
         System.Collections.IEnumerator WaitForNextRoom(int index)
         {
+            EnsureNextButton();
             if (nextButton == null) yield break;
 
             bool advance = false;
@@ -196,6 +197,16 @@ namespace EmotionRooms
             if (events != null)
                 events.WriteValues("next_room", ((long)((Time.time - waitedFrom) * 1000f)).ToString(),
                     null, "participant-paced break between rooms");
+        }
+
+        /// <summary>Built on first use rather than saved in the scene. See WorldButton.Create.</summary>
+        void EnsureNextButton()
+        {
+            if (nextButton != null) return;
+
+            var host = new GameObject("Next Room");
+            nextButton = WorldButton.Create(host.transform, "Next Room Button", "Next room",
+                                            Vector3.zero, 0.55f, 0.16f);
         }
 
         /// <summary>Put a button where it can be seen and pointed at, level with the eye.</summary>

@@ -24,6 +24,47 @@ namespace EmotionRooms
 
         public bool IsShowing { get; private set; }
 
+        /// <summary>
+        /// Build a button in code rather than in the scene.
+        ///
+        /// Everything here used to be created by scene setup and serialized into the
+        /// scene file. The built player reads that file positionally -- it carries no
+        /// type tree -- so every new component in it is another chance for the data and
+        /// the shipped layout to disagree, and when they do the player dies during scene
+        /// load with no managed exception and nothing in the log. XRRig already builds
+        /// its rig and pointer this way for the same reason. Nothing that can be built at
+        /// runtime should be sitting in the scene file.
+        /// </summary>
+        public static WorldButton Create(Transform parent, string name, string caption,
+                                         Vector3 localPosition, float width, float height)
+        {
+            var slab = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            slab.name = name;
+            slab.transform.SetParent(parent, false);
+            slab.transform.localPosition = localPosition;
+            slab.transform.localScale = new Vector3(width, height, 0.02f);
+
+            var box = slab.GetComponent<BoxCollider>();
+            if (box != null) box.isTrigger = true;
+
+            var shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
+            var renderer = slab.GetComponent<Renderer>();
+            if (renderer != null && shader != null)
+                renderer.material = new Material(shader) { name = name, color = Idle };
+
+            // Beside the slab, not inside it: the slab is scaled to a wide flat box and
+            // text parented to it would inherit that stretch.
+            var text = new GameObject(name + " Label").transform;
+            text.SetParent(parent, false);
+            text.localPosition = localPosition + new Vector3(0f, 0f, -0.02f);
+            text.localRotation = Quaternion.identity;
+            WorldLabel.Attach(text, caption, height * 0.45f, Vector3.zero, TextAnchor.MiddleCenter);
+
+            var button = slab.AddComponent<WorldButton>();
+            button.label = text.gameObject;
+            return button;
+        }
+
         Collider area;
         Renderer face;
         float shownAt;

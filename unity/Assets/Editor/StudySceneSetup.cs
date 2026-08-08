@@ -52,8 +52,6 @@ namespace EmotionRooms.EditorTools
             var camera = SetUpCamera(root);
             var light = SetUpLight(root);
             var grid = SetUpGrid(root, camera);
-            var nextButton = SetUpNextButton(root);
-            var stage = SetUpRatingStage(root);
             var wallRenderers = CollectTintables(rooms);
 
             var loader = root.AddComponent<RoomLoader>();
@@ -62,7 +60,6 @@ namespace EmotionRooms.EditorTools
             loader.linearRoomRoot = FindChild(rooms, "Linear Room Root");
             loader.curvedRoomRoot = FindChild(rooms, "Curved Room Root");
             loader.loadOnStart = false;
-            loader.ratingStage = stage;
             loader.wallTextures = BuildTextureTable();
             // Placeholders. Tune in the headset and record what you settle on: the lux to
             // intensity mapping is a study parameter, not a rendering detail.
@@ -83,7 +80,6 @@ namespace EmotionRooms.EditorTools
             var runner = root.AddComponent<TrialRunner>();
             runner.loader = loader;
             runner.grid = grid;
-            runner.nextButton = nextButton;
             runner.events = events;
             runner.sessionFileName = "session.json";
             runner.telemetry = telemetry;
@@ -256,28 +252,6 @@ namespace EmotionRooms.EditorTools
             return light;
         }
 
-        /// <summary>Neutral ground for the rating step, so it does not happen in a void.</summary>
-        static RatingStage SetUpRatingStage(GameObject root)
-        {
-            var host = new GameObject("Rating Stage");
-            host.transform.SetParent(root.transform, false);
-            host.transform.position = new Vector3(0f, RoomDimensions.StandingPosition.y, 0f);
-
-            var stage = host.AddComponent<RatingStage>();
-            host.SetActive(false);
-            return stage;
-        }
-
-        /// <summary>The between-rooms advance, placed in front of the viewer when shown.</summary>
-        static WorldButton SetUpNextButton(GameObject root)
-        {
-            var host = new GameObject("Next Room");
-            host.transform.SetParent(root.transform, false);
-
-            return MakeButton(host.transform, "Next Room Button", "Next room",
-                              Vector3.zero, 0.55f, 0.16f);
-        }
-
         static AffectGrid SetUpGrid(GameObject root, Camera camera)
         {
             var quad = GameObject.CreatePrimitive(PrimitiveType.Quad);
@@ -340,48 +314,8 @@ namespace EmotionRooms.EditorTools
             grid.hoverMarker = Marker(quad, "Hover Marker", new Color(1f, 1f, 1f, 0.9f), 0.05f);
             grid.selectionMarker = Marker(quad, "Selection Marker", new Color(0.2f, 0.9f, 0.3f), 0.07f);
 
-            // Confirm sits below the grid, parented to the labels so it travels with the
-            // grid when the grid places itself in front of the viewer.
-            grid.confirmButton = MakeButton(labels, "Confirm Button", "Done",
-                                            new Vector3(0f, -0.75f, 0f), 0.42f, 0.13f);
-
             quad.SetActive(false);   // shown only when a response is wanted
             return grid;
-        }
-
-        /// <summary>
-        /// A labelled slab with a collider, pressed by pointing and squeezing the trigger.
-        ///
-        /// Deliberately large. It is aimed at from a metre away with a hand-held ray, and
-        /// a button that needs a steady hand is a button that fails at the end of a
-        /// session rather than at the start of one.
-        /// </summary>
-        static WorldButton MakeButton(Transform parent, string name, string caption,
-                                      Vector3 localPosition, float width, float height)
-        {
-            var slab = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            slab.name = name;
-            slab.transform.SetParent(parent, false);
-            slab.transform.localPosition = localPosition;
-            slab.transform.localScale = new Vector3(width, height, 0.02f);
-
-            var box = slab.GetComponent<BoxCollider>();
-            box.isTrigger = true;
-
-            var material = new Material(DefaultShader()) { name = name };
-            material.color = new Color(0.22f, 0.42f, 0.65f);
-            slab.GetComponent<Renderer>().sharedMaterial = material;
-
-            // Parented to the slab's parent, not the slab: the slab is scaled to a wide
-            // thin box and text inside it would inherit that stretch.
-            var text = new GameObject(name + " Label").transform;
-            text.SetParent(parent, false);
-            text.localPosition = localPosition + new Vector3(0f, 0f, -0.02f);
-            WorldLabel.Attach(text, caption, height * 0.45f, Vector3.zero, TextAnchor.MiddleCenter);
-
-            var button = slab.AddComponent<WorldButton>();
-            button.label = text.gameObject;
-            return button;
         }
 
         const string MaterialFolder = "Assets/EmotionRooms/Materials";
@@ -706,20 +640,11 @@ namespace EmotionRooms.EditorTools
                     problems.Add("RoomLoader is missing a shape root, so shape will not switch");
                 if (loader.wallTextures == null || loader.wallTextures.Length != PoolConstants.Textures.Length)
                     problems.Add("wall texture table does not cover every material in the pool");
-                if (loader.ratingStage == null)
-                    problems.Add("RoomLoader has no rating stage, so hiding the room leaves " +
-                                 "the participant in an empty skybox while they rate it");
             }
 
             var runner = root.GetComponent<TrialRunner>();
             if (runner == null) problems.Add("no TrialRunner");
             else if (runner.grid == null) problems.Add("TrialRunner has no affect grid, so no response can be collected");
-            else if (runner.grid.confirmButton == null)
-                problems.Add("The affect grid has no confirm button, so a rating would " +
-                             "commit the instant the trigger fires and could not be changed");
-            else if (runner.nextButton == null)
-                problems.Add("TrialRunner has no next-room button, so trials would advance " +
-                             "on a timer the participant does not control");
 
             var bootstrap = root.GetComponent<StudyBootstrap>();
             if (bootstrap == null) problems.Add("no StudyBootstrap, so nothing drives grid input");

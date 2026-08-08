@@ -84,16 +84,6 @@ namespace EmotionRooms
             Hide();
         }
 
-        void OnEnable()
-        {
-            if (confirmButton != null) confirmButton.Pressed += OnConfirmPressed;
-        }
-
-        void OnDisable()
-        {
-            if (confirmButton != null) confirmButton.Pressed -= OnConfirmPressed;
-        }
-
         void OnConfirmPressed()
         {
             AffectResponse ignored;
@@ -131,6 +121,7 @@ namespace EmotionRooms
 
         public void Show()
         {
+            EnsureConfirmButton();
             PlaceInFrontOfViewer();
             EnsureVisible();
 
@@ -149,6 +140,25 @@ namespace EmotionRooms
             if (hoverMarker != null) hoverMarker.gameObject.SetActive(true);
             gameObject.SetActive(true);
             if (labels != null) labels.SetActive(true);
+        }
+
+        /// <summary>
+        /// Build the confirm button the first time the grid is shown.
+        ///
+        /// Built here rather than saved in the scene: a serialized MonoBehaviour is one
+        /// more thing the player has to deserialize positionally at load, and one more
+        /// way for a build to die before it starts.
+        /// </summary>
+        void EnsureConfirmButton()
+        {
+            if (confirmButton != null) return;
+
+            var parent = labels != null ? labels.transform : transform.parent;
+            if (parent == null) return;
+
+            confirmButton = WorldButton.Create(parent, "Confirm Button", "Done",
+                                               new Vector3(0f, -0.75f, 0f), 0.42f, 0.13f);
+            confirmButton.Pressed += OnConfirmPressed;
         }
 
         void PlaceInFrontOfViewer()

@@ -166,6 +166,104 @@ namespace EmotionRooms.EditorTools
         }
 
         /// <summary>
+        /// The whole route from source to a running app, as one action.
+        ///
+        /// This used to be five buttons -- install, clean rebuild, launch, allow local
+        /// HTTP, check again -- and four of them were steps this one should have taken
+        /// itself. None of them is a decision anybody wants to make between participants.
+        /// Allowing local HTTP is a one-off permission, launching is what installing is
+        /// for, and whether the build needed to be clean is something the tool can work
+        /// out better than a person can.
+        ///
+        /// It also checks the app is still alive afterwards. An APK that installs and
+        /// then dies during scene load reports "Success" from adb, so without this the
+        /// panel would say it had worked while the headset showed nothing.
+        /// </summary>
+        public static void InstallAndRun()
+        {
+            // The permission the panel needs to talk to the app. Idempotent.
+            XRSetup.AllowLocalHttp();
+
+            // Rebuild clean whenever the scene the player must deserialize has changed
+            // shape. Incremental builds reuse serialized player data, and reusing it
+            // across a change to a serialized field is what makes an app install fine
+            // and then vanish on the loading screen.
+            bool clean = SceneChangedSinceLastBuild();
+            BuildAndDeploy(clean);
+            if (clean) RecordBuiltScene();
+
+            ReportWhetherItActuallyRuns();
+        }
+
+        const string LastBuiltStampKey = "EmotionRooms.LastBuiltSceneStamp";
+
+        static bool SceneChangedSinceLastBuild()
+        {
+            return EditorPrefs.GetInt(LastBuiltStampKey, -1) != StudySceneStamp.Current;
+        }
+
+        static void RecordBuiltScene()
+        {
+            EditorPrefs.SetInt(LastBuiltStampKey, StudySceneStamp.Current);
+        }
+
+        /// <summary>
+        /// Say plainly whether the app survived starting.
+        ///
+        /// adb reports success once the bytes are on the device, which is not the same
+        /// as the app running -- and a player that dies deserializing the scene leaves no
+        /// managed exception and nothing in the Unity log, so silence here would read as
+        /// everything being fine.
+        /// </summary>
+        static void ReportWhetherItActuallyRuns()
+        {
+            System.Threading.Thread.Sleep(6000);
+
+            string pid = Run("shell pidof " + Package).Trim();
+            if (!string.IsNullOrEmpty(pid))
+            {
+                Debug.Log("Study build: installed, launched, and still running on the " +
+                          "headset (pid " + pid + ").");
+                return;
+            }
+
+            string crash = Run("logcat -d -t 400");
+            bool died = crash.Contains("Fatal signal") || crash.Contains("SIGTRAP") ||
+                        crash.Contains("SIGSEGV");
+
+            Debug.LogError("Study build: the app installed and launched, then stopped." +
+                (died ? " It crashed while loading -- the headset log has a native stack." +
+                        " This is not something to fix by launching it again."
+                      : " Put the headset on and try Install again; an idle headset " +
+                        "suspends the app before it finishes starting.") +
+                "\n\nTo capture the stack:  adb logcat -d | grep -A 30 'Fatal signal'");
+        }
+
+        static string Run(string arguments)
+        {
+            var info = new System.Diagnostics.ProcessStartInfo(AdbPath(), arguments)
+            {
+                UseShellExecute = false, RedirectStandardOutput = true,
+                RedirectStandardError = true, CreateNoWindow = true,
+            };
+            try
+            {
+                using (var process = System.Diagnostics.Process.Start(info))
+                {
+                    string output = process.StandardOutput.ReadToEnd() +
+                                    process.StandardError.ReadToEnd();
+                    process.WaitForExit();
+                    return output;
+                }
+            }
+            catch (System.Exception error)
+            {
+                Debug.LogWarning("Study build: adb " + arguments + " failed: " + error.Message);
+                return "";
+            }
+        }
+
+        /// <summary>
         /// Throw away every cached Android build artefact, then build.
         ///
         /// Unity builds the player incrementally, and the scene it writes carries no type

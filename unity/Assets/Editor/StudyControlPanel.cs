@@ -372,29 +372,13 @@ namespace EmotionRooms.EditorTools
                     : "Installed but not running, or the headset is asleep.");
             if (live == 0)
             {
-                EditorGUILayout.BeginHorizontal();
-                if (GUILayout.Button("Install on the headset", GUILayout.Height(26f)))
-                    Later(StudyBuild.BuildAndDeploy);
-                // The one to reach for when a build installs but will not start. Slower,
-                // and the only reliable answer to a player that dies during scene load.
-                if (GUILayout.Button(new GUIContent("Clean rebuild",
-                        "Throws away every cached build artefact first. Several minutes, " +
-                        "but it is what fixes a build that installs and then vanishes on " +
-                        "the loading screen."),
-                        GUILayout.Height(26f), GUILayout.Width(110f)))
-                    Later(StudyBuild.CleanBuildAndDeploy);
-                if (GUILayout.Button("Launch it", GUILayout.Height(26f), GUILayout.Width(90f)))
-                    Later(StudyBuild.LaunchOnHeadset);
-                if (GUILayout.Button("Check again", GUILayout.Height(26f), GUILayout.Width(100f)))
-                    Probe(true);
-                EditorGUILayout.EndHorizontal();
+                // One button, because every one of the others was a step this button
+                // should have taken itself. Rebuilding, allowing local HTTP and launching
+                // are not decisions a researcher should be making between participants;
+                // they are things that have to be true before a session can start.
+                if (GUILayout.Button("Install on the headset", GUILayout.Height(34f)))
+                    Later(() => { StudyBuild.InstallAndRun(); Probe(true); });
 
-                EditorGUILayout.BeginHorizontal();
-                if (GUILayout.Button("Allow local HTTP", GUILayout.Height(22f)))
-                    Later(() => { XRSetup.AllowLocalHttp(); Probe(true); });
-                GUILayout.Label("needed once, so this panel can reach the headset app",
-                    EditorStyles.miniLabel);
-                EditorGUILayout.EndHorizontal();
                 EditorGUILayout.LabelField(
                     "If the headset is asleep, put it on for a moment to wake it.",
                     EditorStyles.wordWrappedMiniLabel);

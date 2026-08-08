@@ -138,7 +138,18 @@ namespace EmotionRooms
         {
             if (linearRoomRoot != null) linearRoomRoot.SetActive(false);
             if (curvedRoomRoot != null) curvedRoomRoot.SetActive(false);
+            EnsureRatingStage();
             if (ratingStage != null) ratingStage.Show();
+        }
+
+        /// <summary>Built on first use rather than saved in the scene. See WorldButton.Create.</summary>
+        void EnsureRatingStage()
+        {
+            if (ratingStage != null) return;
+
+            var host = new GameObject("Rating Stage");
+            host.transform.position = new Vector3(0f, RoomDimensions.StandingPosition.y, 0f);
+            ratingStage = host.AddComponent<RatingStage>();
         }
 
         public void LoadFromJson(string json)
