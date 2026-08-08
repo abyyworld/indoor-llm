@@ -47,6 +47,16 @@ namespace EmotionRooms
         void Awake()
         {
             Instance = this;
+
+            // Keep running when the headset is not being worn.
+            //
+            // Unity pauses an unfocused Android app, and a paused app does not advance
+            // coroutines -- so launching from the laptop while the Quest sits on a desk
+            // left the loading coroutine frozen mid-way and the app showing "loading"
+            // forever. A study app has to survive that: the researcher launches it before
+            // the participant puts it on, and the form server has to keep answering the
+            // laptop while nobody is wearing anything.
+            Application.runInBackground = true;
             if (Ready) return;
             StartCoroutine(LoadAll());
         }

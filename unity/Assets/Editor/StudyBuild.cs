@@ -90,6 +90,10 @@ namespace EmotionRooms.EditorTools
             // rotating player window fights it.
             PlayerSettings.defaultInterfaceOrientation = UIOrientation.LandscapeLeft;
 
+            // Same reason as the runtime flag, set at build time so it holds from the
+            // first frame rather than from whenever Awake happens to run.
+            PlayerSettings.runInBackground = true;
+
             PlayerSettings.SetApplicationIdentifier(android, "com.emotionrooms.study");
             PlayerSettings.productName = "Emotion Rooms";
 
