@@ -310,6 +310,12 @@ namespace EmotionRooms
                              completed.Count + " trials. Data kept.");
         }
 
+        [Tooltip("How long the task briefing stays up before the first review trial.")]
+        public float briefingSeconds = 15f;
+
+        [Tooltip("Where the briefing is drawn. Wired by scene setup.")]
+        public MessageBoard board;
+
         public void BeginBlock()
         {
             if (IsRunning) return;
@@ -338,6 +344,24 @@ namespace EmotionRooms
         IEnumerator RunBlock()
         {
             IsRunning = true;
+
+            // Name the game before the first trial. Without this, participants answered
+            // a different question than the one being scored: "do I agree this looks
+            // depressed?" -- a taste judgment -- instead of "does this room match its
+            // design?" -- an audit. One pilot answered "wrong" nearly every time on
+            // exactly that reading. Stating the base rate is standard for a detection
+            // task and is what separates disagreement with the design, which is not
+            // measured here, from detection of tampering, which is.
+            if (board != null)
+                board.Show("Checking the system's work\n\n" +
+                           "Each room was designed by a system to convey the feeling " +
+                           "named with it.\nIn about half of the rooms, ONE setting was " +
+                           "changed after design.\n\nSay whether each room is as " +
+                           "designed or has been changed.\nYou are not judging whether " +
+                           "the design is good -- only whether\nthe room matches it.");
+            if (events != null) events.Write("review_briefing_shown", null);
+            yield return new WaitForSeconds(briefingSeconds);
+            if (board != null) board.Hide();
             completed.Clear();
 
             for (int i = 0; i < block.trials.Count; i++)
@@ -417,8 +441,10 @@ namespace EmotionRooms
 
             detectionAnswered = false;
             if (detectionPanel != null)
-                detectionPanel.Show("This room was built to feel " + trial.target_emotion_shown +
-                                    ". Does anything about it look wrong for that?");
+                // Wording and the yes/no mapping in StudyBootstrap.OnDetectionAnswered
+                // are a pair: yes must always mean "changed", i.e. detected.
+                detectionPanel.Show("Designed to convey: " + trial.target_emotion_shown +
+                                    ".\nHas this room been changed from its design?");
             if (telemetry != null) { telemetry.SetReviewSegment(true, false, false); telemetry.Mark("detection_shown"); }
             if (events != null) events.Write("detection_shown", null);
             while (!detectionAnswered) yield return null;

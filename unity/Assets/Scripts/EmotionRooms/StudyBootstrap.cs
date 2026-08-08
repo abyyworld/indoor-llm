@@ -546,7 +546,13 @@ namespace EmotionRooms
             }
             if (oversightReview == null) return;
             oversightReview.pendingDetectionConfidence = confidence;
-            oversightReview.CommitDetection(value == "yes" ? false : true);
+            // POLARITY INVARIANT: the detection question asks whether the room HAS BEEN
+            // CHANGED, so yes means detected. This line once read yes -> false -- the
+            // wording and the mapping had drifted apart -- and every detection in the
+            // block would have been recorded inverted: d-prime negative, hits counted
+            // as misses, an entire phase poisoned silently. If the question wording in
+            // OversightReview.RunBlock ever changes, this mapping changes with it.
+            oversightReview.CommitDetection(value == "yes");
         }
 
         void OnAttributionAnswered(string value, float confidence)

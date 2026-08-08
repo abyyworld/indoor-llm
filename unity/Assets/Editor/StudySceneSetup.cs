@@ -142,6 +142,7 @@ namespace EmotionRooms.EditorTools
             runner.message = messageBoard;
             bootstrap.rationaleReview = rationale;
             rationale.board = messageBoard;
+            review.board = messageBoard;
             bootstrap.questionnaires = forms;
             server.bootstrap = bootstrap;
             bootstrap.detectionPanel = detection;
@@ -489,6 +490,20 @@ namespace EmotionRooms.EditorTools
             prompt.SetParent(go.transform, false);
             prompt.localPosition = new Vector3(0f, 0.46f, 0f);
             panel.promptLabel = WorldLabel.Attach(prompt, "", 0.035f);
+
+            // A dark slab behind everything. Phase B keeps the room visible while it
+            // asks -- the room is the thing being judged -- and white text floating
+            // over a 750-lux wall was unreadable. No collider: the ray must only ever
+            // see the option and confidence cells.
+            var backing = GameObject.CreatePrimitive(PrimitiveType.Quad);
+            backing.name = "Backing";
+            backing.transform.SetParent(go.transform, false);
+            backing.transform.localPosition = new Vector3(0f, 0.12f, 0.03f);
+            backing.transform.localScale = new Vector3(1.5f, 1.15f, 1f);
+            Object.DestroyImmediate(backing.GetComponent<Collider>());
+            var backingMaterial = new Material(DefaultShader()) { name = "Panel Backing" };
+            backingMaterial.color = new Color(0.10f, 0.10f, 0.13f);
+            backing.GetComponent<Renderer>().sharedMaterial = backingMaterial;
 
             if (withConfidence)
             {
