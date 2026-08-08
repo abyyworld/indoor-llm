@@ -51,7 +51,9 @@ namespace EmotionRooms
         void Awake()
         {
             Confidence = 0.5f;
-            Hide();
+            // No Hide() -- same deferred-Awake trap as AffectGrid: the panel is saved
+            // inactive, so this Awake runs inside the first Show(), and a Hide() here
+            // would cancel that Show and hang the review block on its first question.
         }
 
         public void Show(string questionText)

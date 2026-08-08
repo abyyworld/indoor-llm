@@ -80,7 +80,14 @@ namespace EmotionRooms
         {
             area = GetComponent<BoxCollider>();
             area.isTrigger = true;
-            Hide();
+            // NO Hide() here, and none may ever return. The grid is saved inactive in
+            // the scene, and Unity defers Awake on an inactive object until the first
+            // SetActive(true) -- which is the one inside Show(). A Hide() here therefore
+            // runs in the middle of the first Show(), deactivates the object again and
+            // clears IsAwaitingResponse: the grid un-shows itself, input goes dead, and
+            // the trial waits forever on an answer that can never come. That single line
+            // was every "I see the four words but no grid and nothing selects" report
+            // from the headset. Hidden-at-start is the scene's job, not Awake's.
         }
 
 
