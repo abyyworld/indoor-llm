@@ -507,7 +507,9 @@ namespace EmotionRooms.EditorTools
                 case "texture":
                     if (value == "plaster") return "painted wall";
                     if (value == "concrete") return "stone-like wall";
-                    if (value == "textile") return "fabric wall";
+                    // "textile" is a frozen pool value and cannot go; the face can.
+                    // Cloth is about the most basic word for what the weave looks like.
+                    if (value == "textile") return "cloth wall";
                     break;
             }
             return value;   // rough/smooth are already words
