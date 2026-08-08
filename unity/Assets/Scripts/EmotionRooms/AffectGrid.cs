@@ -345,6 +345,48 @@ namespace EmotionRooms
             return true;
         }
 
+        /// <summary>
+        /// Commit a cell directly, no ray involved.
+        ///
+        /// This exists so a session can be driven end to end from the researcher side --
+        /// the trial loop, the acknowledgements, the review block -- without a person in
+        /// the headset. Every use is written to the event log as remote, so a driven
+        /// session can never be mistaken for participant data.
+        /// </summary>
+        public bool CommitCell(int valence, int arousal)
+        {
+            if (!IsAwaitingResponse || HasResponded) return false;
+            if (Time.time - shownAt < inputLockSeconds) return false;
+            if (valence < 1 || valence > cells || arousal < 1 || arousal > cells) return false;
+
+            var response = new AffectResponse
+            {
+                valence = valence,
+                arousal = arousal,
+                durationMs = (long)((Time.time - shownAt) * 1000f),
+            };
+
+            HasResponded = true;
+            IsAwaitingResponse = false;
+
+            if (events != null)
+                events.WriteGrid("grid_selected", valence, arousal, 0f, 0f,
+                    "REMOTE dwell_ms=" + response.durationMs.ToString());
+
+            PaintCells();
+            PaintCell(valence, arousal, Chosen);
+            if (selectionMarker != null)
+            {
+                selectionMarker.gameObject.SetActive(true);
+                selectionMarker.position = CellCentre(valence, arousal);
+            }
+            if (hoverMarker != null) hoverMarker.gameObject.SetActive(false);
+
+            var handler = Responded;
+            if (handler != null) handler(response);
+            return true;
+        }
+
         /// <summary>Ray to grid cell. Both axes come out 1..cells inclusive.</summary>
         public bool TryResolve(Ray ray, out int valence, out int arousal, out Vector3 point)
         {

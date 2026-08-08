@@ -23,10 +23,25 @@ namespace EmotionRooms.EditorTools
         [MenuItem("Emotion Rooms/Advanced/Set Up Study Scene", priority = 100)]
         public static void SetUp()
         {
+            SetUp(false);
+        }
+
+        /// <summary>
+        /// Regenerate the study scene from the current code.
+        ///
+        /// Install calls this silently before every build, which is the structural fix
+        /// for a whole class of failures this project kept hitting: the scene on disk was
+        /// built by an older version of the code, so the two could disagree -- dead
+        /// script references, stale component wiring, objects the code no longer knows.
+        /// A scene that is always regenerated from the code that is about to be built
+        /// cannot drift from it.
+        /// </summary>
+        public static void SetUp(bool silent)
+        {
             var existing = GameObject.Find(RootName);
             if (existing != null)
             {
-                if (!EditorUtility.DisplayDialog(
+                if (!silent && !EditorUtility.DisplayDialog(
                         "Replace study scene?",
                         "A 'Study' object already exists. Rebuild it?\n\n" +
                         "Anything you parented under it will be destroyed. The rooms are " +
@@ -304,6 +319,9 @@ namespace EmotionRooms.EditorTools
             WorldLabel.Attach(labels, "calm", 0.028f, new Vector3(0f, -0.58f, 0f),
                               TextAnchor.UpperCenter);
             grid.labels = labels.gameObject;
+            // Hidden until the grid is shown. Saved active, the four axis words floated
+            // in space from app start, looking like a question nobody could answer.
+            labels.gameObject.SetActive(false);
             grid.cells = 9;
             grid.hoverMarker = Marker(quad, "Hover Marker", new Color(1f, 1f, 1f, 0.9f), 0.05f);
             grid.selectionMarker = Marker(quad, "Selection Marker", new Color(0.2f, 0.9f, 0.3f), 0.07f);

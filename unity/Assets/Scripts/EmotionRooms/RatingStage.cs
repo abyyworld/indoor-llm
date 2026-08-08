@@ -33,7 +33,9 @@ namespace EmotionRooms
         void Awake()
         {
             if (transform.childCount == 0) Build();
-            Hide();
+            // No Hide() -- the deferred-Awake trap: on an instance saved inactive, Awake
+            // runs inside the first Show() and a Hide() here would cancel it. The stage
+            // is created active and shown immediately, so there is nothing to hide.
         }
 
         public void Show()

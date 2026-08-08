@@ -542,6 +542,12 @@ namespace EmotionRooms
             if (oversightReview != null) oversightReview.CommitCorrection(value);
         }
 
+        /// <summary>The panel currently awaiting an answer, for the remote instrument.</summary>
+        public QuestionPanel CurrentPanel()
+        {
+            return ActivePanel();
+        }
+
         QuestionPanel ActivePanel()
         {
             if (detectionPanel != null && detectionPanel.IsAwaitingAnswer) return detectionPanel;

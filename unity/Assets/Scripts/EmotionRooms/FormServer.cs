@@ -289,6 +289,57 @@ namespace EmotionRooms
                        ",\"trial\":" + done.ToString(CultureInfo.InvariantCulture) + ",\"of\":8}";
             }
 
+            // Verification instrument, not a participant control. Answers whatever is
+            // currently awaiting input -- the grid or a question panel -- so a whole
+            // session can be exercised from the researcher machine with nobody in the
+            // headset. Localhost only, like everything this server does, and every
+            // answer it lands is marked REMOTE in the event log, so a driven session is
+            // unmistakable in the data.
+            if (path == "/answer")
+            {
+                var values = ParseForm(query);
+                string result = "nothing awaiting input";
+                var answered = new ManualResetEvent(false);
+                lock (mainThread)
+                {
+                    mainThread.Enqueue(() =>
+                    {
+                        try
+                        {
+                            if (bootstrap != null && bootstrap.grid != null &&
+                                bootstrap.grid.IsAwaitingResponse)
+                            {
+                                string v, a;
+                                values.TryGetValue("v", out v);
+                                values.TryGetValue("a", out a);
+                                int valence, arousal;
+                                if (int.TryParse(v, out valence) && int.TryParse(a, out arousal) &&
+                                    bootstrap.grid.CommitCell(valence, arousal))
+                                    result = "grid " + valence + "," + arousal;
+                                else
+                                    result = "grid awaiting but v/a missing or locked";
+                                return;
+                            }
+
+                            var panel = bootstrap != null ? bootstrap.CurrentPanel() : null;
+                            if (panel != null)
+                            {
+                                string option;
+                                values.TryGetValue("option", out option);
+                                int index;
+                                if (int.TryParse(option, out index) && panel.TrySelectOption(index))
+                                    result = "panel option " + index;
+                                else
+                                    result = "panel awaiting but option missing or locked";
+                            }
+                        }
+                        finally { answered.Set(); }
+                    });
+                }
+                answered.WaitOne(5000);
+                return "{\"answered\":\"" + Escape(result) + "\"}";
+            }
+
             if (path == "/start")
             {
                 var values = ParseForm(query);

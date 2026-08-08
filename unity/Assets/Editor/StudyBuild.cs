@@ -184,6 +184,11 @@ namespace EmotionRooms.EditorTools
             // The permission the panel needs to talk to the app. Idempotent.
             XRSetup.AllowLocalHttp();
 
+            // Regenerate the scene from the code that is about to be built, so the two
+            // can never disagree. Stale scenes produced dead script references, missing
+            // wiring and days of load crashes; a scene rebuilt every install cannot.
+            StudySceneSetup.SetUp(true);
+
             // ALWAYS clean. This line was once a gate -- rebuild clean only when the
             // scene stamp had moved -- and that gate was itself a bug: a link.xml edit
             // rode through as an incremental build, regenerated libunity with different
