@@ -85,10 +85,15 @@ namespace EmotionRooms
         // so its Awake runs last, and this file had already been created under the
         // previous participant's id. The responses would say p07 and the log filename
         // p06, which is only noticeable long after the session.
+        string openedFor;
+
         void Start()
         {
             Open();
+            openedFor = participantId;
         }
+
+
 
         void OnDestroy()
         {
@@ -155,6 +160,18 @@ namespace EmotionRooms
 
         void Update()
         {
+            // The id can arrive after Start: the researcher sets it on the laptop and it
+            // reaches the app over the network, by which point this file is already open
+            // under whatever the scene shipped with. That produced logs named p01 for a
+            // participant recorded everywhere else as 09 -- two names for one person, and
+            // nothing to say which was right.
+            if (openedFor != participantId && !string.IsNullOrEmpty(participantId))
+            {
+                Close();
+                Open();
+                openedFor = participantId;
+            }
+
             if (writer == null || headTransform == null || poseSampleHz <= 0f) return;
 
             bool due = Time.realtimeSinceStartup >= nextPoseSample;

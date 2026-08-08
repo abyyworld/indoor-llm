@@ -116,6 +116,8 @@ namespace EmotionRooms
             pointerDriver.node = rightHanded ? XRNode.RightHand : XRNode.LeftHand;
             pointerDriver.origin = anchor;
             pointer = hand;
+
+            BuildRay(hand);
         }
 
         /// <summary>
@@ -159,6 +161,51 @@ namespace EmotionRooms
 
             var other = pointerDriver.node == XRNode.RightHand ? XRNode.LeftHand : XRNode.RightHand;
             if (InputDevices.GetDeviceAtXRNode(other).isValid) pointerDriver.node = other;
+        }
+
+        /// <summary>
+        /// A visible beam from the controller.
+        ///
+        /// Without one there is no way to tell a controller that is not tracked from one
+        /// that is tracked and aimed somewhere unexpected -- both look like nothing
+        /// happening. A participant also needs to see where they are pointing before they
+        /// can point at anything, which is the whole interaction.
+        /// </summary>
+        void BuildRay(Transform hand)
+        {
+            var line = hand.gameObject.AddComponent<LineRenderer>();
+            line.useWorldSpace = false;
+            line.positionCount = 2;
+            line.SetPosition(0, Vector3.zero);
+            line.SetPosition(1, new Vector3(0f, 0f, 3f));
+            line.startWidth = 0.006f;
+            line.endWidth = 0.002f;
+
+            var shader = Shader.Find("Unlit/Color") ?? Shader.Find("Sprites/Default");
+            if (shader != null)
+            {
+                var material = new Material(shader) { name = "Pointer Ray" };
+                if (material.HasProperty("_Color"))
+                    material.SetColor("_Color", new Color(0.3f, 0.65f, 1f));
+                line.sharedMaterial = material;
+            }
+            ray = line;
+        }
+
+        LineRenderer ray;
+
+        void LateUpdate()
+        {
+            // Shown only while a headset is actually tracking, so it does not hang in the
+            // air during the mouse-driven editor path.
+            if (ray != null) ray.enabled = HeadsetPresent && ControllerTracked();
+        }
+
+        /// <summary>Whether the pointer's controller is reporting a pose.</summary>
+        public bool ControllerTracked()
+        {
+            if (pointerDriver == null) return false;
+            return InputDevices.GetDeviceAtXRNode(pointerDriver.node).isValid;
         }
 
         public static bool IsHeadsetRunning()

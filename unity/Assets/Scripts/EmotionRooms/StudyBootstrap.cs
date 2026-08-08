@@ -209,14 +209,15 @@ namespace EmotionRooms
             if (bundledOnExit) return;
             bundledOnExit = true;
 
-            if (trialRunner != null && trialRunner.IsRunning)
-                trialRunner.Abort("stopped_early");
-            if (oversightReview != null && oversightReview.IsRunning)
-                oversightReview.Abort("stopped_early");
-            if (rationaleReview != null && rationaleReview.IsRunning)
-                rationaleReview.Abort("stopped_early");
-
-            BundleNow("session stopped early");
+            // Write the file; do NOT abort the runners.
+            //
+            // Android calls this when the activity is destroyed, which on a Quest happens
+            // when the headset is set down mid-session. Aborting here ended the session
+            // for a participant who was only adjusting the strap: the room hid, the block
+            // stopped, and the screen went empty with nothing to say why. The data up to
+            // that point is already on disk either way, so quitting should save and leave
+            // the session alone.
+            BundleNow("app closing");
         }
 
         bool bundledOnExit;
@@ -314,7 +315,19 @@ namespace EmotionRooms
 
         void StartPhases()
         {
-            if (board != null) board.Hide();
+            // Say what the headset can actually see, once, at the start. A controller
+            // that is not tracked is indistinguishable from a study that is not
+            // responding, and the participant is the only one who can see the screen.
+            if (xrRig != null && board != null && xrRig.HeadsetPresent &&
+                !xrRig.ControllerTracked())
+            {
+                Debug.LogWarning("StudyBootstrap: no controller is tracking. The pointer " +
+                                 "will not work until one wakes up.");
+                board.Show("No controller detected.\n\nPick one up and press a button " +
+                           "on it, then it will appear as a blue beam.");
+            }
+
+            if (board != null && (xrRig == null || xrRig.ControllerTracked())) board.Hide();
 
             if (!DoesPhaseA)
             {
