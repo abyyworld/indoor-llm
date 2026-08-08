@@ -101,8 +101,14 @@ namespace EmotionRooms
         [Tooltip("Mengkai, 1 Aug 2026: 20 s. Was 30 s in the original spec.")]
         public float exposureSeconds = 20f;
 
-        [Tooltip("Gap between committing a response and the next room appearing.")]
-        public float transitionSeconds = 15f;
+        [Tooltip("Extra gap between the acknowledgement and the next room. Zero by " +
+                 "decision of 8 Aug 2026: the spec's ~15 s figure belonged to a time " +
+                 "budget with a ~45 s questionnaire per room, and the questionnaire " +
+                 "became a one-click grid. The 2 s acknowledgement is the pause. If the " +
+                 "design later wants an affect washout between rooms, this is the one " +
+                 "number to raise -- the cost of raising it is session length, the cost " +
+                 "of zero is possible carryover from the previous room.")]
+        public float transitionSeconds = 0f;
 
         [Header("Session")]
         public string participantId = "p00";

@@ -55,6 +55,33 @@ namespace EmotionRooms
             if (board != null) board.gameObject.SetActive(false);
         }
 
+        void Update()
+        {
+            // Follow the viewer while showing. Placed once, the idle message stayed
+            // wherever the head was at app start -- someone who walked away with the
+            // stick then turned around saw an empty grey stage and read it as broken,
+            // because the one sentence explaining the state was behind them somewhere.
+            if (board == null || !board.gameObject.activeSelf) return;
+
+            var camera = Camera.main;
+            if (camera == null) return;
+
+            var forward = camera.transform.forward;
+            forward.y = 0f;
+            if (forward.sqrMagnitude < 0.0001f) return;
+            forward.Normalize();
+
+            var wanted = camera.transform.position + forward * distance;
+            // Eased, not snapped: text glued rigidly to the head is unreadable and
+            // nauseating; text that drifts after it reads as a sign hanging in space.
+            board.position = Vector3.Lerp(board.position, wanted, Time.deltaTime * 3f);
+            var look = board.position - camera.transform.position;
+            look.y = 0f;
+            if (look.sqrMagnitude > 0.0001f)
+                board.rotation = Quaternion.Slerp(board.rotation,
+                    Quaternion.LookRotation(look), Time.deltaTime * 3f);
+        }
+
         void PlaceInFront()
         {
             var camera = viewer != null ? viewer : Camera.main;
