@@ -197,6 +197,11 @@ namespace EmotionRooms.EditorTools
 
             Undo.RegisterCreatedObjectUndo(root, "Set Up Study Scene");
             Selection.activeGameObject = root;
+            // Diagnostic bisection, batch builds only. EMOTION_ROOMS_DESTROY names
+            // objects or root components to strip from the scene before it is saved,
+            // so a load crash can be cornered by halves without editing this file.
+            ApplyBisection();
+
             // SAVE IT. Marking dirty is not enough.
             //
             // BuildPipeline builds from the scene as it exists on disk, not from what is
@@ -330,8 +335,13 @@ namespace EmotionRooms.EditorTools
             // in space from app start, looking like a question nobody could answer.
             labels.gameObject.SetActive(false);
             grid.cells = 9;
-            grid.hoverMarker = Marker(quad, "Hover Marker", new Color(1f, 1f, 1f, 0.9f), 0.05f);
-            grid.selectionMarker = Marker(quad, "Selection Marker", new Color(0.2f, 0.9f, 0.3f), 0.07f);
+            // No marker spheres. Two builds isolated them as the difference between a
+            // player that loads and one that dies in CachedReader::OutOfBoundsError
+            // during scene load -- with the identical scene otherwise, present crashes,
+            // absent loads, reproduced twice. The mechanism is not fully explained and
+            // this comment does not pretend otherwise; what is certain is the probes,
+            // and that the markers are redundant: the grid tiles paint hover and
+            // selection states themselves, so the spheres carried no function.
 
             quad.SetActive(false);   // shown only when a response is wanted
             return grid;
@@ -549,21 +559,6 @@ namespace EmotionRooms.EditorTools
         /// cross through the middle so the neutral point is findable at a glance.
         /// Unlit when applied, so a dim room does not make the instrument unreadable.
         /// </summary>
-        static Transform Marker(GameObject parent, string name, Color colour, float size)
-        {
-            var go = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            go.name = name;
-            go.transform.SetParent(parent.transform, false);
-            go.transform.localScale = Vector3.one * size;
-            Object.DestroyImmediate(go.GetComponent<Collider>());  // must not block the grid
-
-            var material = new Material(DefaultShader()) { name = name + " Material" };
-            material.color = colour;
-            go.GetComponent<Renderer>().sharedMaterial = material;
-            go.SetActive(false);
-            return go.transform;
-        }
-
         static Renderer[] CollectTintables(GameObject rooms)
         {
             var marked = rooms.GetComponentsInChildren<TintableSurface>(true);
@@ -611,6 +606,48 @@ namespace EmotionRooms.EditorTools
         }
 
         // ------------------------------------------------------------------ checks
+
+        static void ApplyBisection()
+        {
+            var spec = System.Environment.GetEnvironmentVariable("EMOTION_ROOMS_DESTROY");
+            if (string.IsNullOrEmpty(spec)) return;
+
+            foreach (var raw in spec.Split(','))
+            {
+                var token = raw.Trim();
+                if (token.Length == 0) continue;
+
+                var target = FindAnywhere(token);
+                if (target != null)
+                {
+                    Debug.Log("bisect: destroying object '" + token + "'");
+                    Object.DestroyImmediate(target);
+                    continue;
+                }
+
+                var studyRoot = GameObject.Find(RootName);
+                var component = studyRoot != null ? studyRoot.GetComponent(token) : null;
+                if (component != null)
+                {
+                    Debug.Log("bisect: destroying component '" + token + "'");
+                    Object.DestroyImmediate(component);
+                    continue;
+                }
+                Debug.LogWarning("bisect: nothing named '" + token + "'");
+            }
+        }
+
+        /// <summary>Find by name including inactive objects, which GameObject.Find skips.</summary>
+        static GameObject FindAnywhere(string name)
+        {
+            foreach (var sceneRoot in UnityEngine.SceneManagement.SceneManager.GetActiveScene().GetRootGameObjects())
+            {
+                if (sceneRoot.name == name) return sceneRoot;
+                foreach (var t in sceneRoot.GetComponentsInChildren<Transform>(true))
+                    if (t.name == name) return t.gameObject;
+            }
+            return null;
+        }
 
         [MenuItem("Emotion Rooms/Advanced/Check Scene", priority = 101)]
         public static void CheckScene()

@@ -166,6 +166,22 @@ namespace EmotionRooms.EditorTools
         }
 
         /// <summary>
+        /// The whole install pipeline, runnable headless:
+        ///   Unity -batchmode -quit -executeMethod EmotionRooms.EditorTools.StudyBuild.BatchInstall
+        /// Exists so the build loop does not need a person at the editor: the load-crash
+        /// hunt burns one full build per experiment, and a person pressing the button
+        /// for each one was the bottleneck and the friction.
+        /// </summary>
+        public static void BatchInstall()
+        {
+            UnityEditor.SceneManagement.EditorSceneManager.OpenScene("Assets/indoor room.unity");
+            XRSetup.AllowLocalHttp();
+            StudySceneSetup.SetUp(true);
+            ClearBuildCache();
+            BuildAndDeploy(false);
+        }
+
+        /// <summary>
         /// The whole route from source to a running app, as one action.
         ///
         /// This used to be five buttons -- install, clean rebuild, launch, allow local
