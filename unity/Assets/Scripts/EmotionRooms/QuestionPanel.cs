@@ -48,6 +48,20 @@ namespace EmotionRooms
         float shownAt;
         Transform highlighted;
 
+        // Two-part answering. The answer used to commit on the option press with the
+        // confidence strip defaulting to 0.5 for anyone who never touched it -- which
+        // fills the confidence column with a value nobody chose. Phase B scores
+        // calibration from that column, so an unchosen default is not data. Nothing
+        // resolves until both the option and, when a strip is present, a confidence
+        // cell have been pressed, in either order.
+        string pendingValue;
+        bool confidenceChosen;
+        Transform chosenOption, chosenConfidence;
+
+        static readonly Color IdleTint = new Color(0.85f, 0.85f, 0.85f);
+        static readonly Color HoverTint = new Color(0.35f, 0.75f, 1f);
+        static readonly Color ChosenTint = new Color(0.30f, 0.85f, 0.42f);
+
         void Awake()
         {
             Confidence = 0.5f;
@@ -71,6 +85,11 @@ namespace EmotionRooms
         public void Show(string questionText, ICollection<string> allowed)
         {
             prompt = questionText ?? prompt;
+            pendingValue = null;
+            confidenceChosen = false;
+            SetTint(chosenOption, false);
+            SetTint(chosenConfidence, false);
+            chosenOption = chosenConfidence = null;
 
             // The question has to be visible, not just stored. Without this the panel is
             // a row of unlabelled boxes and the participant is guessing at what is being
@@ -103,12 +122,16 @@ namespace EmotionRooms
             Transform hit = Resolve(ray);
             if (hit == highlighted) return;
 
-            SetTint(highlighted, false);
-            SetTint(hit, true);
+            if (highlighted != chosenOption && highlighted != chosenConfidence)
+                SetTint(highlighted, false);
+            if (hit != chosenOption && hit != chosenConfidence)
+                SetTint(hit, true);
             highlighted = hit;
         }
 
-        /// <summary>Commit. Returns false on a miss or during the input lock.</summary>
+        /// <summary>
+        /// Register a press. Resolves only once every required part has been chosen.
+        /// </summary>
         public bool TrySelect(Ray ray)
         {
             if (!IsAwaitingAnswer) return false;
@@ -117,31 +140,52 @@ namespace EmotionRooms
             Transform hit = Resolve(ray);
             if (hit == null) return false;
 
-            // Confidence strip: setting confidence is not answering, so the panel stays
-            // up. Otherwise a participant adjusting confidence would submit by accident.
             if (confidenceStrip != null && hit.IsChildOf(confidenceStrip))
             {
                 int index = confidenceStrip.GetSiblingIndexOf(hit);
                 if (index >= 0 && confidenceSteps > 1)
                 {
                     Confidence = Mathf.Clamp01(index / (float)(confidenceSteps - 1));
+                    confidenceChosen = true;
+                    SetTint(chosenConfidence, false);
+                    chosenConfidence = hit;
+                    Paint(chosenConfidence, ChosenTint);
                 }
-                return false;
+                return CommitIfComplete();
             }
 
             foreach (var option in options)
             {
                 if (option.target != hit) continue;
 
-                IsAwaitingAnswer = false;
-                SetTint(highlighted, false);
-                highlighted = null;
-
-                var handler = Answered;
-                if (handler != null) handler(option.value, Confidence);
-                return true;
+                pendingValue = option.value;
+                SetTint(chosenOption, false);
+                chosenOption = hit;
+                Paint(chosenOption, ChosenTint);
+                return CommitIfComplete();
             }
             return false;
+        }
+
+        bool StripRequired()
+        {
+            return confidenceStrip != null && confidenceStrip.gameObject.activeInHierarchy;
+        }
+
+        bool CommitIfComplete()
+        {
+            if (pendingValue == null) return false;
+            if (StripRequired() && !confidenceChosen) return false;
+
+            IsAwaitingAnswer = false;
+            SetTint(highlighted, false);
+            SetTint(chosenOption, false);
+            SetTint(chosenConfidence, false);
+            highlighted = chosenOption = chosenConfidence = null;
+
+            var handler = Answered;
+            if (handler != null) handler(pendingValue, Confidence);
+            return true;
         }
 
         /// <summary>
@@ -162,7 +206,9 @@ namespace EmotionRooms
 
             IsAwaitingAnswer = false;
             SetTint(highlighted, false);
-            highlighted = null;
+            SetTint(chosenOption, false);
+            SetTint(chosenConfidence, false);
+            highlighted = chosenOption = chosenConfidence = null;
 
             var handler = Answered;
             if (handler != null) handler(options[index].value, Confidence);
@@ -205,12 +251,15 @@ namespace EmotionRooms
 
         static void SetTint(Transform t, bool on)
         {
+            Paint(t, on ? HoverTint : IdleTint);
+        }
+
+        static void Paint(Transform t, Color colour)
+        {
             if (t == null) return;
             var renderer = t.GetComponent<Renderer>();
             if (renderer == null || renderer.material == null) return;
-            renderer.material.color = on
-                ? new Color(0.35f, 0.75f, 1f)
-                : new Color(0.85f, 0.85f, 0.85f);
+            renderer.material.color = colour;
         }
     }
 

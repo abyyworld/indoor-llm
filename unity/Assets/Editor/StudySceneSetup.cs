@@ -314,11 +314,13 @@ namespace EmotionRooms.EditorTools
                               TextAnchor.MiddleRight);
             WorldLabel.Attach(labels, "pleasant", 0.028f, new Vector3(0.62f, 0f, 0f),
                               TextAnchor.MiddleLeft);
-            // Russell, Weiss and Mendelsohn's own anchors for the arousal axis. The
-            // bottom one said "calm", which collided with calm being one of the four
-            // target emotions -- a participant read the axis as describing the room
-            // ("obviously it's calm, there's no horror") rather than their own state.
-            WorldLabel.Attach(labels, "worked up", 0.028f, new Vector3(0f, 0.58f, 0f),
+            // Arousal axis anchors. Russell, Weiss and Mendelsohn print "high arousal"
+            // and "sleepiness"; these are plain-language glosses of the same poles,
+            // chosen after two participant complaints. "calm" collided with calm being a
+            // target emotion (the axis read as describing the room, not the person),
+            // and "worked up" simply did not parse. The gloss is worth a line in the
+            // methods section; the axis meaning is unchanged.
+            WorldLabel.Attach(labels, "full of energy", 0.028f, new Vector3(0f, 0.58f, 0f),
                               TextAnchor.LowerCenter);
             WorldLabel.Attach(labels, "sleepy", 0.028f, new Vector3(0f, -0.58f, 0f),
                               TextAnchor.UpperCenter);
@@ -472,12 +474,7 @@ namespace EmotionRooms.EditorTools
 
                 // The face of the button says what it is. Named only in the hierarchy,
                 // these were identical grey boxes to the person being asked.
-                // On a two-option panel the buttons are also bound to A and B, so the
-                // face says which -- a mapping nobody should have to be told twice.
-                string face = values.Length == 2
-                    ? values[i] + "  (" + (i == 0 ? "A" : "B") + ")"
-                    : values[i];
-                WorldLabel.Attach(cell.transform, face, 0.03f,
+                WorldLabel.Attach(cell.transform, values[i], 0.03f,
                                   new Vector3(0f, 0f, -0.6f));
 
                 panel.options.Add(new QuestionPanel.Option
@@ -500,6 +497,13 @@ namespace EmotionRooms.EditorTools
                 strip.localPosition = new Vector3(0f, -0.28f, 0f);
                 panel.confidenceStrip = strip;
                 panel.confidenceSteps = 5;
+
+                // Says what the row is and that it is required. Five unlabelled grey
+                // cells read as decoration, and the answer now waits for one of them.
+                var stripLabel = new GameObject("Confidence Label").transform;
+                stripLabel.SetParent(strip, false);
+                WorldLabel.Attach(stripLabel, "How sure are you? Pick one.", 0.024f,
+                                  new Vector3(0f, 0.09f, 0f));
 
                 for (int i = 0; i < panel.confidenceSteps; i++)
                 {

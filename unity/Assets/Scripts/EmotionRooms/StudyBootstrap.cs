@@ -595,17 +595,10 @@ namespace EmotionRooms
             var panel = ActivePanel();
             if (panel != null)
             {
-                // A two-option question is answered with a face button. The ray still
-                // works, but pointing at a box to say yes or no is more work than the
-                // question deserves and it fails whenever the beam is slightly off.
-                if (panel.VisibleOptionCount() == 2)
-                {
-                    if (ButtonDown(UnityEngine.XR.CommonUsages.primaryButton, ref primaryWasDown))
-                    { panel.TrySelectOption(0); return; }
-                    if (ButtonDown(UnityEngine.XR.CommonUsages.secondaryButton, ref secondaryWasDown))
-                    { panel.TrySelectOption(1); return; }
-                }
-
+                // Ray and trigger only, decided 8 Aug 2026. Face buttons answered
+                // yes/no directly, which resolved the panel before the confidence strip
+                // could be touched -- and one input grammar for everything (point,
+                // squeeze) is easier to brief than two.
                 if (haveRight) panel.Hover(rightRay);
                 if (haveLeft) panel.Hover(leftRay);
                 if (haveMouse) panel.Hover(mouseRay);
@@ -686,27 +679,6 @@ namespace EmotionRooms
             if (withdrawHeldSince < 0f) withdrawHeldSince = Time.unscaledTime;
             else if (Time.unscaledTime - withdrawHeldSince >= withdrawHoldSeconds)
                 WithdrawParticipant();
-        }
-
-        /// <summary>Commit whatever the pointer is currently over. Call from XR input.</summary>
-        bool primaryWasDown, secondaryWasDown;
-
-        /// <summary>True on the frame a face button goes down, on either controller.</summary>
-        static bool ButtonDown(UnityEngine.XR.InputFeatureUsage<bool> button, ref bool wasDown)
-        {
-            bool down = Read(UnityEngine.XR.XRNode.RightHand, button) ||
-                        Read(UnityEngine.XR.XRNode.LeftHand, button);
-            bool fired = down && !wasDown;
-            wasDown = down;
-            return fired;
-        }
-
-        static bool Read(UnityEngine.XR.XRNode node,
-                         UnityEngine.XR.InputFeatureUsage<bool> button)
-        {
-            var device = UnityEngine.XR.InputDevices.GetDeviceAtXRNode(node);
-            bool value;
-            return device.isValid && device.TryGetFeatureValue(button, out value) && value;
         }
 
     }
