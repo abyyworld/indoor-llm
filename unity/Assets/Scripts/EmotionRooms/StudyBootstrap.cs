@@ -561,14 +561,24 @@ namespace EmotionRooms
             PollWithdrawal();
             PollController();
 
-            Ray ray;
+            // Read each hand's trigger edge exactly once per frame. Both hands carry a
+            // ray now, and a press has to commit with the ray of the hand that pressed:
+            // one shared "any trigger" bit either loses that or eats the edge twice.
+            bool xr = xrRig != null && xrRig.HeadsetPresent;
+            Ray rightRay = default(Ray), leftRay = default(Ray), mouseRay = default(Ray);
+            bool haveRight = xr && HandRay(xrRig.pointer, out rightRay);
+            bool haveLeft = xr && HandRay(xrRig.leftPointer, out leftRay);
+            bool rightDown = useLegacyInput && haveRight && XRRig.TriggerPressed(UnityEngine.XR.XRNode.RightHand);
+            bool leftDown = useLegacyInput && haveLeft && XRRig.TriggerPressed(UnityEngine.XR.XRNode.LeftHand);
+            bool haveMouse = !xr && MouseRay(out mouseRay);
+            bool mouseDown = useLegacyInput && haveMouse && Input.GetMouseButtonDown(0);
 
             var panel = ActivePanel();
             if (panel != null)
             {
-                // A two-option question is answered with a button. The ray still works,
-                // but pointing at a box to say yes or no is more work than the question
-                // deserves and it fails whenever the beam is slightly off.
+                // A two-option question is answered with a face button. The ray still
+                // works, but pointing at a box to say yes or no is more work than the
+                // question deserves and it fails whenever the beam is slightly off.
                 if (panel.VisibleOptionCount() == 2)
                 {
                     if (ButtonDown(UnityEngine.XR.CommonUsages.primaryButton, ref primaryWasDown))
@@ -577,17 +587,43 @@ namespace EmotionRooms
                     { panel.TrySelectOption(1); return; }
                 }
 
-                if (!TryBuildRay(out ray)) return;
-                panel.Hover(ray);
-                if (useLegacyInput && Pressed()) panel.TrySelect(ray);
+                if (haveRight) panel.Hover(rightRay);
+                if (haveLeft) panel.Hover(leftRay);
+                if (haveMouse) panel.Hover(mouseRay);
+
+                if (rightDown) panel.TrySelect(rightRay);
+                else if (leftDown) panel.TrySelect(leftRay);
+                else if (mouseDown) panel.TrySelect(mouseRay);
                 return;
             }
 
             if (grid == null || !grid.IsAwaitingResponse) return;
-            if (!TryBuildRay(out ray)) return;
 
-            grid.Hover(ray);
-            if (useLegacyInput && Pressed()) Select();
+            if (haveRight) grid.Hover(rightRay);
+            if (haveLeft) grid.Hover(leftRay);
+            if (haveMouse) grid.Hover(mouseRay);
+
+            AffectResponse response;
+            if (rightDown) grid.TrySelect(rightRay, out response);
+            else if (leftDown) grid.TrySelect(leftRay, out response);
+            else if (mouseDown) grid.TrySelect(mouseRay, out response);
+        }
+
+        static bool HandRay(Transform hand, out Ray ray)
+        {
+            ray = default(Ray);
+            if (hand == null) return false;
+            ray = new Ray(hand.position, hand.forward);
+            return true;
+        }
+
+        bool MouseRay(out Ray ray)
+        {
+            ray = default(Ray);
+            var camera = fallbackCamera != null ? fallbackCamera : Camera.main;
+            if (camera == null) return false;
+            ray = camera.ScreenPointToRay(Input.mousePosition);
+            return true;
         }
 
         bool warnedNoController;
@@ -634,18 +670,6 @@ namespace EmotionRooms
         }
 
         /// <summary>Commit whatever the pointer is currently over. Call from XR input.</summary>
-        public void Select()
-        {
-            if (grid == null || !grid.IsAwaitingResponse) return;
-
-            Ray ray;
-            if (!TryBuildRay(out ray)) return;
-
-            AffectResponse response;
-            if (grid.TrySelect(ray, out response))
-                Debug.Log("StudyBootstrap: response " + response);
-        }
-
         bool primaryWasDown, secondaryWasDown;
 
         /// <summary>True on the frame a face button goes down, on either controller.</summary>
@@ -666,51 +690,5 @@ namespace EmotionRooms
             return device.isValid && device.TryGetFeatureValue(button, out value) && value;
         }
 
-        bool TryBuildRay(out Ray ray)
-        {
-            // The controller wins whenever a headset is tracking, checked per frame so a
-            // controller that wakes mid-session simply starts working.
-            if (xrRig != null && xrRig.HeadsetPresent && xrRig.pointer != null)
-            {
-                ray = new Ray(xrRig.pointer.position, xrRig.pointer.forward);
-                return true;
-            }
-
-            if (pointerOrigin != null)
-            {
-                ray = new Ray(pointerOrigin.position, pointerOrigin.forward);
-                return true;
-            }
-
-            var camera = fallbackCamera != null ? fallbackCamera : Camera.main;
-            if (camera == null)
-            {
-                ray = default(Ray);
-                return false;
-            }
-
-            ray = camera.ScreenPointToRay(Input.mousePosition);
-            return true;
-        }
-
-        bool Pressed()
-        {
-
-            if (!string.IsNullOrEmpty(selectButton))
-            {
-                // Wrapped: an unmapped axis name throws rather than returning false, and
-                // a study should not die mid-session because of an inspector typo.
-                try { return Input.GetButtonDown(selectButton); }
-                catch (System.ArgumentException)
-                {
-                    Debug.LogWarning("StudyBootstrap: no input button named '" +
-                                     selectButton + "'; falling back to mouse.");
-                    selectButton = "";
-                }
-            }
-            if (xrRig != null && xrRig.HeadsetPresent && XRRig.TriggerPressed()) return true;
-
-            return Input.GetMouseButtonDown(0);
-        }
     }
 }

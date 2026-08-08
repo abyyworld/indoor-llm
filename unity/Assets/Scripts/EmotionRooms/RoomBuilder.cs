@@ -203,8 +203,12 @@ namespace EmotionRooms
                 if (i < VaultSegments)
                 {
                     int b = i * 2;
-                    // Wound so the faces point inward, into the room.
-                    wallTris.AddRange(new[] { b, b + 1, b + 2, b + 2, b + 1, b + 3 });
+                    // Wound so the faces point INWARD. The previous winding read as
+                    // inward in a comment and was outward in fact: Unity front faces are
+                    // the clockwise side, and from inside the room this order came out
+                    // counterclockwise -- so the whole curved wall was backface-culled
+                    // and half the room showed the skybox.
+                    wallTris.AddRange(new[] { b, b + 2, b + 1, b + 1, b + 2, b + 3 });
                     floorTris.AddRange(new[] { 0, i + 2, i + 1 });
                     ceilTris.AddRange(new[] { 0, i + 1, i + 2 });
                 }

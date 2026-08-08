@@ -80,6 +80,9 @@ namespace EmotionRooms
         [Tooltip("Created at runtime: the transform whose forward axis is the pointer ray.")]
         public Transform pointer;
 
+        /// <summary>The left hand's pointer. Same aim rules, same beam.</summary>
+        public Transform leftPointer;
+
         [Tooltip("Pitch correction from the controller's grip pose to where it appears " +
                  "to point.\n\n" +
                  "60 degrees, set by aiming in the headset rather than derived: the grip " +
@@ -109,7 +112,6 @@ namespace EmotionRooms
         public Transform Origin { get; private set; }
 
         XRPoseDriver headDriver;
-        XRPoseDriver pointerDriver;
         static readonly List<XRDisplaySubsystem> displays = new List<XRDisplaySubsystem>();
 
         void Awake()
@@ -149,16 +151,13 @@ namespace EmotionRooms
             headDriver.node = XRNode.CenterEye;
             headDriver.origin = anchor;
 
-            var hand = new GameObject("Pointer").transform;
-            hand.SetParent(anchor, false);
-            pointerDriver = hand.gameObject.AddComponent<XRPoseDriver>();
-            pointerDriver.node = rightHanded ? XRNode.RightHand : XRNode.LeftHand;
-            pointerDriver.origin = anchor;
-            pointerDriver.pitchOffset = GripToAim;
-            pointer = hand;
+            // One pointer per hand, both live. There used to be a single pointer with
+            // hand-swapping when its controller slept, which meant the other hand's
+            // trigger fired with no ray of its own behind it -- a press that either did
+            // nothing or committed wherever the sleeping hand happened to aim.
+            pointer = BuildHand(anchor, XRNode.RightHand, "Right Pointer");
+            leftPointer = BuildHand(anchor, XRNode.LeftHand, "Left Pointer");
             Origin = anchor;
-
-            BuildRay(hand);
         }
 
         /// <summary>
@@ -193,15 +192,6 @@ namespace EmotionRooms
                 UseFloorOrigin();
             }
 
-            if (!HeadsetPresent || pointerDriver == null) return;
-
-            // Swap hands if the preferred controller is not tracking. A participant given
-            // the other controller should not silently have no pointer at all.
-            var preferred = InputDevices.GetDeviceAtXRNode(pointerDriver.node);
-            if (preferred.isValid) return;
-
-            var other = pointerDriver.node == XRNode.RightHand ? XRNode.LeftHand : XRNode.RightHand;
-            if (InputDevices.GetDeviceAtXRNode(other).isValid) pointerDriver.node = other;
         }
 
         /// <summary>
@@ -212,8 +202,16 @@ namespace EmotionRooms
         /// happening. A participant also needs to see where they are pointing before they
         /// can point at anything, which is the whole interaction.
         /// </summary>
-        void BuildRay(Transform hand)
+        Transform BuildHand(Transform anchor, XRNode node, string name)
         {
+            var hand = new GameObject(name).transform;
+            hand.SetParent(anchor, false);
+
+            var driver = hand.gameObject.AddComponent<XRPoseDriver>();
+            driver.node = node;
+            driver.origin = anchor;
+            driver.pitchOffset = GripToAim;
+
             var line = hand.gameObject.AddComponent<LineRenderer>();
             line.useWorldSpace = false;
             line.positionCount = 2;
@@ -225,35 +223,46 @@ namespace EmotionRooms
             var shader = Shader.Find("Unlit/Color") ?? Shader.Find("Sprites/Default");
             if (shader != null)
             {
-                var material = new Material(shader) { name = "Pointer Ray" };
+                var material = new Material(shader) { name = name + " Ray" };
                 if (material.HasProperty("_Color"))
                     material.SetColor("_Color", new Color(0.3f, 0.65f, 1f));
                 line.sharedMaterial = material;
             }
-            ray = line;
+
+            if (node == XRNode.RightHand) rightRay = line; else leftRay = line;
+            return hand;
         }
 
-        LineRenderer ray;
+        LineRenderer rightRay, leftRay;
 
         void LateUpdate()
         {
-            // Shown only while a headset is actually tracking, so it does not hang in the
-            // air during the mouse-driven editor path.
-            if (ray != null) ray.enabled = HeadsetPresent && ControllerTracked();
+            // Each beam shows only while ITS controller is tracking, so a sleeping hand
+            // does not hang a ray in the air, and neither shows on the mouse path.
+            if (rightRay != null)
+                rightRay.enabled = HeadsetPresent && Tracked(XRNode.RightHand);
+            if (leftRay != null)
+                leftRay.enabled = HeadsetPresent && Tracked(XRNode.LeftHand);
         }
 
-        /// <summary>Whether the pointer's controller is reporting a pose.</summary>
+        static bool Tracked(XRNode node)
+        {
+            return InputDevices.GetDeviceAtXRNode(node).isValid;
+        }
+
+        /// <summary>Whether either hand's controller is reporting a pose.</summary>
         public bool ControllerTracked()
         {
-            if (pointerDriver == null) return false;
-            return InputDevices.GetDeviceAtXRNode(pointerDriver.node).isValid;
+            return Tracked(XRNode.RightHand) || Tracked(XRNode.LeftHand);
         }
 
-        /// <summary>Put the pointer back on the fixed angle, whatever the inspector says.</summary>
+        /// <summary>Put both pointers back on the fixed angle, whatever the inspector says.</summary>
         public void ApplyPointerPitch()
         {
             gripToAimDegrees = GripToAim;
-            if (pointerDriver != null) pointerDriver.pitchOffset = GripToAim;
+            foreach (var driver in GetComponentsInChildren<XRPoseDriver>(true))
+                if (driver.node == XRNode.RightHand || driver.node == XRNode.LeftHand)
+                    driver.pitchOffset = GripToAim;
         }
 
         public static bool IsHeadsetRunning()
@@ -268,6 +277,13 @@ namespace EmotionRooms
         public static bool TriggerPressed()
         {
             return Pressed(XRNode.RightHand) || Pressed(XRNode.LeftHand);
+        }
+
+        /// <summary>True on the frame THIS hand's trigger goes down. The distinction
+        /// matters because a press must commit with the pressing hand's own ray.</summary>
+        public static bool TriggerPressed(XRNode node)
+        {
+            return Pressed(node);
         }
 
         static readonly Dictionary<XRNode, bool> wasDown = new Dictionary<XRNode, bool>();

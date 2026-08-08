@@ -330,6 +330,12 @@ namespace EmotionRooms
                 IsRunning = false;
                 if (grid != null) grid.Hide();
                 if (restScreen != null) restScreen.SetActive(true);
+                // Say so, in the headset. Without this the run simply stopped: the
+                // participant was left standing on the grey stage with no grid, no room
+                // and no way to tell "finished" from "hung".
+                if (message != null)
+                    message.Show("Practice finished.\n\nNothing was scored.\n" +
+                                 "You can take the headset off.");
                 if (events != null) events.Write("practice_only_end", null);
                 Debug.Log("TrialRunner: practice-only run finished. No trials were scored.");
 

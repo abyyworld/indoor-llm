@@ -58,6 +58,28 @@ namespace EmotionRooms
             if (enableSnapTurn) SnapTurn(camera);
         }
 
+        /// <summary>
+        /// Keep the HEAD inside the room, whatever moved it.
+        ///
+        /// Clamping the rig on stick input missed the other way people move: physically
+        /// walking. The headset tracks real steps and applies them to the camera, not
+        /// the rig, so a participant could lean or walk straight through a wall while
+        /// the rig stayed politely inside. Run after XR writes the head pose, this
+        /// shifts the rig by however far the head has strayed past the bound, which
+        /// works identically for both kinds of movement.
+        /// </summary>
+        void LateUpdate()
+        {
+            if (rig == null) return;
+            var camera = headCamera != null ? headCamera : Camera.main;
+            if (camera == null) return;
+
+            var head = camera.transform.position;
+            var held = Clamp(head);
+            if (held.x != head.x || held.z != head.z)
+                rig.position += new Vector3(held.x - head.x, 0f, held.z - head.z);
+        }
+
         void Move(Camera camera)
         {
             Vector2 stick;
