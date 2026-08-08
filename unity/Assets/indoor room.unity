@@ -4427,7 +4427,7 @@ MonoBehaviour:
   withdrawKey: 293
   withdrawHoldSeconds: 1.5
   consentLogFileName: consent_log.csv
-  participantId: 091
+  participantId: 09
   autoStart: 0
   startDelaySeconds: 3
   practiceRooms: 1
@@ -4465,7 +4465,7 @@ MonoBehaviour:
   telemetry: {fileID: 572995560}
   board: {fileID: 572995554}
   answerPanel: {fileID: 2132755998}
-  participantId: 091
+  participantId: 09
   blockFileName: rationale.json
   exposureSeconds: 8
   responsesFileName: rationale_responses.csv
@@ -4523,7 +4523,7 @@ MonoBehaviour:
   detectionPanel: {fileID: 2132755998}
   attributionPanel: {fileID: 930294618}
   correctionPanel: {fileID: 511652016}
-  participantId: 091
+  participantId: 09
   blockAsset: {fileID: 0}
   blockFileName: oversight.json
   reviewExposureSeconds: 8
@@ -4551,7 +4551,7 @@ MonoBehaviour:
   board: {fileID: 0}
   exposureSeconds: 20
   transitionSeconds: 15
-  participantId: 091
+  participantId: 09
   sessionAsset: {fileID: 0}
   sessionFileName: session.json
   practiceOnly: 0
@@ -4569,7 +4569,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 83af24403366647f7a8495803897ae4e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EmotionRooms.StudyTelemetry
-  participantId: 091
+  participantId: 09
   sessionOrder: 0
   latinSeed: 0
   loader: {fileID: 572995563}
@@ -4594,7 +4594,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 80ce2959a98db42cdb75ca85e03d70c5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EmotionRooms.EventLog
-  participantId: 091
+  participantId: 09
   folder: logs
   headTransform: {fileID: 212706377}
   poseSampleHz: 10

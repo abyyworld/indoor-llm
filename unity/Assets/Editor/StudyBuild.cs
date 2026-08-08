@@ -184,27 +184,18 @@ namespace EmotionRooms.EditorTools
             // The permission the panel needs to talk to the app. Idempotent.
             XRSetup.AllowLocalHttp();
 
-            // Rebuild clean whenever the scene the player must deserialize has changed
-            // shape. Incremental builds reuse serialized player data, and reusing it
-            // across a change to a serialized field is what makes an app install fine
-            // and then vanish on the loading screen.
-            bool clean = SceneChangedSinceLastBuild();
-            BuildAndDeploy(clean);
-            if (clean) RecordBuiltScene();
+            // ALWAYS clean. This line was once a gate -- rebuild clean only when the
+            // scene stamp had moved -- and that gate was itself a bug: a link.xml edit
+            // rode through as an incremental build, regenerated libunity with different
+            // stripping while reusing the serialized player data the previous engine
+            // wrote, and the app died at scene load. Every load crash this project has
+            // seen came off an incremental build; no clean build has ever produced one.
+            // Minutes per install is the price, and it is cheap against another day of
+            // chasing a corrupt build.
+            ClearBuildCache();
+            BuildAndDeploy(false);
 
             ReportWhetherItActuallyRuns();
-        }
-
-        const string LastBuiltStampKey = "EmotionRooms.LastBuiltSceneStamp";
-
-        static bool SceneChangedSinceLastBuild()
-        {
-            return EditorPrefs.GetInt(LastBuiltStampKey, -1) != StudySceneStamp.Current;
-        }
-
-        static void RecordBuiltScene()
-        {
-            EditorPrefs.SetInt(LastBuiltStampKey, StudySceneStamp.Current);
         }
 
         /// <summary>
@@ -217,8 +208,22 @@ namespace EmotionRooms.EditorTools
         /// </summary>
         static void ReportWhetherItActuallyRuns()
         {
-            System.Threading.Thread.Sleep(6000);
+            // Polled off EditorApplication.update rather than slept: a Thread.Sleep here
+            // runs inside a delayCall and freezes the whole editor for the wait,
+            // corrupting whatever IMGUI layout was mid-frame.
+            double checkAt = EditorApplication.timeSinceStartup + 6.0;
+            EditorApplication.CallbackFunction poll = null;
+            poll = () =>
+            {
+                if (EditorApplication.timeSinceStartup < checkAt) return;
+                EditorApplication.update -= poll;
+                CheckStillRunning();
+            };
+            EditorApplication.update += poll;
+        }
 
+        static void CheckStillRunning()
+        {
             string pid = Run("shell pidof " + Package).Trim();
             if (!string.IsNullOrEmpty(pid))
             {
