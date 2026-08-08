@@ -308,9 +308,6 @@ STRATEGY = {
         {"id": "correction_goal", "type": "paragraph",
          "text": "When you changed something about a room, what were you trying to "
                  "achieve?"},
-        {"id": "self_rated_detection", "type": "scale", "min": 1, "max": 5,
-         "text": "How confident are you that you spotted the rooms with something wrong?",
-         "min_label": "Not at all", "max_label": "Very confident"},
         {"id": "anything_else", "type": "paragraph",
          "text": "Anything that felt odd, uncomfortable, unclear, or worth telling us?"},
     ],
@@ -470,9 +467,6 @@ PREFERENCE = {
          "text": "Which room shape did you prefer?"},
         {"id": "shape_reason", "type": "paragraph",
          "text": "Why?"},
-        {"id": "would_live_in", "type": "paragraph",
-         "text": "Which room would you most want to spend time in, and what made it that "
-                 "one?"},
         {"id": "attention_check", "type": "choice",
          "options": ["Strongly disagree", "Disagree", "Neither", "Agree", "Strongly agree"],
          "text": "Please select \"Disagree\" for this item.",
