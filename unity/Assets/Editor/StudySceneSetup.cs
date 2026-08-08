@@ -239,6 +239,21 @@ namespace EmotionRooms.EditorTools
 
             var grid = quad.AddComponent<AffectGrid>();
             grid.viewer = camera;
+
+            // The grid is meaningless without its axes named. Attached to the quad's
+            // parent so the quad's own scale does not stretch the text.
+            var labels = new GameObject("Grid Labels").transform;
+            labels.SetParent(quad.transform.parent, false);
+            labels.localPosition = quad.transform.localPosition;
+            labels.localRotation = quad.transform.localRotation;
+
+            WorldLabel.Attach(labels, "How did that room make you feel?", 0.05f,
+                              new Vector3(0f, 0.78f, 0f));
+            WorldLabel.Attach(labels, "unpleasant", 0.04f, new Vector3(-0.82f, 0f, 0f));
+            WorldLabel.Attach(labels, "pleasant", 0.04f, new Vector3(0.82f, 0f, 0f));
+            WorldLabel.Attach(labels, "worked up", 0.04f, new Vector3(0f, 0.62f, 0f));
+            WorldLabel.Attach(labels, "calm", 0.04f, new Vector3(0f, -0.62f, 0f));
+            grid.labels = labels.gameObject;
             grid.cells = 9;
             grid.hoverMarker = Marker(quad, "Hover Marker", new Color(1f, 1f, 1f, 0.9f), 0.05f);
             grid.selectionMarker = Marker(quad, "Selection Marker", new Color(0.2f, 0.9f, 0.3f), 0.07f);
@@ -383,12 +398,23 @@ namespace EmotionRooms.EditorTools
                 material.color = new Color(0.85f, 0.85f, 0.85f);
                 cell.GetComponent<Renderer>().sharedMaterial = material;
 
+                // The face of the button says what it is. Named only in the hierarchy,
+                // these were identical grey boxes to the person being asked.
+                WorldLabel.Attach(cell.transform, values[i], 0.045f,
+                                  new Vector3(0f, 0f, -0.6f));
+
                 panel.options.Add(new QuestionPanel.Option
                 {
                     value = values[i],
                     target = cell.transform,
                 });
             }
+
+            // The question itself, above the options.
+            var prompt = new GameObject("Prompt").transform;
+            prompt.SetParent(go.transform, false);
+            prompt.localPosition = new Vector3(0f, 0.46f, 0f);
+            panel.promptLabel = WorldLabel.Attach(prompt, "", 0.05f);
 
             if (withConfidence)
             {
@@ -411,6 +437,10 @@ namespace EmotionRooms.EditorTools
                     var material = new Material(DefaultShader()) { name = step.name };
                     material.color = new Color(0.85f, 0.85f, 0.85f);
                     step.GetComponent<Renderer>().sharedMaterial = material;
+
+                    WorldLabel.Attach(step.transform,
+                        i == 0 ? "not sure" : i == panel.confidenceSteps - 1 ? "certain" : "",
+                        0.03f, new Vector3(0f, -1.2f, 0f));
                 }
             }
 

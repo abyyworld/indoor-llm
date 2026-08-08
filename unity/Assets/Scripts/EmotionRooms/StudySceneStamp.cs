@@ -18,7 +18,7 @@ namespace EmotionRooms
     public class StudySceneStamp : MonoBehaviour
     {
         /// <summary>Raise this when the setup code changes what it builds.</summary>
-        public const int Current = 19;
+        public const int Current = 20;
 
         [Tooltip("Set by Emotion Rooms > Study Control Panel when the scene is built. " +
                  "Do not edit by hand: a stamp that disagrees with the scene is worse " +

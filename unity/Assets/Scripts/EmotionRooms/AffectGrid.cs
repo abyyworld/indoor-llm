@@ -88,6 +88,10 @@ namespace EmotionRooms
                  "Camera.main.")]
         public Camera viewer;
 
+        [Tooltip("Axis names and the question. Shown and hidden with the grid, and " +
+                 "kept outside it so the quad's scale does not stretch the text.")]
+        public GameObject labels;
+
         [Tooltip("Metres in front of the viewer.")]
         public float distance = 1.2f;
 
@@ -112,6 +116,7 @@ namespace EmotionRooms
             if (selectionMarker != null) selectionMarker.gameObject.SetActive(false);
             if (hoverMarker != null) hoverMarker.gameObject.SetActive(true);
             gameObject.SetActive(true);
+            if (labels != null) labels.SetActive(true);
         }
 
         void PlaceInFrontOfViewer()
@@ -131,6 +136,12 @@ namespace EmotionRooms
 
             transform.position = eye.position + forward * distance;
             transform.rotation = Quaternion.LookRotation(forward);
+
+            if (labels != null)
+            {
+                labels.transform.position = transform.position;
+                labels.transform.rotation = transform.rotation;
+            }
         }
 
         /// <summary>
@@ -158,6 +169,7 @@ namespace EmotionRooms
         {
             IsAwaitingResponse = false;
             if (hoverMarker != null) hoverMarker.gameObject.SetActive(false);
+            if (labels != null) labels.SetActive(false);
             gameObject.SetActive(false);
         }
 

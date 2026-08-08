@@ -25,9 +25,17 @@ namespace EmotionRooms
     {
         public XRNode node = XRNode.CenterEye;
 
-        [Tooltip("Apply rotation as well as position. Off for the camera when something " +
-                 "else already orients it.")]
+        [Tooltip("Apply rotation as well as position.")]
         public bool applyRotation = true;
+
+        [Tooltip("Degrees of pitch applied after the tracked rotation.\n\n" +
+                 "CommonUsages.deviceRotation reports the GRIP pose -- how the controller " +
+                 "sits in a closed hand -- not the aim pose a ray should follow. On Touch " +
+                 "controllers the grip is tilted back from where the participant thinks " +
+                 "they are pointing, which is why a ray follows the hand correctly and " +
+                 "still points somewhere wrong. About -40 degrees brings it back to the " +
+                 "line people expect.")]
+        public float pitchOffset;
 
         [Tooltip("Where the tracked pose is measured from. Left empty, the parent is used, " +
                  "which is what puts the rig at the researcher-set standing position.")]
@@ -54,7 +62,8 @@ namespace EmotionRooms
             }
             if (hasRotation && applyRotation)
             {
-                transform.rotation = basis != null ? basis.rotation * rotation : rotation;
+                var aim = rotation * Quaternion.Euler(pitchOffset, 0f, 0f);
+                transform.rotation = basis != null ? basis.rotation * aim : aim;
             }
         }
     }
@@ -71,13 +80,16 @@ namespace EmotionRooms
         [Tooltip("Created at runtime: the transform whose forward axis is the pointer ray.")]
         public Transform pointer;
 
+        [Tooltip("Pitch correction from the controller's grip pose to where it appears " +
+                 "to point. Negative tilts the ray up from the grip.")]
+        public float gripToAimDegrees = -40f;
+
         [Tooltip("Preferred hand. Falls back to the other one if it is not tracking, so a " +
                  "left-handed participant is not stuck holding the wrong controller.")]
         public bool rightHanded = true;
 
         public bool HeadsetPresent { get; private set; }
 
-        XRPoseDriver headDriver;
         XRPoseDriver pointerDriver;
         static readonly List<XRDisplaySubsystem> displays = new List<XRDisplaySubsystem>();
 
@@ -106,15 +118,22 @@ namespace EmotionRooms
             anchor.rotation = headCamera.transform.rotation;
             headCamera.transform.SetParent(anchor, true);
 
-            headDriver = headCamera.gameObject.AddComponent<XRPoseDriver>();
-            headDriver.node = XRNode.CenterEye;
-            headDriver.origin = anchor;
+            // NOTHING drives the camera here.
+            //
+            // Unity's XR system already applies the head pose to the main camera every
+            // frame when a display is running. Adding a pose driver on top of that meant
+            // two writers fighting over one transform: the view stopped responding to
+            // head movement, and camera.transform.position became a value nobody could
+            // rely on -- which is why the affect grid, placed relative to the camera,
+            // ended up somewhere the participant was not looking. The camera only needs
+            // a parent at floor level; XR does the rest.
 
             var hand = new GameObject("Pointer").transform;
             hand.SetParent(anchor, false);
             pointerDriver = hand.gameObject.AddComponent<XRPoseDriver>();
             pointerDriver.node = rightHanded ? XRNode.RightHand : XRNode.LeftHand;
             pointerDriver.origin = anchor;
+            pointerDriver.pitchOffset = gripToAimDegrees;
             pointer = hand;
 
             BuildRay(hand);

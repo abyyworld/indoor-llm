@@ -315,19 +315,7 @@ namespace EmotionRooms
 
         void StartPhases()
         {
-            // Say what the headset can actually see, once, at the start. A controller
-            // that is not tracked is indistinguishable from a study that is not
-            // responding, and the participant is the only one who can see the screen.
-            if (xrRig != null && board != null && xrRig.HeadsetPresent &&
-                !xrRig.ControllerTracked())
-            {
-                Debug.LogWarning("StudyBootstrap: no controller is tracking. The pointer " +
-                                 "will not work until one wakes up.");
-                board.Show("No controller detected.\n\nPick one up and press a button " +
-                           "on it, then it will appear as a blue beam.");
-            }
-
-            if (board != null && (xrRig == null || xrRig.ControllerTracked())) board.Hide();
+            if (board != null) board.Hide();
 
             if (!DoesPhaseA)
             {
@@ -565,6 +553,7 @@ namespace EmotionRooms
         void Update()
         {
             PollWithdrawal();
+            PollController();
 
             Ray ray;
 
@@ -582,6 +571,34 @@ namespace EmotionRooms
 
             grid.Hover(ray);
             if (useLegacyInput && Pressed()) Select();
+        }
+
+        bool warnedNoController;
+
+        /// <summary>
+        /// Keep telling the truth about the controller.
+        ///
+        /// Checked once at Begin, this said "no controller detected" and then never took
+        /// it back -- so a controller that woke a second later left the message on screen
+        /// while the pointer worked perfectly. Re-evaluated every frame, the message
+        /// appears when a controller really is missing and clears the moment one reports.
+        /// </summary>
+        void PollController()
+        {
+            if (xrRig == null || board == null || !xrRig.HeadsetPresent) return;
+
+            bool tracked = xrRig.ControllerTracked();
+            if (!tracked && !warnedNoController)
+            {
+                warnedNoController = true;
+                board.Show("No controller detected.\n\nPick one up and squeeze the " +
+                           "trigger. A blue beam will appear.");
+            }
+            else if (tracked && warnedNoController)
+            {
+                warnedNoController = false;
+                board.Hide();
+            }
         }
 
         void PollWithdrawal()

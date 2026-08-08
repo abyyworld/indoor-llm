@@ -23,8 +23,11 @@ namespace EmotionRooms
             public Transform target;      // the collider the pointer hits
         }
 
-        [Tooltip("Question text. Set at runtime; [emotion] is replaced with the target.")]
+        [Tooltip("Question text. Set at runtime and rendered above the options.")]
         public string prompt = "";
+
+        [Tooltip("Where the question is drawn. Built by scene setup.")]
+        public TextMesh promptLabel;
 
         public List<Option> options = new List<Option>();
 
@@ -66,6 +69,11 @@ namespace EmotionRooms
         public void Show(string questionText, ICollection<string> allowed)
         {
             prompt = questionText ?? prompt;
+
+            // The question has to be visible, not just stored. Without this the panel is
+            // a row of unlabelled boxes and the participant is guessing at what is being
+            // asked -- including which emotion the room was supposed to convey.
+            if (promptLabel != null) promptLabel.text = WorldLabel.Wrap(prompt);
             Confidence = 0.5f;
             IsAwaitingAnswer = true;
             shownAt = Time.time;
