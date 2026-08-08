@@ -77,7 +77,22 @@ namespace EmotionRooms
             var head = camera.transform.position;
             var held = Clamp(head);
             if (held.x != head.x || held.z != head.z)
+            {
                 rig.position += new Vector3(held.x - head.x, 0f, held.z - head.z);
+                // One row per contact, not per frame: wallHeld collapses a continuous
+                // lean into enter/leave so the file records episodes, not frame spam.
+                if (!wallHeld && events != null)
+                    events.WriteValues("wall_hold", F3(head), F3(held), null);
+                wallHeld = true;
+            }
+            else wallHeld = false;
+        }
+
+        bool wallHeld;
+
+        static string F3(Vector3 v)
+        {
+            return v.x.ToString("0.00") + "|" + v.y.ToString("0.00") + "|" + v.z.ToString("0.00");
         }
 
         void Move(Camera camera)
@@ -120,6 +135,9 @@ namespace EmotionRooms
             // around the participant rather than the participant turning within it.
             rig.RotateAround(camera.transform.position, Vector3.up,
                              snapDegrees * Mathf.Sign(stick.x));
+            if (events != null)
+                events.WriteValues("snap_turn", (snapDegrees * Mathf.Sign(stick.x)).ToString("0"),
+                    camera.transform.eulerAngles.y.ToString("0.0"), null);
         }
 
         /// <summary>Keep the participant inside whichever shell is loaded.</summary>

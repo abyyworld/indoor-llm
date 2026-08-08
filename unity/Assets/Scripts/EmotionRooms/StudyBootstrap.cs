@@ -26,6 +26,9 @@ namespace EmotionRooms
     {
         [Header("Wiring")]
         public TrialRunner trialRunner;
+
+        [Tooltip("Raw input stream target. Every trigger press lands here as a row.")]
+        public EventLog events;
         public OversightReview oversightReview;
 
         [Tooltip("The rationale check. Runs after the oversight block, ~3 minutes.")]
@@ -598,6 +601,16 @@ namespace EmotionRooms
             bool haveMouse = !xr && MouseRay(out mouseRay);
             bool mouseDown = useLegacyInput && haveMouse && Input.GetMouseButtonDown(0);
 
+            // Raw input stream, decided 8 Aug 2026: every press is a row no matter how
+            // often it repeats or whether it landed. What people pressed at and missed
+            // is data the successful-selection rows silently discard.
+            if (events != null)
+            {
+                if (rightDown) LogPress("right", rightRay);
+                if (leftDown) LogPress("left", leftRay);
+                if (mouseDown) LogPress("mouse", mouseRay);
+            }
+
             var panel = ActivePanel();
             if (panel != null)
             {
@@ -625,6 +638,17 @@ namespace EmotionRooms
             if (rightDown) grid.TrySelect(rightRay, out response);
             else if (leftDown) grid.TrySelect(leftRay, out response);
             else if (mouseDown) grid.TrySelect(mouseRay, out response);
+        }
+
+        void LogPress(string hand, Ray ray)
+        {
+            string hit = "nothing";
+            RaycastHit info;
+            if (Physics.Raycast(ray, out info, 100f, ~0, QueryTriggerInteraction.Collide))
+                hit = info.transform.name;
+            var row = hand + " from " + ray.origin.ToString("F3") +
+                      " dir " + ray.direction.ToString("F3");
+            events.WriteValues("trigger_press", hand, hit, row);
         }
 
         static bool HandRay(Transform hand, out Ray ray)

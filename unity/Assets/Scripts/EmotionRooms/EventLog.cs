@@ -243,6 +243,16 @@ namespace EmotionRooms
         Dictionary<string, string> NewRow(string eventName, string detail)
         {
             var row = new Dictionary<string, string>();
+            // Head pose on EVERY row, decided 8 Aug 2026: an event without where the
+            // participant was standing and looking is half an event, and repeating six
+            // columns is cheaper than joining against the pose stream afterwards.
+            if (headTransform != null)
+            {
+                Vector3 hp = headTransform.position;
+                Vector3 he = headTransform.rotation.eulerAngles;
+                row["head_x"] = F(hp.x); row["head_y"] = F(hp.y); row["head_z"] = F(hp.z);
+                row["head_yaw"] = F(he.y); row["head_pitch"] = F(he.x); row["head_roll"] = F(he.z);
+            }
             row["seq"] = (++sequence).ToString(CultureInfo.InvariantCulture);
             row["t_utc"] = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture);
             row["t_ms"] = ((long)((Time.realtimeSinceStartup - sessionStart) * 1000f))

@@ -114,6 +114,9 @@ namespace EmotionRooms.EditorTools
                 AttributionLabels(), true);
             var correction = BuildCorrectionPanel(root, camera);
 
+            detection.events = events;
+            attribution.events = events;
+            correction.events = events;
             review.detectionPanel = detection;
             review.attributionPanel = attribution;
             review.correctionPanel = correction;
@@ -138,6 +141,7 @@ namespace EmotionRooms.EditorTools
 
             var bootstrap = root.AddComponent<StudyBootstrap>();
             bootstrap.board = messageBoard;
+            bootstrap.events = events;
             runner.message = messageBoard;
             bootstrap.rationaleReview = rationale;
             rationale.board = messageBoard;

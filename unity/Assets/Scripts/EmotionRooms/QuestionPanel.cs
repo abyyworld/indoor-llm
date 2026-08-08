@@ -46,6 +46,10 @@ namespace EmotionRooms
                  "previous screen cannot fall through into an answer.")]
         public float inputLockSeconds = 0.4f;
 
+        [Tooltip("Every hover change, part-choice and commit becomes a row here. " +
+                 "Decided 8 Aug 2026: the path to an answer is data, not noise.")]
+        public EventLog events;
+
         /// <summary>Fires with the chosen option value and the confidence at the time.</summary>
         public event Action<string, float> Answered;
 
@@ -146,6 +150,16 @@ namespace EmotionRooms
             if (hit != chosenOption && hit != chosenConfidence)
                 SetTint(hit, true);
             highlighted = hit;
+
+            if (events != null)
+                events.WriteValues("panel_hover", name, hit != null ? hit.name : "",
+                    Elapsed());
+        }
+
+        string Elapsed()
+        {
+            return "t_shown_ms=" + ((long)((Time.time - shownAt) * 1000f))
+                       .ToString(System.Globalization.CultureInfo.InvariantCulture);
         }
 
         /// <summary>
@@ -169,6 +183,9 @@ namespace EmotionRooms
                     SetTint(chosenConfidence, false);
                     chosenConfidence = hit;
                     Paint(chosenConfidence, ChosenTint);
+                    if (events != null)
+                        events.WriteValues("panel_confidence_chosen", name,
+                            Confidence.ToString("0.##"), Elapsed());
                 }
                 return CommitIfComplete();
             }
@@ -181,6 +198,8 @@ namespace EmotionRooms
                 SetTint(chosenOption, false);
                 chosenOption = hit;
                 Paint(chosenOption, ChosenTint);
+                if (events != null)
+                    events.WriteValues("panel_option_chosen", name, option.value, Elapsed());
                 return CommitIfComplete();
             }
             return false;
@@ -201,6 +220,10 @@ namespace EmotionRooms
             SetTint(chosenOption, false);
             SetTint(chosenConfidence, false);
             highlighted = chosenOption = chosenConfidence = null;
+
+            if (events != null)
+                events.WriteValues("panel_committed", name,
+                    pendingValue + "@" + Confidence.ToString("0.##"), Elapsed());
 
             var handler = Answered;
             if (handler != null) handler(pendingValue, Confidence);
