@@ -75,7 +75,6 @@ namespace EmotionRooms
         float shownAt;
         int lastHoverValence = -1;
         int lastHoverArousal = -1;
-        int marks;
 
         void Awake()
         {
@@ -84,11 +83,6 @@ namespace EmotionRooms
             Hide();
         }
 
-        void OnConfirmPressed()
-        {
-            AffectResponse ignored;
-            Commit(out ignored);
-        }
 
         /// <summary>Present the grid and start accepting input.</summary>
         [Tooltip("Camera the grid places itself in front of when shown. Empty uses " +
@@ -98,16 +92,6 @@ namespace EmotionRooms
         [Tooltip("Axis names and the question. Shown and hidden with the grid, and " +
                  "kept outside it so the quad's scale does not stretch the text.")]
         public GameObject labels;
-
-        [Tooltip("Pressed to commit the chosen cell. Without a separate confirm step a " +
-                 "rating lands the instant the trigger goes down, with no way to change " +
-                 "it -- and no way to tell a considered answer from a slipped finger.")]
-        public WorldButton confirmButton;
-
-        /// <summary>Chosen but not yet committed. -1 when nothing is picked.</summary>
-        public int PendingValence { get; private set; }
-        public int PendingArousal { get; private set; }
-        public bool HasPending { get { return PendingValence > 0 && PendingArousal > 0; } }
 
         [Tooltip("Metres in front of the viewer.")]
         public float distance = 1.2f;
@@ -121,17 +105,13 @@ namespace EmotionRooms
 
         public void Show()
         {
-            EnsureConfirmButton();
+            EnsureCells();
             PlaceInFrontOfViewer();
             EnsureVisible();
 
             HasResponded = false;
             IsAwaitingResponse = true;
-            PendingValence = PendingArousal = -1;
-            marks = 0;
-            // Greyed rather than absent: a button that appears only once you have chosen
-            // gives no clue that choosing is a two-step act in the first place.
-            if (confirmButton != null) confirmButton.ShowDisabled();
+            PaintCells();
             shownAt = Time.time;
             lastHoverValence = -1;
             lastHoverArousal = -1;
@@ -143,23 +123,86 @@ namespace EmotionRooms
         }
 
         /// <summary>
-        /// Build the confirm button the first time the grid is shown.
+        /// Draw the 9x9 lattice as real geometry, one tile per cell.
         ///
-        /// Built here rather than saved in the scene: a serialized MonoBehaviour is one
-        /// more thing the player has to deserialize positionally at load, and one more
-        /// way for a build to die before it starts.
+        /// It was a texture baked onto a single quad with Unlit/Transparent. Twice now
+        /// that has come back as "I see no grid": in a build the lattice depends on the
+        /// texture asset surviving import and on a built-in transparent shader surviving
+        /// shader stripping, and when either fails there is nothing to say so -- the quad
+        /// renders blank or not at all, and the participant is left looking at four words
+        /// floating in space with nothing to aim at.
+        ///
+        /// Tiles use the same lit shader the rooms and markers already use, so if
+        /// anything in the scene renders, these do. They also give the pointer something
+        /// that visibly responds, which a painted texture never did.
+        ///
+        /// Deliberately neutral greys. The grid is the instrument for measuring how a
+        /// room made someone feel, so it must not carry colour of its own.
         /// </summary>
-        void EnsureConfirmButton()
+        void EnsureCells()
         {
-            if (confirmButton != null) return;
+            if (tiles != null && tiles.Length == cells * cells) return;
 
-            var parent = labels != null ? labels.transform : transform.parent;
-            if (parent == null) return;
+            var shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
+            tiles = new Renderer[cells * cells];
 
-            confirmButton = WorldButton.Create(parent, "Confirm Button", "Done",
-                                               new Vector3(0f, -0.75f, 0f), 0.42f, 0.13f);
-            confirmButton.Pressed += OnConfirmPressed;
+            float span = 1f / cells;
+            for (int v = 1; v <= cells; v++)
+            {
+                for (int a = 1; a <= cells; a++)
+                {
+                    var tile = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                    tile.name = "Cell " + v.ToString() + "," + a.ToString();
+                    tile.transform.SetParent(transform, false);
+                    // A little smaller than the cell, so the gaps draw the lattice.
+                    tile.transform.localScale = new Vector3(span * 0.88f, span * 0.88f, 0.04f);
+                    tile.transform.localPosition = new Vector3(
+                        (v - 0.5f) * span - 0.5f, (a - 0.5f) * span - 0.5f, -0.03f);
+
+                    // The grid's own BoxCollider resolves the ray. A collider per tile
+                    // would just be 81 more things for the pointer to catch on.
+                    var collider = tile.GetComponent<Collider>();
+                    if (collider != null) Destroy(collider);
+
+                    var renderer = tile.GetComponent<Renderer>();
+                    if (renderer != null && shader != null)
+                        renderer.material = new Material(shader) { color = Idle };
+                    tiles[Index(v, a)] = renderer;
+                }
+            }
+
+            // A dark backing panel, assigned at runtime rather than trusted to a saved
+            // material asset, so the tiles read against something.
+            var own = GetComponent<Renderer>();
+            if (own != null && shader != null)
+                own.material = new Material(shader) { color = new Color(0.08f, 0.08f, 0.11f) };
         }
+
+        int Index(int valence, int arousal)
+        {
+            return (arousal - 1) * cells + (valence - 1);
+        }
+
+        void PaintCells()
+        {
+            if (tiles == null) return;
+            for (int i = 0; i < tiles.Length; i++)
+                if (tiles[i] != null && tiles[i].material != null) tiles[i].material.color = Idle;
+        }
+
+        void PaintCell(int valence, int arousal, Color colour)
+        {
+            if (tiles == null) return;
+            if (valence < 1 || valence > cells || arousal < 1 || arousal > cells) return;
+            var tile = tiles[Index(valence, arousal)];
+            if (tile != null && tile.material != null) tile.material.color = colour;
+        }
+
+        static readonly Color Idle = new Color(0.62f, 0.62f, 0.66f);
+        static readonly Color Hot = new Color(0.95f, 0.95f, 1f);
+        static readonly Color Chosen = new Color(0.30f, 0.85f, 0.42f);
+
+        Renderer[] tiles;
 
         void PlaceInFrontOfViewer()
         {
@@ -212,7 +255,6 @@ namespace EmotionRooms
             IsAwaitingResponse = false;
             if (hoverMarker != null) hoverMarker.gameObject.SetActive(false);
             if (labels != null) labels.SetActive(false);
-            if (confirmButton != null) confirmButton.Hide();
             gameObject.SetActive(false);
         }
 
@@ -222,13 +264,15 @@ namespace EmotionRooms
         /// </summary>
         public void Hover(Ray ray)
         {
-            if (!IsAwaitingResponse || hoverMarker == null) return;
+            if (!IsAwaitingResponse) return;
 
             int valence, arousal;
             Vector3 point;
             if (TryResolve(ray, out valence, out arousal, out point))
             {
-                hoverMarker.position = CellCentre(valence, arousal);
+                if (hoverMarker != null) hoverMarker.position = CellCentre(valence, arousal);
+                PaintCells();
+                PaintCell(valence, arousal, Hot);
 
                 // One row per change of cell. Every frame would be noise; only on
                 // commit would lose the hesitation, which is the interesting part.
@@ -242,16 +286,23 @@ namespace EmotionRooms
         }
 
         /// <summary>
-        /// Mark a cell without committing to it.
+        /// Commit the cell under the pointer, there and then.
         ///
-        /// Selection used to land the instant the trigger went down, wherever the beam
-        /// happened to be resting, with no way to change it. Marking and confirming are
-        /// now separate: the marker can be moved as often as the participant likes, and
-        /// nothing is recorded until they press the confirm button. That is the
-        /// difference between a considered rating and a slipped finger.
+        /// This was briefly a two-step act -- mark, then press a confirm button -- so a
+        /// rating could be changed before it counted. In the headset that turned into a
+        /// dead end: the confirm button was the only way forward and it was not always
+        /// there, so the session simply stopped with the grid up and nothing that could
+        /// be done about it. A single press cannot strand anybody, and it is how the
+        /// published Affect Grid is administered anyway.
+        ///
+        /// The cost is real and worth stating in the write-up: a misplaced press is
+        /// recorded, with no correction. `marks` is gone as a measure, so the response
+        /// time is what carries how considered an answer was.
         /// </summary>
-        public bool TryMark(Ray ray)
+        public bool TrySelect(Ray ray, out AffectResponse response)
         {
+            response = default(AffectResponse);
+
             if (!IsAwaitingResponse || HasResponded) return false;
             if (Time.time - shownAt < inputLockSeconds) return false;
 
@@ -259,39 +310,10 @@ namespace EmotionRooms
             Vector3 point;
             if (!TryResolve(ray, out valence, out arousal, out point)) return false;
 
-            bool changed = valence != PendingValence || arousal != PendingArousal;
-            PendingValence = valence;
-            PendingArousal = arousal;
-
-            if (selectionMarker != null)
-            {
-                selectionMarker.gameObject.SetActive(true);
-                selectionMarker.position = CellCentre(valence, arousal);
-            }
-            if (confirmButton != null) confirmButton.Show();
-
-            // Every change of mind is logged. How often a rating moves before it is
-            // committed says something about how confident it was.
-            if (events != null && changed)
-                events.WriteGrid("grid_marked", valence, arousal, point.x, point.y,
-                    marks == 0 ? "first mark" : "changed from mark " + marks.ToString());
-            marks++;
-            return true;
-        }
-
-        /// <summary>
-        /// Commit whatever is marked. Does nothing while nothing is marked, which is why
-        /// the confirm button is shown greyed until the first mark lands.
-        /// </summary>
-        public bool Commit(out AffectResponse response)
-        {
-            response = default(AffectResponse);
-            if (!IsAwaitingResponse || HasResponded || !HasPending) return false;
-
             response = new AffectResponse
             {
-                valence = PendingValence,
-                arousal = PendingArousal,
+                valence = valence,
+                arousal = arousal,
                 durationMs = (long)((Time.time - shownAt) * 1000f),
             };
 
@@ -299,11 +321,17 @@ namespace EmotionRooms
             IsAwaitingResponse = false;
 
             if (events != null)
-                events.WriteGrid("grid_selected", response.valence, response.arousal, 0f, 0f,
-                    "dwell_ms=" + response.durationMs.ToString() + " marks=" + marks.ToString());
+                events.WriteGrid("grid_selected", valence, arousal, point.x, point.y,
+                    "dwell_ms=" + response.durationMs.ToString());
 
+            PaintCells();
+            PaintCell(valence, arousal, Chosen);
+            if (selectionMarker != null)
+            {
+                selectionMarker.gameObject.SetActive(true);
+                selectionMarker.position = CellCentre(valence, arousal);
+            }
             if (hoverMarker != null) hoverMarker.gameObject.SetActive(false);
-            if (confirmButton != null) confirmButton.Hide();
 
             var handler = Responded;
             if (handler != null) handler(response);

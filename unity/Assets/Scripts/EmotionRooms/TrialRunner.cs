@@ -76,9 +76,8 @@ namespace EmotionRooms
         public RoomLoader loader;
         public AffectGrid grid;
 
-        [Tooltip("Pressed to move on to the next room, so the break between trials is " +
-                 "the participant's to set rather than a fixed timer.")]
-        public WorldButton nextButton;
+        [Tooltip("Pause between a recorded answer and the next room appearing.")]
+        public float betweenRoomsSeconds = 2f;
 
         [Tooltip("Where the between-rooms instruction is drawn.")]
         public MessageBoard message;
@@ -168,60 +167,18 @@ namespace EmotionRooms
             if (grid != null) grid.Responded -= OnResponded;
         }
 
-        /// <summary>Hold on the neutral stage until the participant asks for the next room.</summary>
-        System.Collections.IEnumerator WaitForNextRoom(int index)
+        /// <summary>Show that the answer landed, then move on.</summary>
+        System.Collections.IEnumerator AcknowledgeAndContinue(int index)
         {
-            EnsureNextButton();
-            if (nextButton == null) yield break;
+            bool last = session != null && session.rooms != null && index + 1 >= session.rooms.Length;
 
-            bool advance = false;
-            System.Action onPress = delegate { advance = true; };
-
-            nextButton.Pressed += onPress;
-            // The parent, so the caption travels with the slab.
-            PlaceInFrontOfViewer(nextButton.transform.parent != null
-                                 ? nextButton.transform.parent : nextButton.transform, 1.4f);
-            nextButton.Show();
             if (message != null)
-                message.Show(session != null && session.rooms != null && index + 1 >= session.rooms.Length
-                    ? "That was the last room.\n\nPoint at the button and press the trigger to finish."
-                    : "Take a moment.\n\nPoint at the button and press the trigger\nwhen you are ready for the next room.");
-            if (events != null) events.Write("await_next_room", "trial " + index.ToString());
+                message.Show(last ? "Answer recorded.\n\nThat was the last room."
+                                  : "Answer recorded.\n\nThe next room is coming up.");
+            if (events != null) events.Write("answer_acknowledged", "trial " + index.ToString());
 
-            float waitedFrom = Time.time;
-            while (!advance) yield return null;
-
-            nextButton.Pressed -= onPress;
-            nextButton.Hide();
+            yield return new WaitForSeconds(betweenRoomsSeconds);
             if (message != null) message.Hide();
-            if (events != null)
-                events.WriteValues("next_room", ((long)((Time.time - waitedFrom) * 1000f)).ToString(),
-                    null, "participant-paced break between rooms");
-        }
-
-        /// <summary>Built on first use rather than saved in the scene. See WorldButton.Create.</summary>
-        void EnsureNextButton()
-        {
-            if (nextButton != null) return;
-
-            var host = new GameObject("Next Room");
-            nextButton = WorldButton.Create(host.transform, "Next Room Button", "Next room",
-                                            Vector3.zero, 0.55f, 0.16f);
-        }
-
-        /// <summary>Put a button where it can be seen and pointed at, level with the eye.</summary>
-        void PlaceInFrontOfViewer(Transform target, float distance)
-        {
-            var camera = grid != null && grid.viewer != null ? grid.viewer : Camera.main;
-            if (camera == null || target == null) return;
-
-            var forward = camera.transform.forward;
-            forward.y = 0f;
-            if (forward.sqrMagnitude < 0.0001f) forward = Vector3.forward;
-            forward.Normalize();
-
-            target.position = camera.transform.position + forward * distance - Vector3.up * 0.25f;
-            target.rotation = Quaternion.LookRotation(forward);
         }
 
         void OnResponded(AffectResponse response)
@@ -448,12 +405,13 @@ namespace EmotionRooms
             if (events != null)
                 events.WriteGrid("grid_hidden", latest.valence, latest.arousal, 0f, 0f, "response committed");
 
-            // Self-paced gap between rooms. The exposure is fixed at exposureSeconds and
-            // that is the part that has to be constant across participants; how long
-            // somebody takes to collect themselves before the next room is not a
-            // measurement, and taking that control away only creates a rushed rating on
-            // the trial after.
-            yield return WaitForNextRoom(index);
+            // Straight on to the next room once the answer is in.
+            //
+            // There was a "Next room" button here, and it was the wrong shape for this
+            // study: it put a press between every pair of rooms in a block of eight,
+            // and if it failed to appear the session stopped dead with no way forward.
+            // A short acknowledgement is enough to show the answer registered.
+            yield return AcknowledgeAndContinue(index);
 
             var record = new TrialRecord
             {

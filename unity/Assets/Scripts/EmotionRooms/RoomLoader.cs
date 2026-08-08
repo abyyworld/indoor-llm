@@ -142,7 +142,11 @@ namespace EmotionRooms
             if (ratingStage != null) ratingStage.Show();
         }
 
-        /// <summary>Built on first use rather than saved in the scene. See WorldButton.Create.</summary>
+        /// <summary>
+        /// Built on first use rather than saved in the scene: the player deserializes the
+        /// scene positionally, so every component in that file is another chance for a
+        /// build to die before it starts.
+        /// </summary>
         void EnsureRatingStage()
         {
             if (ratingStage != null) return;
