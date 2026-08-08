@@ -196,6 +196,25 @@ namespace EmotionRooms
             if (correctionPanel != null) correctionPanel.Answered += OnCorrectionAnswered;
 
             if (autoStart) StartCoroutine(AutoStart());
+            else ShowIdleState();
+        }
+
+        /// <summary>
+        /// Say what state the app is in while nothing is running.
+        ///
+        /// Idle used to show the default skybox and nothing else. Every session in
+        /// testing had been started remotely within seconds, so nobody had ever seen the
+        /// idle state -- and the first person who did reported it as "endless loading",
+        /// which is exactly what an unlabelled empty sky looks like. Ground underfoot and
+        /// a sentence naming the state make waiting and broken distinguishable.
+        /// </summary>
+        void ShowIdleState()
+        {
+            if (trialRunner != null && trialRunner.loader != null)
+                trialRunner.loader.HideRooms();
+            if (board != null)
+                board.Show("Ready.\n\nStart the session from the laptop:\n" +
+                           "Emotion Rooms > Study Control Panel > Start.");
         }
 
         /// <summary>
