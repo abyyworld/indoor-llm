@@ -81,14 +81,22 @@ namespace EmotionRooms
         public Transform pointer;
 
         [Tooltip("Pitch correction from the controller's grip pose to where it appears " +
-                 "to point. Negative tilts the ray up from the grip.")]
-        public float gripToAimDegrees = -40f;
+                 "to point.\n\n" +
+                 "60 degrees, set by aiming in the headset rather than derived: the grip " +
+                 "pose is how the controller sits in a closed hand, and the offset to the " +
+                 "line a person thinks they are pointing along can only really be judged " +
+                 "by pointing at something. Adjustable live with the thumbstick under the " +
+                 "diagnostics overlay if a different headset needs another value.")]
+        public float gripToAimDegrees = 60f;
 
         [Tooltip("Preferred hand. Falls back to the other one if it is not tracking, so a " +
                  "left-handed participant is not stuck holding the wrong controller.")]
         public bool rightHanded = true;
 
         public bool HeadsetPresent { get; private set; }
+
+        /// <summary>The floor-level anchor. What locomotion moves, never the camera.</summary>
+        public Transform Origin { get; private set; }
 
         XRPoseDriver headDriver;
         XRPoseDriver pointerDriver;
@@ -138,6 +146,7 @@ namespace EmotionRooms
             pointerDriver.origin = anchor;
             pointerDriver.pitchOffset = gripToAimDegrees;
             pointer = hand;
+            Origin = anchor;
 
             BuildRay(hand);
         }

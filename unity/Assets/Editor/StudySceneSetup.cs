@@ -153,6 +153,12 @@ namespace EmotionRooms.EditorTools
             xr.headCamera = camera;
             bootstrap.xrRig = xr;
 
+            var walking = root.AddComponent<Locomotion>();
+            walking.xrRig = xr;
+            walking.headCamera = camera;
+            walking.loader = loader;
+            walking.events = events;
+
             var diagnostics = root.AddComponent<XRDiagnostics>();
             diagnostics.rig = xr;
             diagnostics.headCamera = camera;
@@ -433,7 +439,12 @@ namespace EmotionRooms.EditorTools
 
                 // The face of the button says what it is. Named only in the hierarchy,
                 // these were identical grey boxes to the person being asked.
-                WorldLabel.Attach(cell.transform, values[i], 0.03f,
+                // On a two-option panel the buttons are also bound to A and B, so the
+                // face says which -- a mapping nobody should have to be told twice.
+                string face = values.Length == 2
+                    ? values[i] + "  (" + (i == 0 ? "A" : "B") + ")"
+                    : values[i];
+                WorldLabel.Attach(cell.transform, face, 0.03f,
                                   new Vector3(0f, 0f, -0.6f));
 
                 panel.options.Add(new QuestionPanel.Option

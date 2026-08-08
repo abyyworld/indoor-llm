@@ -1,0 +1,138 @@
+// Walking, on the thumbstick.
+//
+// The standing point was researcher-fixed so both room shells presented identical
+// sightlines, and that was the right default -- but it is a default, not a law, and the
+// researcher has asked for movement. It is enabled here with the cost recorded rather
+// than argued about: once participants walk, the two shapes are no longer experienced
+// from a matched viewpoint, so a shape difference could in principle be a difference in
+// where people chose to stand. The telemetry already logs head position at 20 Hz, which
+// is what makes that checkable afterwards instead of merely assumed.
+//
+// Bounded to the room. Walking through a wall would end the illusion the study depends
+// on, and a participant outside the room is rating nothing.
+
+using UnityEngine;
+using UnityEngine.XR;
+
+namespace EmotionRooms
+{
+    public class Locomotion : MonoBehaviour
+    {
+        [Tooltip("The transform that gets moved -- the XR origin, not the camera. Moving " +
+                 "the camera would fight the head pose that XR writes to it every frame.")]
+        public Transform rig;
+
+        [Tooltip("Where the rig comes from. The anchor is created in XRRig.Awake, so it " +
+                 "cannot be wired in the editor.")]
+        public XRRig xrRig;
+
+        public Camera headCamera;
+        public RoomLoader loader;
+        public EventLog events;
+
+        [Tooltip("Metres per second. Walking pace; faster provokes sickness in VR.")]
+        public float speed = 1.4f;
+
+        [Tooltip("Degrees per snap turn. Snap rather than smooth, which is the single " +
+                 "biggest reduction in simulator sickness available here.")]
+        public float snapDegrees = 30f;
+
+        [Tooltip("How close a participant may get to a wall.")]
+        public float wallMargin = 0.45f;
+
+        public bool enableMovement = true;
+        public bool enableSnapTurn = true;
+
+        bool turnArmed = true;
+        bool announced;
+
+        void Update()
+        {
+            if (rig == null && xrRig != null) rig = xrRig.Origin;
+            if (rig == null) return;
+
+            var camera = headCamera != null ? headCamera : Camera.main;
+            if (camera == null) return;
+
+            if (enableMovement) Move(camera);
+            if (enableSnapTurn) SnapTurn(camera);
+        }
+
+        void Move(Camera camera)
+        {
+            Vector2 stick;
+            if (!Stick(XRNode.LeftHand, out stick) || stick.sqrMagnitude < 0.04f) return;
+
+            // Relative to where they are looking, not to the room, which is what people
+            // expect from a thumbstick and what makes it usable without instruction.
+            var forward = camera.transform.forward;
+            var right = camera.transform.right;
+            forward.y = 0f; right.y = 0f;
+            forward.Normalize(); right.Normalize();
+
+            var step = (forward * stick.y + right * stick.x) * speed * Time.deltaTime;
+            var wanted = rig.position + step;
+
+            rig.position = Clamp(wanted);
+
+            if (!announced && events != null)
+            {
+                announced = true;
+                // Recorded once per session: whether people could walk is a property of
+                // the data that a reader of the file should not have to infer.
+                events.WriteValues("locomotion_used", "thumbstick",
+                    speed.ToString("0.0"), null);
+            }
+        }
+
+        void SnapTurn(Camera camera)
+        {
+            Vector2 stick;
+            if (!Stick(XRNode.RightHand, out stick)) { turnArmed = true; return; }
+
+            if (Mathf.Abs(stick.x) < 0.6f) { turnArmed = true; return; }
+            if (!turnArmed) return;
+            turnArmed = false;
+
+            // Rotate about the head, not the rig's origin, or the room appears to swing
+            // around the participant rather than the participant turning within it.
+            rig.RotateAround(camera.transform.position, Vector3.up,
+                             snapDegrees * Mathf.Sign(stick.x));
+        }
+
+        /// <summary>Keep the participant inside whichever shell is loaded.</summary>
+        Vector3 Clamp(Vector3 position)
+        {
+            float halfWidth = RoomDimensions.EntranceWidth / 2f - wallMargin;
+            position.x = Mathf.Clamp(position.x, -halfWidth, halfWidth);
+            position.z = Mathf.Clamp(position.z, wallMargin,
+                                     RoomDimensions.Depth - wallMargin);
+
+            bool curved = loader != null && loader.Current != null &&
+                          loader.Current.Shape == "curved";
+            if (curved && position.z > RoomDimensions.FoyerDepth)
+            {
+                // Past the springline the wall is a half-cylinder, so a box would let
+                // someone walk out through the curve.
+                var springline = new Vector2(0f, RoomDimensions.FoyerDepth);
+                var offset = new Vector2(position.x, position.z) - springline;
+                float limit = RoomDimensions.VaultRadius - wallMargin;
+                if (offset.magnitude > limit)
+                {
+                    offset = offset.normalized * limit;
+                    position.x = springline.x + offset.x;
+                    position.z = springline.y + offset.y;
+                }
+            }
+            return position;
+        }
+
+        static bool Stick(XRNode node, out Vector2 value)
+        {
+            value = Vector2.zero;
+            var device = InputDevices.GetDeviceAtXRNode(node);
+            return device.isValid &&
+                   device.TryGetFeatureValue(CommonUsages.primary2DAxis, out value);
+        }
+    }
+}

@@ -560,6 +560,17 @@ namespace EmotionRooms
             var panel = ActivePanel();
             if (panel != null)
             {
+                // A two-option question is answered with a button. The ray still works,
+                // but pointing at a box to say yes or no is more work than the question
+                // deserves and it fails whenever the beam is slightly off.
+                if (panel.VisibleOptionCount() == 2)
+                {
+                    if (ButtonDown(UnityEngine.XR.CommonUsages.primaryButton, ref primaryWasDown))
+                    { panel.TrySelectOption(0); return; }
+                    if (ButtonDown(UnityEngine.XR.CommonUsages.secondaryButton, ref secondaryWasDown))
+                    { panel.TrySelectOption(1); return; }
+                }
+
                 if (!TryBuildRay(out ray)) return;
                 panel.Hover(ray);
                 if (useLegacyInput && Pressed()) panel.TrySelect(ray);
@@ -629,6 +640,26 @@ namespace EmotionRooms
             {
                 Debug.Log("StudyBootstrap: response " + response);
             }
+        }
+
+        bool primaryWasDown, secondaryWasDown;
+
+        /// <summary>True on the frame a face button goes down, on either controller.</summary>
+        static bool ButtonDown(UnityEngine.XR.InputFeatureUsage<bool> button, ref bool wasDown)
+        {
+            bool down = Read(UnityEngine.XR.XRNode.RightHand, button) ||
+                        Read(UnityEngine.XR.XRNode.LeftHand, button);
+            bool fired = down && !wasDown;
+            wasDown = down;
+            return fired;
+        }
+
+        static bool Read(UnityEngine.XR.XRNode node,
+                         UnityEngine.XR.InputFeatureUsage<bool> button)
+        {
+            var device = UnityEngine.XR.InputDevices.GetDeviceAtXRNode(node);
+            bool value;
+            return device.isValid && device.TryGetFeatureValue(button, out value) && value;
         }
 
         bool TryBuildRay(out Ray ray)

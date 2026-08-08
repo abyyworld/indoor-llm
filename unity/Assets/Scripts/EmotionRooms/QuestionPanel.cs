@@ -142,6 +142,40 @@ namespace EmotionRooms
             return false;
         }
 
+        /// <summary>
+        /// Answer a two-option question with a controller button.
+        ///
+        /// Pointing a ray at a box to say yes or no is more work than the question
+        /// deserves, and it fails in the ways a ray fails: the beam is off, the box is
+        /// small, the hand drifts. A button cannot miss. Kept to two options because
+        /// beyond that there is no obvious mapping and the ray is the honest instrument.
+        /// </summary>
+        public bool TrySelectOption(int index)
+        {
+            if (!IsAwaitingAnswer) return false;
+            if (Time.time - shownAt < inputLockSeconds) return false;
+            if (index < 0 || index >= options.Count) return false;
+            if (options[index].target != null && !options[index].target.gameObject.activeSelf)
+                return false;
+
+            IsAwaitingAnswer = false;
+            SetTint(highlighted, false);
+            highlighted = null;
+
+            var handler = Answered;
+            if (handler != null) handler(options[index].value, Confidence);
+            return true;
+        }
+
+        /// <summary>How many options are actually offered right now.</summary>
+        public int VisibleOptionCount()
+        {
+            int count = 0;
+            foreach (var option in options)
+                if (option.target == null || option.target.gameObject.activeSelf) count++;
+            return count;
+        }
+
         Transform Resolve(Ray ray)
         {
             // RaycastAll, not Raycast. A single Raycast returns the nearest collider in
