@@ -255,9 +255,9 @@ namespace EmotionRooms.EditorTools
             EditorGUILayout.LabelField(
                 sessionMode == 1 ? "Phase A only: 8 rooms and the affect grid. ~15-20 min."
                 : sessionMode == 2 ? "Phase B only: the oversight block, no prior exposure " +
-                                     "to the rooms. ~35-45 min, and the cleanest version."
-                : "Both: Phase A then Phase B. ~40-55 min, machine-verified. B is never " +
-                  "first — its attribution question names every manipulated variable.",
+                                     "to the rooms. ~25-35 min, and the cleanest version."
+                : "Both: Phase A then Phase B. ~30-45 min. B is never first — its " +
+                  "attribution question names every manipulated variable.",
                 EditorStyles.wordWrappedMiniLabel);
 
             EditorGUILayout.LabelField(practiceOnly

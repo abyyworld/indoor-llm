@@ -196,7 +196,14 @@ namespace EmotionRooms
                  "metric across the pool is required.\n\n" +
                  "It is also what makes the participant a principal rather than a rater: " +
                  "they act, and then live with the result.")]
-        public bool reRateCorrections = true;
+        // OFF by decision of 9 Aug 2026: the trial is detect, attribute, propose a
+        // repair, anything else, next room. Applying the repair and re-rating (with
+        // the yoked control) measured the correction EFFECT; it cost a grid rating
+        // before and after every flagged trial and was the hardest step to explain.
+        // The correction hypothesis survives without it as repair accuracy: whether
+        // the proposed value matches the removed original, scored offline against the
+        // trial file. All machinery stays; this one flag revives the old design.
+        public bool reRateCorrections = false;
 
         [Header("Output")]
         public string responsesFileName = "oversight_responses.csv";

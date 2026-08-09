@@ -524,7 +524,45 @@ namespace EmotionRooms.EditorTools
                                "Use Install on the headset first.");
                 return;
             }
-            Adb("shell am start -n " + activity, "launched on the headset");
+            LaunchWithRetries(activity);
+        }
+
+        /// <summary>
+        /// Start the app and keep at it until it is actually alive.
+        ///
+        /// A single am start is not a launch: the headset can be asleep, a Guardian
+        /// boundary dialog can be in front, or the install can still be settling, and
+        /// any of those swallows the intent or kills the app seconds later. Every one
+        /// of those looked identical from the panel - "launched", then nothing - and
+        /// was reported as the app failing to load. Wake the display first, then start,
+        /// then confirm a live process, and retry a few times before giving up.
+        /// </summary>
+        static void LaunchWithRetries(string activity)
+        {
+            const int attempts = 4;
+            for (int attempt = 1; attempt <= attempts; attempt++)
+            {
+                Run("shell input keyevent KEYCODE_WAKEUP");
+                Run("shell am start -n " + activity);
+
+                // Unity reaches its first frame in about six seconds on this scene; ten
+                // is enough to distinguish "starting" from "died during load".
+                for (int waited = 0; waited < 10; waited++)
+                {
+                    System.Threading.Thread.Sleep(1000);
+                    if (string.IsNullOrEmpty(Run("shell pidof " + Package).Trim())) continue;
+                    Debug.Log("Study: running on the headset" +
+                              (attempt > 1 ? " (attempt " + attempt + ")" : "") + ".");
+                    return;
+                }
+                Debug.LogWarning("Study: launch attempt " + attempt + " of " + attempts +
+                                 " did not stay up; retrying.");
+            }
+
+            Debug.LogError("Study: the app will not stay running after " + attempts +
+                           " attempts. Check: is the headset awake and out of the " +
+                           "Guardian setup dialog? If it is, capture the crash with:  " +
+                           "adb logcat -b crash -d | grep -A 20 'Fatal signal'");
         }
 
         /// <summary>
