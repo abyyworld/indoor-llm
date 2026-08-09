@@ -84,6 +84,7 @@ namespace EmotionRooms.EditorTools
         int cachedPacks;
         string[] cachedDevices = new string[0];
         string cachedHeadsetIp;
+        bool showBrowserRoute;
         HeadsetState headsetApp;   // what the app on the headset reports, or null
 
         void Probe(bool force = false)
@@ -252,11 +253,11 @@ namespace EmotionRooms.EditorTools
             }
 
             EditorGUILayout.LabelField(
-                sessionMode == 1 ? "Phase A only: 8 rooms and the affect grid. ~35 min."
+                sessionMode == 1 ? "Phase A only: 8 rooms and the affect grid. ~15-20 min."
                 : sessionMode == 2 ? "Phase B only: the oversight block, no prior exposure " +
-                                     "to the rooms. ~57 min, and the cleanest version."
-                : "Both: Phase A then Phase B. ~62 min. B is never first — its " +
-                  "attribution question names every manipulated variable.",
+                                     "to the rooms. ~35-45 min, and the cleanest version."
+                : "Both: Phase A then Phase B. ~40-55 min, machine-verified. B is never " +
+                  "first — its attribution question names every manipulated variable.",
                 EditorStyles.wordWrappedMiniLabel);
 
             EditorGUILayout.LabelField(practiceOnly
@@ -491,9 +492,19 @@ namespace EmotionRooms.EditorTools
 
             int live = !up ? 0 : !headsetIn ? 1 : running ? 3 : finished ? 4 : 2;
 
+            // The cable IS the workflow. This branch used to pivot the whole panel to
+            // the browser route the moment adb blinked, presenting an IP to hand-type
+            // into the headset as if that were the normal next step. It is the fallback
+            // for a headset without Developer Mode, nothing more, so it lives behind a
+            // foldout and the panel's first word is the actual fix: plug it in.
             EditorGUILayout.HelpBox(
-                "No headset over USB — this is the browser route. Plug the headset in " +
-                "and wake it for the simpler cable route.", MessageType.None);
+                "No headset over USB. Plug it in and wake it — the panel re-detects " +
+                "every few seconds and takes over from there. Nothing to type anywhere.",
+                MessageType.Warning);
+
+            showBrowserRoute = EditorGUILayout.Foldout(showBrowserRoute,
+                "Browser fallback (only for a headset without Developer Mode)", true);
+            if (!showBrowserRoute) return;
 
             Step(0, live, "Start the study server", up
                 ? "Running."
