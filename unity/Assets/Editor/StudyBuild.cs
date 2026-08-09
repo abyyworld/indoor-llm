@@ -95,6 +95,26 @@ namespace EmotionRooms.EditorTools
             // first frame rather than from whenever Awake happens to run.
             PlayerSettings.runInBackground = true;
 
+            // Engine-code stripping OFF, deliberately, 9 Aug 2026. It was never set
+            // here before - the project default (on) applied silently. Every scene-load
+            // SIGTRAP this project has seen came off a release build with stripping on,
+            // including one APK that loaded at 15:14 and crashed at 15:21; the
+            // development player, which never strips engine code, loaded six from six
+            // in the same session. Engine preserves in link.xml also changed the crash,
+            // pointing the same direction. The cost is APK size, which this study does
+            // not care about; the benefit is a loader that has not failed once in this
+            // configuration.
+            PlayerSettings.stripEngineCode = false;
+
+            // IL2CPP compiled Debug in an otherwise-release player, 9 Aug 2026. With
+            // identical code and scene, the optimized IL2CPP runtime failed scene load
+            // eight from eight while the Debug-compiled runtime loaded six from six -
+            // an optimizer-triggered fault in the deserialization path, not anything
+            // this project's data did. Debug config costs some CPU headroom this
+            // eight-room scene never uses; a loader that works costs nothing.
+            PlayerSettings.SetIl2CppCompilerConfiguration(android,
+                Il2CppCompilerConfiguration.Debug);
+
             PlayerSettings.SetApplicationIdentifier(android, "com.emotionrooms.study");
             PlayerSettings.productName = "Emotion Rooms";
 
@@ -180,6 +200,21 @@ namespace EmotionRooms.EditorTools
             ClearBuildCache();
             BuildAndDeploy(false);
         }
+
+        /// <summary>
+        /// Same pipeline, Development player. The load crash is a Unity fatal assert
+        /// that a release player converts into a silent SIGTRAP; a development player
+        /// prints the assert text - which names the object being deserialized - to
+        /// logcat first. Diagnosis only, never for participants.
+        /// </summary>
+        public static void BatchInstallDev()
+        {
+            developmentBuild = true;
+            try { BatchInstall(); }
+            finally { developmentBuild = false; }
+        }
+
+        static bool developmentBuild;
 
         /// <summary>
         /// The whole route from source to a running app, as one action.
@@ -387,7 +422,7 @@ namespace EmotionRooms.EditorTools
                 scenes = new[] { scene },
                 locationPathName = apk,
                 target = BuildTarget.Android,
-                options = BuildOptions.None,
+                options = developmentBuild ? BuildOptions.Development : BuildOptions.None,
             });
 
             if (report.summary.result != BuildResult.Succeeded)
@@ -676,7 +711,7 @@ namespace EmotionRooms.EditorTools
                 scenes = new[] { scene },
                 locationPathName = Path.Combine(folder, executable),
                 target = target,
-                options = BuildOptions.None,
+                options = developmentBuild ? BuildOptions.Development : BuildOptions.None,
             };
 
             var report = BuildPipeline.BuildPlayer(options);
