@@ -142,10 +142,19 @@ namespace EmotionRooms.EditorTools
         }
 
         /// <summary>Serial numbers of headsets adb can see. Empty means none.</summary>
-        public static string[] ConnectedDevices()
+        /// <summary>
+        /// Serials in each adb state, so the panel can tell three different situations
+        /// apart instead of calling them all "no headset": nothing plugged in, plugged
+        /// in but never authorised, and ready.
+        /// </summary>
+        static void ReadDevices(out System.Collections.Generic.List<string> ready,
+                                out System.Collections.Generic.List<string> unauthorised)
         {
+            ready = new System.Collections.Generic.List<string>();
+            unauthorised = new System.Collections.Generic.List<string>();
+
             string adb = AdbPath();
-            if (adb == null) return new string[0];
+            if (adb == null) return;
 
             try
             {
@@ -158,25 +167,82 @@ namespace EmotionRooms.EditorTools
                     string output = process.StandardOutput.ReadToEnd();
                     process.WaitForExit();
 
-                    var devices = new System.Collections.Generic.List<string>();
                     foreach (var line in output.Split('\n'))
                     {
                         var parts = line.Trim().Split('\t');
-                        // "unauthorized" means the headset is plugged in but the Allow USB
-                        // Debugging prompt has not been accepted inside it -- a different
-                        // problem from not being plugged in, and worth saying so.
-                        if (parts.Length == 2 && parts[1].Trim() == "device") devices.Add(parts[0]);
-                        else if (parts.Length == 2 && parts[1].Trim() == "unauthorized")
-                            devices.Add(parts[0] + " (not authorised — put the headset on " +
-                                        "and accept Allow USB Debugging)");
+                        if (parts.Length != 2) continue;
+                        string state = parts[1].Trim();
+                        if (state == "device") ready.Add(parts[0].Trim());
+                        else if (state == "unauthorized") unauthorised.Add(parts[0].Trim());
                     }
-                    return devices.ToArray();
                 }
             }
-            catch (Exception)
-            {
-                return new string[0];
-            }
+            catch (Exception) { }
+        }
+
+        /// <summary>Headsets ready to be built to. Empty is empty for a reason; see Diagnosis.</summary>
+        public static string[] ConnectedDevices()
+        {
+            System.Collections.Generic.List<string> ready, unauthorised;
+            ReadDevices(out ready, out unauthorised);
+            return ready.ToArray();
+        }
+
+        /// <summary>
+        /// One line saying what is actually wrong, or null when a headset is ready.
+        ///
+        /// "No Android device connected" was being shown for a headset sitting on the
+        /// desk plugged in and awake, because it had never authorised this Mac - a
+        /// different headset means a different authorisation, and the prompt only
+        /// appears inside the headset. Saying so is the difference between a ten-second
+        /// fix and an hour of cable-swapping.
+        /// </summary>
+        public static string Diagnosis()
+        {
+            System.Collections.Generic.List<string> ready, unauthorised;
+            ReadDevices(out ready, out unauthorised);
+
+            if (ready.Count > 0) return null;
+            if (unauthorised.Count > 0)
+                return "Headset " + unauthorised[0] + " is connected but has not " +
+                       "authorised this computer. Put it on: there is an \"Allow USB " +
+                       "debugging\" prompt waiting. Tick \"Always allow from this " +
+                       "computer\", then Allow. A headset you have not used with this " +
+                       "Mac before always needs this once.";
+            return "No headset over USB. Check the cable carries data (charging cables " +
+                   "look identical), the headset is awake, and Developer Mode is on for " +
+                   "the account that owns it.";
+        }
+
+        /// <summary>
+        /// The serial every adb call is aimed at.
+        ///
+        /// Without -s, adb refuses outright when two devices are attached, and this
+        /// project is now used alongside another that also drives a headset. Picking
+        /// explicitly keeps both usable at once, and keeps a session from being
+        /// installed onto whichever device happened to enumerate first.
+        /// </summary>
+        static string Target()
+        {
+            var ready = ConnectedDevices();
+            if (ready.Length == 0) return null;
+
+            string pinned = EditorPrefs.GetString(DeviceKey, "");
+            foreach (var serial in ready) if (serial == pinned) return serial;
+            return ready[0];
+        }
+
+        const string DeviceKey = "EmotionRooms.TargetDevice";
+
+        /// <summary>Remember which headset this project talks to. Set from the panel.</summary>
+        public static void PinDevice(string serial) { EditorPrefs.SetString(DeviceKey, serial ?? ""); }
+        public static string PinnedDevice() { return EditorPrefs.GetString(DeviceKey, ""); }
+
+        /// <summary>adb arguments with the target device prefixed.</summary>
+        static string Aimed(string arguments)
+        {
+            string serial = Target();
+            return serial == null ? arguments : "-s " + serial + " " + arguments;
         }
 
         [MenuItem("Emotion Rooms/Advanced/Build and put it on the headset", priority = 123)]
@@ -302,7 +368,7 @@ namespace EmotionRooms.EditorTools
 
         static string Run(string arguments)
         {
-            var info = new System.Diagnostics.ProcessStartInfo(AdbPath(), arguments)
+            var info = new System.Diagnostics.ProcessStartInfo(AdbPath(), Aimed(arguments))
             {
                 UseShellExecute = false, RedirectStandardOutput = true,
                 RedirectStandardError = true, CreateNoWindow = true,
@@ -641,7 +707,7 @@ namespace EmotionRooms.EditorTools
 
             try
             {
-                var info = new System.Diagnostics.ProcessStartInfo(adb, arguments)
+                var info = new System.Diagnostics.ProcessStartInfo(adb, Aimed(arguments))
                 {
                     UseShellExecute = false, RedirectStandardOutput = true,
                     RedirectStandardError = true, CreateNoWindow = true,

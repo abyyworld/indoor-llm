@@ -221,14 +221,13 @@ namespace EmotionRooms.EditorTools
                     "There is already data filed under " + participant + ". Use a " +
                     "different id unless you mean to add to it.", MessageType.Warning);
 
-            int phases = EditorGUILayout.Popup("Phases",
-                sessionMode, new[] { "Both (A then B)", "Phase A only", "Phase B only" });
-            if (phases != sessionMode)
-            {
-                sessionMode = phases;
-                EditorPrefs.SetInt(ModeKey, sessionMode);
-                PushSettings();
-            }
+            // No phase picker. One session, one protocol, everyone does all of it
+            // (decision of 9 Aug): partial sessions produced participants who differed
+            // in what they had seen, and analysis can separate the parts perfectly well
+            // from the phase column that every logged row already carries. Splitting is
+            // now an analysis choice, not a session-time one. The sessionMode plumbing
+            // stays for the pilot path and for anyone who later needs a B-only arm.
+            sessionMode = 0;
 
             int mode = practiceOnly ? 1 : 0;
             int picked = GUILayout.Toolbar(mode, new[] { "Real session", "Practice only" });
@@ -253,11 +252,11 @@ namespace EmotionRooms.EditorTools
             }
 
             EditorGUILayout.LabelField(
-                sessionMode == 1 ? "Phase A only: 8 rooms and the affect grid. ~15-20 min."
-                : sessionMode == 2 ? "Phase B only: the oversight block, no prior exposure " +
-                                     "to the rooms. ~25-35 min, and the cleanest version."
-                : "Both: Phase A then Phase B. ~30-45 min. B is never first — its " +
-                  "attribution question names every manipulated variable.",
+                "One session, about 30-45 minutes: 8 rooms rated on the affect grid, " +
+                "then the same rooms reviewed for alterations. Everything is logged " +
+                "with a phase column, so the two parts separate cleanly in analysis. " +
+                "The review part is never first: its attribution question names every " +
+                "manipulated variable.",
                 EditorStyles.wordWrappedMiniLabel);
 
             EditorGUILayout.LabelField(practiceOnly
@@ -497,10 +496,9 @@ namespace EmotionRooms.EditorTools
             // into the headset as if that were the normal next step. It is the fallback
             // for a headset without Developer Mode, nothing more, so it lives behind a
             // foldout and the panel's first word is the actual fix: plug it in.
+            // Say which of the three situations this is, not just "no headset".
             EditorGUILayout.HelpBox(
-                "No headset over USB. Plug it in and wake it — the panel re-detects " +
-                "every few seconds and takes over from there. Nothing to type anywhere.",
-                MessageType.Warning);
+                StudyBuild.Diagnosis() ?? "No headset over USB.", MessageType.Warning);
 
             showBrowserRoute = EditorGUILayout.Foldout(showBrowserRoute,
                 "Browser fallback (only for a headset without Developer Mode)", true);
