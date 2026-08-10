@@ -98,6 +98,13 @@ namespace EmotionRooms
 
         /// <summary>The manipulated factor: was the system's reasoning shown here.</summary>
         public bool explanationShown;
+
+        /// <summary>Did they judge the reasoning to match the room, and how sure.</summary>
+        public bool explanationMatched;
+        public float explanationMatchConfidence;
+
+        /// <summary>Ground truth: was the reasoning actually wrong for this room.</summary>
+        public bool rationaleWasWrong;
         public float attributionConfidence;
         public string correctedValue;
 
@@ -140,6 +147,9 @@ namespace EmotionRooms
                 correctionApplied ? "1" : "0",
                 extraAttributions ?? "",
                 explanationShown ? "1" : "0",
+                explanationMatched ? "1" : "0",
+                explanationMatchConfidence.ToString("0.###", CultureInfo.InvariantCulture),
+                rationaleWasWrong ? "1" : "0",
             };
             var row = new StringBuilder();
             for (int i = 0; i < fields.Length; i++)
@@ -158,7 +168,8 @@ namespace EmotionRooms
                    "corrected_value,applied_value,correction_source," +
                    "duration_ms,swapped_field,started_utc," +
                    "valence_before,arousal_before,valence_after,arousal_after," +
-                   "correction_applied,extra_attributions,explanation_shown";
+                   "correction_applied,extra_attributions,explanation_shown," +
+                   "explanation_matched,explanation_match_confidence,rationale_was_wrong";
         }
     }
 
@@ -321,6 +332,20 @@ namespace EmotionRooms
         }
 
         /// <summary>Call these from the UI buttons.</summary>
+        /// <summary>Set by the panel handler for the reasoning-match question.</summary>
+        public bool pendingExplanationMatched;
+        public float pendingExplanationConfidence;
+        bool explanationAnswered;
+
+        public void CommitExplanationMatch(bool matched)
+        {
+            pendingExplanationMatched = matched;
+            explanationAnswered = true;
+        }
+
+        /// <summary>True while the reasoning-match question is the one on screen.</summary>
+        public bool AwaitingExplanationMatch { get { return IsRunning && !explanationAnswered; } }
+
         public void CommitDetection(bool noticedSwap)
         {
             pendingDetected = noticedSwap;
@@ -575,6 +600,32 @@ namespace EmotionRooms
                     trial.explanation_shown ? trial.rationale_shown : shown,
                     "held_ms=" + ((long)((Time.time - readingFrom) * 1000f)).ToString());
 
+            // Ask about the reasoning separately, and only where reasoning was shown.
+            //
+            // Without this the mismatch condition is unrecordable: the detection
+            // question asks whether the ROOM was altered, and on a mismatched trial the
+            // room was not, so "no" is the correct answer and a participant who spotted
+            // that the reasoning does not fit has nowhere to say so. Keeping it as its
+            // own yes/no also keeps the room measure clean - the detection contrast
+            // stays about the artifact, and whether a wrong explanation drives false
+            // alarms on the room question becomes something the data can show rather
+            // than something the instrument confounds.
+            if (trial.explanation_shown && !string.IsNullOrEmpty(trial.rationale_shown))
+            {
+                explanationAnswered = false;
+                if (detectionPanel != null)
+                    detectionPanel.Show("Did the system's reasoning match this room?");
+                if (events != null) events.Write("explanation_match_shown", null);
+                while (!explanationAnswered) yield return null;
+                if (detectionPanel != null) detectionPanel.Hide();
+                if (events != null)
+                    events.WriteValues("explanation_match_answered",
+                        pendingExplanationMatched ? "matched" : "did_not_match",
+                        pendingExplanationConfidence.ToString("0.##"),
+                        trial.ground_truth != null && trial.ground_truth.rationale_is_wrong
+                            ? "truth=mismatched" : "truth=matched");
+            }
+
             detectionAnswered = false;
             if (detectionPanel != null)
                 // Wording and the yes/no mapping in StudyBootstrap.OnDetectionAnswered
@@ -801,6 +852,9 @@ namespace EmotionRooms
                 attributedField = pendingAttributedField,
                 extraAttributions = pendingExtras,
                 explanationShown = trial.explanation_shown,
+                explanationMatched = pendingExplanationMatched,
+                explanationMatchConfidence = pendingExplanationConfidence,
+                rationaleWasWrong = trial.ground_truth != null && trial.ground_truth.rationale_is_wrong,
                 attributionConfidence = pendingAttributionConfidence,
                 correctedValue = pendingCorrectedValue,
                 appliedValue = appliedValue,
