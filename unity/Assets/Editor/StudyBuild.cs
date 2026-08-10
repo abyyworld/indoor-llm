@@ -221,9 +221,23 @@ namespace EmotionRooms.EditorTools
                        "debugging\" prompt waiting. Tick \"Always allow from this " +
                        "computer\", then Allow. A headset you have not used with this " +
                        "Mac before always needs this once.";
-            return "No headset over USB. Check the cable carries data (charging cables " +
-                   "look identical), the headset is awake, and Developer Mode is on for " +
-                   "the account that owns it.";
+            string common = "No headset over USB. Check the cable carries data (charging " +
+                            "cables look identical), the headset is awake, and Developer " +
+                            "Mode is on for the account that owns it.";
+
+            // Windows needs a driver before adb can see a Quest at all; macOS does not.
+            // Without it the headset never appears, never prompts for debug
+            // authorisation, and the console stays silent - so the researcher on Windows
+            // sees nothing at all while the one on macOS sees prompts, and neither
+            // symptom points at the cause.
+            if (Application.platform == RuntimePlatform.WindowsEditor)
+                common += "\n\nOn Windows the Meta Quest ADB driver must be installed " +
+                          "before adb can see a headset at all. Install Meta Quest " +
+                          "Developer Hub, which bundles it, or download the ADB driver " +
+                          "from the Meta developer downloads page, unzip it, right-click " +
+                          "android_winusb.inf and choose Install. Then reconnect and " +
+                          "accept Allow USB debugging in the headset.";
+            return common;
         }
 
         /// <summary>
