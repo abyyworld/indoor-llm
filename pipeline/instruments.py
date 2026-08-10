@@ -298,6 +298,21 @@ STRATEGY = {
     "citation": "",
     "instruction": "In your own words. There are no right answers here.",
     "items": [
+        # Manipulation check. Without it, a null on the explanation effect cannot be
+        # told apart from an explanation nobody found convincing -- a measurement
+        # failure and a real absence of effect look identical in the d-prime.
+        {"id": "reasoning_convincing", "type": "scale", "min": 1, "max": 7,
+         "text": "On the rooms where the system explained its reasoning, how convincing "
+                 "was that reasoning?",
+         "min_label": "Not at all", "max_label": "Very convincing"},
+        {"id": "reasoning_influence", "type": "scale", "min": 1, "max": 7,
+         "text": "How much did the reasoning affect your judgement of whether the room "
+                 "had been altered?",
+         "min_label": "Not at all", "max_label": "A great deal"},
+        {"id": "reasoning_noticed", "type": "paragraph",
+         "text": "Did you notice anything about when the system did and did not explain "
+                 "itself?",
+         "help": "Guessing is fine."},
         {"id": "how_decided", "type": "paragraph",
          "text": "When you were asked whether something looked wrong in a room, how did "
                  "you decide?",

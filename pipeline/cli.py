@@ -396,9 +396,20 @@ def cmd_build_participants(args: argparse.Namespace) -> int:
                 return {k: room[k] for k in
                         ("hue", "saturation", "brightness", "texture") if k in room}
 
+            # No random arm once explanations are crossed in.
+            #
+            # The explanation shown on a corrupted trial describes the ORIGINAL design.
+            # For a swapped trial that is exactly right: one variable is off and the
+            # reasoning is subtly, arguably wrong. For a random trial every variable is
+            # off, so the reasoning contradicts the room outright - "electric acid
+            # yellow on a hard slick surface" over a red plaster wall. That is not the
+            # manipulation under test, it is a grossly-wrong stimulus wearing its
+            # costume, and it would have been a quarter of the block. Passing no sampler
+            # keeps the corrupted half entirely swapped: 16 faithful, 16 swapped, and
+            # the 2x2 with explanation comes out at 8 per cell.
             block = build_oversight_block(
                 rooms, participant=participant, seed=args.seed + i,
-                trials_total=32, pool_sampler=sampler,
+                trials_total=32, pool_sampler=None,
             )
             rationale = build_rationale_block(
                 rooms, participant=participant, seed=args.seed + i

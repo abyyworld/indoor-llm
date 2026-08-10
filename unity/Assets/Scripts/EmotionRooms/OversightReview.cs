@@ -372,6 +372,34 @@ namespace EmotionRooms
         [Tooltip("Where the briefing is drawn. Wired by scene setup.")]
         public MessageBoard board;
 
+        /// <summary>
+        /// Length-matched filler for the no-explanation arm: says what, never why.
+        ///
+        /// Padded toward the rationale's own length so the two arms present a similar
+        /// amount of text. It deliberately contains no causal language - no "because",
+        /// no appeal to the emotion - so it cannot function as a justification.
+        /// </summary>
+        static string NeutralText(OversightTrialData trial)
+        {
+            string body = "This room was produced by the system for: " +
+                          trial.target_emotion_shown + ".";
+            int target = string.IsNullOrEmpty(trial.rationale_shown)
+                ? 0 : trial.rationale_shown.Length;
+
+            // One clause at a time until the lengths are comparable, rather than
+            // padding with filler characters a participant would read as broken.
+            string[] extras =
+            {
+                " It is one of the rooms in this session.",
+                " The room is shown exactly as it was produced.",
+                " No further detail about it is given here.",
+            };
+            for (int i = 0; i < extras.Length && body.Length + 12 < target; i++)
+                body += extras[i];
+
+            return "About this room:\n\n" + body;
+        }
+
         static string PlainField(string field)
         {
             switch (field)
@@ -517,22 +545,33 @@ namespace EmotionRooms
             // explanation has appeared on screen, so those ratings are uncontaminated
             // and need no caveat. From here on the trial belongs to the oversight
             // study, and the explanation is what that study manipulates.
-            if (trial.explanation_shown && !string.IsNullOrEmpty(trial.rationale_shown))
+            // Both arms read text for the same time. Only one of them is reasoning.
+            //
+            // Showing the rationale on half the trials and nothing on the other half
+            // confounds the factor with time on task and with reading load: a d-prime
+            // difference could then be "they had eight more seconds and something to
+            // do" rather than anything about explanation content. The control arm gets
+            // length-matched text that states what the room is for without justifying
+            // it, held for the same duration, so what differs between arms is the
+            // presence of reasoning and not the presence of words.
+            string shown = trial.explanation_shown
+                ? "The system's reasoning for this room:\n\n\"" + trial.rationale_shown + "\""
+                : NeutralText(trial);
+            float readingFrom = Time.time;
+
+            if (!string.IsNullOrEmpty(shown))
             {
-                if (board != null)
-                    board.Show("The system's reasoning for this room:\n\n\"" +
-                               trial.rationale_shown + "\"");
-                if (events != null)
-                    events.WriteValues("explanation_shown", trial.target_emotion_shown,
-                        trial.rationale_shown, null);
+                if (board != null) board.Show(shown);
                 yield return new WaitForSeconds(explanationSeconds);
                 if (board != null) board.Hide();
             }
-            else if (events != null)
-            {
-                events.WriteValues("explanation_withheld", trial.target_emotion_shown,
-                    null, null);
-            }
+
+            if (events != null)
+                events.WriteValues(
+                    trial.explanation_shown ? "explanation_shown" : "explanation_control",
+                    trial.target_emotion_shown,
+                    trial.explanation_shown ? trial.rationale_shown : shown,
+                    "held_ms=" + ((long)((Time.time - readingFrom) * 1000f)).ToString());
 
             detectionAnswered = false;
             if (detectionPanel != null)
