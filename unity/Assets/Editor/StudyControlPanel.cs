@@ -252,11 +252,11 @@ namespace EmotionRooms.EditorTools
             }
 
             EditorGUILayout.LabelField(
-                "One session, about 30-45 minutes: 8 rooms rated on the affect grid, " +
-                "then the same rooms reviewed for alterations. Everything is logged " +
-                "with a phase column, so the two parts separate cleanly in analysis. " +
-                "The review part is never first: its attribution question names every " +
-                "manipulated variable.",
+                "One session, about 45-55 minutes. Every trial is the same seven " +
+                "steps: room, affect grid, then was-it-altered and the follow-ups. " +
+                "32 trials, 16 of them the model's own output. The affect study reads " +
+                "the grid on those 16; the oversight study reads the rest. No phases, " +
+                "no block boundary, one trial format throughout.",
                 EditorStyles.wordWrappedMiniLabel);
 
             EditorGUILayout.LabelField(practiceOnly
@@ -691,14 +691,45 @@ namespace EmotionRooms.EditorTools
                 return;
             }
 
+            // The four pipeline calls test-participant.sh made, made here instead.
+            //
+            // The script is still the documented command-line route and still works on
+            // macOS; the panel no longer goes through it, because a bash script cannot
+            // run on the Windows laptop that will be running most of the sessions.
+            int seed = 40 + index;
+            string batch = "configs/study_8cell.json";
+            string runs = Path.Combine(repoPath, "runs");
+            Directory.CreateDirectory(runs);
+
+            string session = "runs/session_" + participant + ".json";
+            string unity = "runs/unity_" + participant + ".json";
+            string oversight = "runs/oversight_" + participant + ".json";
+            string rationale = "runs/oversight_" + participant + "_rationale.json";
+
+            if (!RunPipeline(string.Format(
+                    "build-session --batch {0} --participant {1} --seed {2} " +
+                    "--participant-index {3} --out {4}",
+                    Quote(batch), Quote(participant), seed, index, Quote(session)))) return;
+
+            if (!RunPipeline(string.Format("export-unity {0} --out {1}",
+                    Quote(session), Quote(unity)))) return;
+
+            if (!RunPipeline(string.Format(
+                    "oversight-block --batch {0} --participant {1} --seed {2} --out {3}",
+                    Quote(batch), Quote(participant), seed, Quote(oversight)))) return;
+
+            if (!RunPipeline("build-practice --out runs/practice.json")) return;
+
             // persistentDataPath is named after the product, so it moves if the product
-            // is renamed. Passing it through means the stimuli always land where the app
-            // will look, rather than in a folder that used to be right.
-            if (!RunShell(string.Format(
-                    "EMOTION_ROOMS_DATA='{0}' ./test-participant.sh {1} {2} {3}",
-                    Application.persistentDataPath.Replace("'", "'\\''"),
-                    participant, 40 + index, index)))
-                return;
+            // is renamed. Copying here means the stimuli always land where the app will
+            // look, rather than in a folder that used to be right.
+            string dest = Application.persistentDataPath;
+            Directory.CreateDirectory(dest);
+            if (!Stage(Path.Combine(repoPath, unity), Path.Combine(dest, "session.json"))) return;
+            if (!Stage(Path.Combine(repoPath, oversight), Path.Combine(dest, "oversight.json"))) return;
+            if (!Stage(Path.Combine(repoPath, rationale), Path.Combine(dest, "rationale.json"))) return;
+            if (!Stage(Path.Combine(repoPath, "runs/practice.json"),
+                       Path.Combine(dest, "practice.json"))) return;
 
             Debug.Log("Study Control: " + participant + " is ready. Rooms, review block " +
                       "and warm-up written to the data folder.");
@@ -719,14 +750,40 @@ namespace EmotionRooms.EditorTools
                 EditorUtility.DisplayDialog("Emotion Rooms", "Set the repo path first.", "OK");
                 return;
             }
-            if (RunShell("python3 -m pipeline.cli " + command)) AssetDatabase.Refresh();
+            if (RunPipeline(command)) AssetDatabase.Refresh();
         }
 
-        bool RunShell(string command)
+        /// <summary>
+        /// The python interpreter to invoke, by platform.
+        ///
+        /// Windows installs it as "python" (and "py" via the launcher); macOS and Linux
+        /// as "python3", where bare "python" is often absent or still means 2.x.
+        /// </summary>
+        static string PythonExe
+        {
+            get
+            {
+                return Application.platform == RuntimePlatform.WindowsEditor
+                    ? "python" : "python3";
+            }
+        }
+
+        /// <summary>
+        /// Run a pipeline command directly, without a shell.
+        ///
+        /// This used to call /bin/bash -c, which does not exist on Windows: the panel's
+        /// Prepare button failed for the researcher running sessions on a Windows laptop
+        /// with "the system cannot find the file specified", and every step downstream
+        /// of it was unreachable. The study is run by two people on two operating
+        /// systems, so anything the panel does has to work on both. Invoking the
+        /// interpreter directly removes the shell from the path entirely - no quoting
+        /// rules, no cp, no here-documents to translate.
+        /// </summary>
+        bool RunPipeline(string arguments)
         {
             try
             {
-                var info = new ProcessStartInfo("/bin/bash", "-c \"" + command + "\"")
+                var info = new ProcessStartInfo(PythonExe, "-m pipeline.cli " + arguments)
                 {
                     WorkingDirectory = repoPath,
                     UseShellExecute = false,
@@ -755,6 +812,37 @@ namespace EmotionRooms.EditorTools
             {
                 lastOutput = e.Message;
                 Debug.LogError("Study Control: " + e.Message);
+                showTrouble = true;
+                return false;
+            }
+        }
+
+        /// <summary>Quote an argument so a path with spaces survives the process call.</summary>
+        static string Quote(string value)
+        {
+            return "\"" + value.Replace("\"", "\\\"") + "\"";
+        }
+
+        /// <summary>Copy a generated file into the app's data folder, loudly on failure.</summary>
+        bool Stage(string from, string to)
+        {
+            try
+            {
+                if (!File.Exists(from))
+                {
+                    lastOutput = "expected " + from + " but the pipeline did not write it";
+                    Debug.LogError("Study Control: " + lastOutput);
+                    showTrouble = true;
+                    return false;
+                }
+                File.Copy(from, to, true);
+                return true;
+            }
+            catch (Exception e)
+            {
+                lastOutput = e.Message;
+                Debug.LogError("Study Control: could not stage " + Path.GetFileName(to) +
+                               ": " + e.Message);
                 showTrouble = true;
                 return false;
             }

@@ -133,6 +133,18 @@ namespace EmotionRooms.EditorTools
             string root = Path.GetDirectoryName(EditorApplication.applicationPath);
             string[] candidates =
             {
+                // UNITY'S adb, first and by policy.
+                //
+                // adb demands an exact client/server version match: a client of a
+                // different version kills the running server and starts its own. This
+                // machine has Unity's 36.0.0 and Homebrew's 37.0.1. Preferring the
+                // Homebrew one made this project's tooling fight Unity's own Android
+                // extension, which has no setting for which adb it uses - so the two
+                // took turns killing each other's server, the headset sat "unauthorized"
+                // through repeated Allow prompts, and the editor stalled for seconds at
+                // a time on "Scanning For ADB Devices". Unity cannot be told to use
+                // another adb, so everything else defers to Unity's. Any shell work
+                // against the headset must use this same binary.
                 Path.Combine(root ?? "", "PlaybackEngines/AndroidPlayer/SDK/platform-tools/adb"),
                 Path.Combine(EditorPrefs.GetString("AndroidSdkRoot", ""), "platform-tools/adb"),
             };
@@ -273,14 +285,28 @@ namespace EmotionRooms.EditorTools
         /// prints the assert text - which names the object being deserialized - to
         /// logcat first. Diagnosis only, never for participants.
         /// </summary>
-        public static void BatchInstallDev()
+        [MenuItem("Emotion Rooms/Advanced/Diagnostic build (prints the crash)", priority = 124)]
+        public static void DiagnosticInstall()
         {
-            developmentBuild = true;
-            try { BatchInstall(); }
-            finally { developmentBuild = false; }
+            BatchInstallDev();
         }
 
-        static bool developmentBuild;
+        public static void BatchInstallDev()
+        {
+            try
+            {
+                // A development player keeps Unity's asserts alive. The release player
+                // turns the same fatal assert into a bare SIGTRAP with no text, which is
+                // why this crash has been so expensive: the engine knows exactly which
+                // object it failed on and the release build throws that away.
+                XRSetup.AllowLocalHttp();
+                StudySceneSetup.SetUp(true);
+                ClearBuildCache();
+                BuildAndDeploy(false);
+            }
+            finally { }
+        }
+
 
         /// <summary>
         /// The whole route from source to a running app, as one action.
@@ -488,7 +514,23 @@ namespace EmotionRooms.EditorTools
                 scenes = new[] { scene },
                 locationPathName = apk,
                 target = BuildTarget.Android,
-                options = developmentBuild ? BuildOptions.Development : BuildOptions.None,
+                // ALWAYS a development player. This is the fix for the scene-load
+                // crash, arrived at by elimination rather than by understanding.
+                //
+                // The record across both headsets and a full day: the release player
+                // dies in Unity's scene deserialiser (CachedReader::OutOfBoundsError,
+                // SIGTRAP on Loading.Preload), reproducibly, on a Quest 3 and a Quest
+                // 3S. The development player has never once failed on either. Compiling
+                // IL2CPP as Debug and disabling engine stripping closed most of the gap
+                // and still was not enough; whatever remains is inside Unity's release
+                // build path and is not reachable from here.
+                //
+                // A development player costs some CPU headroom this eight-room scene
+                // does not use and opens a profiler port on a headset that is not on a
+                // network during sessions. Against that: it loads. For a research
+                // instrument that a participant is waiting to wear, an app that starts
+                // every time beats a marginally leaner one that does not start at all.
+                options = BuildOptions.Development,
             });
 
             if (report.summary.result != BuildResult.Succeeded)
@@ -815,7 +857,23 @@ namespace EmotionRooms.EditorTools
                 scenes = new[] { scene },
                 locationPathName = Path.Combine(folder, executable),
                 target = target,
-                options = developmentBuild ? BuildOptions.Development : BuildOptions.None,
+                // ALWAYS a development player. This is the fix for the scene-load
+                // crash, arrived at by elimination rather than by understanding.
+                //
+                // The record across both headsets and a full day: the release player
+                // dies in Unity's scene deserialiser (CachedReader::OutOfBoundsError,
+                // SIGTRAP on Loading.Preload), reproducibly, on a Quest 3 and a Quest
+                // 3S. The development player has never once failed on either. Compiling
+                // IL2CPP as Debug and disabling engine stripping closed most of the gap
+                // and still was not enough; whatever remains is inside Unity's release
+                // build path and is not reachable from here.
+                //
+                // A development player costs some CPU headroom this eight-room scene
+                // does not use and opens a profiler port on a headset that is not on a
+                // network during sessions. Against that: it loads. For a research
+                // instrument that a participant is waiting to wear, an app that starts
+                // every time beats a marginally leaner one that does not start at all.
+                options = BuildOptions.Development,
             };
 
             var report = BuildPipeline.BuildPlayer(options);

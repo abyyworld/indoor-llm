@@ -192,10 +192,8 @@ namespace EmotionRooms
 
         void Start()
         {
-            if (trialRunner != null && chainOversightBlock && oversightReview != null)
-            {
-                trialRunner.SessionFinished += OnSessionFinished;
-            }
+            // Always chained now: the warm-up hands over to the trials through this.
+            if (trialRunner != null) trialRunner.SessionFinished += OnSessionFinished;
             if (oversightReview != null) oversightReview.BlockFinished += OnBlockFinished;
             if (rationaleReview != null) rationaleReview.BlockFinished += OnRationaleFinished;
             if (questionnaires != null) questionnaires.FormFinished += OnFormFinished;
@@ -345,17 +343,31 @@ namespace EmotionRooms
         {
             if (board != null) board.Hide();
 
-            if (!DoesPhaseA)
+            // One trial format for the whole session (design-unified.md). There is no
+            // separate 8-room affect phase any more: every one of the 32 trials starts
+            // with the affect grid, and the thesis measure is that grid on the 16
+            // faithful trials - the model's own output for each emotion, seen twice per
+            // shape. Corrupted trials are excluded from that analysis because they are
+            // not the model's output for the stated emotion.
+            //
+            // The warm-up still runs first, in the same trial format, so nobody meets
+            // the grid for the first time on a scored trial. practiceOnly stops there.
+            if (trialRunner != null && practiceRooms)
             {
-                // Phase B only. The cleanest version of the oversight study: no prior
-                // exposure to the rooms, so a faithful stimulus is no more familiar than
-                // a random one, and nothing has told them what varies.
-                if (oversightReview != null) oversightReview.BeginBlock();
-                else Debug.LogError("StudyBootstrap: Phase B only, but no OversightReview.");
-                return;
+                runBlockAfterPractice = !practiceOnly;
+                trialRunner.practiceOnly = true;   // warm-up only; the block follows
+                trialRunner.BeginSession();
+                return;                            // OnSessionFinished starts the block
             }
 
-            trialRunner.BeginSession();
+            BeginReviewBlock();
+        }
+
+        void BeginReviewBlock()
+        {
+            if (oversightReview != null) oversightReview.BeginBlock();
+            else Debug.LogError("StudyBootstrap: no OversightReview, so the session has " +
+                                "nothing to run.");
         }
 
         /// <summary>
@@ -482,31 +494,27 @@ namespace EmotionRooms
 
         void OnSessionFinished()
         {
-            if (practiceOnly)
+            // Reached when the warm-up ends. A pilot asked for practice only stops
+            // here; everyone else goes straight into the 32 unified trials, which is
+            // the whole session under design-unified.md.
+            if (practiceOnly && !runBlockAfterPractice)
             {
-                Debug.Log("StudyBootstrap: practice run finished. Nothing was scored and " +
-                          "the review block was skipped.");
+                Debug.Log("StudyBootstrap: practice run finished. Nothing was scored.");
                 if (questionnaires != null) questionnaires.ShowSummary();
                 BundleNow("practice run finished");
                 return;
             }
 
-            // Phase A is complete and its data is written before anything asks the
-            // participant to evaluate a room. That ordering is the whole reason the
-            // review block does not contaminate the affect ratings.
-            if (!DoesPhaseB)
-            {
-                Debug.Log("StudyBootstrap: Phase A only, session complete.");
-                if (questionnaires != null) questionnaires.ShowSummary();
-                if (board != null)
-                    board.Show("That is everything.\n\nPlease take the headset off.");
-                BundleNow("phase A finished");
-                return;
-            }
-
-            Debug.Log("StudyBootstrap: main session finished, starting the review block.");
-            oversightReview.BeginBlock();
+            practiceOnly = false;
+            Debug.Log("StudyBootstrap: warm-up finished, starting the trials.");
+            BeginReviewBlock();
         }
+
+        /// <summary>
+        /// True for a real session: the warm-up is a prelude, not the session. False
+        /// when the researcher asked for practice only, which is the pilot path.
+        /// </summary>
+        bool runBlockAfterPractice;
 
         void OnBlockFinished()
         {
@@ -682,9 +690,10 @@ namespace EmotionRooms
             var anchor = xrRig != null && xrRig.Origin != null ? xrRig.Origin.position : Vector3.zero;
 
             var slab = WorldLabel.Solid("Cube.fbx", "Pilot Skip Button", null);
-            // Near the ceiling, ahead of the standing point: findable when looked for,
-            // invisible to anyone doing the study.
-            slab.transform.position = anchor + new Vector3(0f, 2.2f, 1.5f);
+            // High and off to the right, not straight ahead. Centred above the panels
+            // it overlapped the question text, which is the one thing on screen that
+            // must never be obscured. Out here it takes a deliberate look up and right.
+            slab.transform.position = anchor + new Vector3(1.15f, 2.35f, 1.1f);
             slab.transform.rotation = Quaternion.LookRotation(
                 (slab.transform.position - (anchor + Vector3.up * 1.6f)).normalized);
             slab.transform.localScale = new Vector3(0.6f, 0.16f, 0.02f);

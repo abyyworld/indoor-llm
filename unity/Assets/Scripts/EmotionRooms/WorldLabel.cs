@@ -16,6 +16,19 @@ namespace EmotionRooms
     public static class WorldLabel
     {
         /// <summary>
+        /// Amber, not white.
+        /// </summary>
+        ///
+        /// White text plus a black outline still failed against a 750 lux wall: a bright
+        /// wall in this study is a pale, low-saturation surface, so white-on-it is white
+        /// on almost-white and the outline is the only thing carrying the glyph. Amber
+        /// differs from every wall the pools can produce in hue as well as luminance,
+        /// which is what makes it legible rather than merely present - the pools top out
+        /// at 40% saturation, so no wall can approach this chroma. With the black
+        /// outline behind it, it reads on the dim rooms too.
+        public static readonly Color Ink = new Color(1f, 0.82f, 0.28f);
+
+        /// <summary>
         /// A mesh object built without GameObject.CreatePrimitive.
         ///
         /// CreatePrimitive attaches a collider, and the collider class is whatever the
@@ -67,7 +80,7 @@ namespace EmotionRooms
             mesh.characterSize = height * 10f / mesh.fontSize;
             mesh.anchor = anchor;
             mesh.alignment = TextAlignment.Center;
-            mesh.color = new Color(0.97f, 0.97f, 0.99f);
+            mesh.color = Ink;
 
             // Drawn after the surface it sits on, so it is never swallowed by it.
             var renderer = go.GetComponent<MeshRenderer>();
@@ -77,7 +90,78 @@ namespace EmotionRooms
                 renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
                 renderer.receiveShadows = false;
             }
+
+            Outline(go.transform, mesh, height);
             return mesh;
+        }
+
+        /// <summary>
+        /// A black outline behind the glyphs, so white text stays legible on anything.
+        ///
+        /// White-on-bright was unreadable in a 750 lux room and white-on-dark is the
+        /// only thing that works in a dim one, so no single colour can serve: the study
+        /// deliberately varies wall brightness across nearly two orders of magnitude,
+        /// and text has to survive all of it. Four offset copies in black behind the
+        /// glyphs give a cheap outline that does. TextMesh has no outline of its own and
+        /// pulling in TextMeshPro for it would mean a font asset to keep in the project.
+        /// </summary>
+        /// <summary>
+        /// Change a label's text, outline included.
+        ///
+        /// Anything whose wording changes at runtime - the question prompt, the message
+        /// board - has to go through here. Setting .text directly leaves the four
+        /// outline copies showing the previous sentence behind the new one.
+        /// </summary>
+        public static void SetText(TextMesh label, string value)
+        {
+            if (label == null) return;
+            label.text = value;
+
+            foreach (Transform child in label.transform.parent)
+            {
+                if (child.name != "Outline") continue;
+                var copy = child.GetComponent<TextMesh>();
+                if (copy != null) copy.text = value;
+            }
+        }
+
+        static void Outline(Transform parent, TextMesh source, float height)
+        {
+            // Scaled from the glyph height so the outline is proportional rather than
+            // hairline on big text and a blob on small.
+            float step = height * 0.06f;
+            var offsets = new[]
+            {
+                new Vector3(step, 0f, 0.001f), new Vector3(-step, 0f, 0.001f),
+                new Vector3(0f, step, 0.001f), new Vector3(0f, -step, 0.001f),
+            };
+
+            foreach (var offset in offsets)
+            {
+                var edge = new GameObject("Outline");
+                edge.transform.SetParent(parent, false);
+                edge.transform.localPosition = offset;
+                edge.transform.localRotation = Quaternion.identity;
+
+                var copy = edge.AddComponent<TextMesh>();
+                copy.text = source.text;
+                copy.font = source.font;
+                copy.fontSize = source.fontSize;
+                copy.characterSize = source.characterSize;
+                copy.anchor = source.anchor;
+                copy.alignment = source.alignment;
+                copy.color = new Color(0f, 0f, 0f, 0.95f);
+
+                var edgeRenderer = edge.GetComponent<MeshRenderer>();
+                if (edgeRenderer != null)
+                {
+                    edgeRenderer.sharedMaterial = source.GetComponent<MeshRenderer>().sharedMaterial;
+                    // Behind the white glyphs, still in front of the surface.
+                    edgeRenderer.sortingOrder = 199;
+                    edgeRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                    edgeRenderer.receiveShadows = false;
+                }
+            }
         }
 
         /// <summary>Break a long prompt so it does not run off the panel.</summary>

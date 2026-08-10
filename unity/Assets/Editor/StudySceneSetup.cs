@@ -117,7 +117,7 @@ namespace EmotionRooms.EditorTools
             detection.events = events;
             attribution.events = events;
             correction.events = events;
-            review.reRateCorrections = false;   // decision of 9 Aug, see OversightReview
+            review.applyAndReRate = true;       // unified design, see OversightReview
             review.detectionPanel = detection;
             review.attributionPanel = attribution;
             review.correctionPanel = correction;

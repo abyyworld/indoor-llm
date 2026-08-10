@@ -196,14 +196,19 @@ namespace EmotionRooms
                  "metric across the pool is required.\n\n" +
                  "It is also what makes the participant a principal rather than a rater: " +
                  "they act, and then live with the result.")]
-        // OFF by decision of 9 Aug 2026: the trial is detect, attribute, propose a
-        // repair, anything else, next room. Applying the repair and re-rating (with
-        // the yoked control) measured the correction EFFECT; it cost a grid rating
-        // before and after every flagged trial and was the hardest step to explain.
-        // The correction hypothesis survives without it as repair accuracy: whether
-        // the proposed value matches the removed original, scored offline against the
-        // trial file. All machinery stays; this one flag revives the old design.
-        public bool reRateCorrections = false;
+        // The unified design (design-unified.md) makes every trial the same seven
+        // steps, and splits what used to be one flag into the two things it gated.
+        //
+        // The affect grid BEFORE any diagnostic prompt is now the thesis measure - the
+        // felt response to the room, collected on all 32 trials, analysed on the 16
+        // faithful ones. It is not optional, hence no flag: switching it off would
+        // delete the affect study.
+        //
+        // Applying the correction and re-rating is the oversight correction effect,
+        // and it is the one part that was cut on 9 Aug and restored by the unified
+        // design. Turning this off returns to detect-attribute-propose and scores
+        // corrections as repair accuracy offline instead.
+        public bool applyAndReRate = true;
 
         [Header("Output")]
         public string responsesFileName = "oversight_responses.csv";
@@ -470,7 +475,7 @@ namespace EmotionRooms
             // collected first: once someone has been asked which variable is off, they
             // are evaluating rather than reporting.
             int valenceBefore = -1, arousalBefore = -1;
-            if (reRateCorrections && grid != null)
+            if (grid != null)
             {
                 loader.HideRooms();
                 hasRating = false;
@@ -630,7 +635,7 @@ namespace EmotionRooms
             int valenceAfter = -1, arousalAfter = -1;
             bool applied = false;
 
-            if (reRateCorrections && grid != null && pendingDetected &&
+            if (applyAndReRate && grid != null && pendingDetected &&
                 !string.IsNullOrEmpty(pendingAttributedField) &&
                 !string.IsNullOrEmpty(pendingCorrectedValue))
             {

@@ -27,13 +27,10 @@ namespace EmotionRooms
             board = new GameObject("Message").transform;
             board.SetParent(transform, false);
 
-            text = board.gameObject.AddComponent<TextMesh>();
-            // Same sizing rule as WorldLabel: characterSize is not metres. 0.045 m lines.
-            text.fontSize = 96;
-            text.characterSize = 0.03f * 10f / text.fontSize;
-            text.anchor = TextAnchor.MiddleCenter;
-            text.alignment = TextAlignment.Center;
-            text.color = new Color(0.96f, 0.96f, 0.98f);
+            // Through WorldLabel so the board inherits the black outline: these
+            // messages appear over rooms that range from 150 to 750 lux, and plain
+            // white text is unreadable at the bright end.
+            text = WorldLabel.Attach(board, "", 0.03f);
 
             // Drawn over the room rather than through it, so a message never ends up
             // inside a wall where it cannot be read.
@@ -45,7 +42,7 @@ namespace EmotionRooms
 
         public void Show(string message)
         {
-            text.text = message;
+            WorldLabel.SetText(text, message);
             PlaceInFront();
             board.gameObject.SetActive(true);
         }

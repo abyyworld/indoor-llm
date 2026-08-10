@@ -115,7 +115,7 @@ namespace EmotionRooms
             // The question has to be visible, not just stored. Without this the panel is
             // a row of unlabelled boxes and the participant is guessing at what is being
             // asked -- including which emotion the room was supposed to convey.
-            if (promptLabel != null) promptLabel.text = WorldLabel.Wrap(prompt);
+            if (promptLabel != null) WorldLabel.SetText(promptLabel, WorldLabel.Wrap(prompt));
             Confidence = 0.5f;
             IsAwaitingAnswer = true;
             shownAt = Time.time;
