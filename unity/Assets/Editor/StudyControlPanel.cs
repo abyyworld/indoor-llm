@@ -70,7 +70,7 @@ namespace EmotionRooms.EditorTools
 
         void OnEnable()
         {
-            repoPath = EditorPrefs.GetString(RepoKey, GuessRepoPath());
+            repoPath = ResolveRepoPath();
             practiceOnly = EditorPrefs.GetBool(PracticeKey, false);
             pilotSkip = EditorPrefs.GetBool(PilotKey, false);
             sessionMode = EditorPrefs.GetInt(ModeKey, 0);
@@ -675,11 +675,14 @@ namespace EmotionRooms.EditorTools
 
         void PrepareParticipant(StudyBootstrap bootstrap)
         {
-            if (!Directory.Exists(repoPath))
+            if (!LooksLikeRepo(repoPath)) repoPath = ResolveRepoPath();
+            if (!LooksLikeRepo(repoPath))
             {
                 EditorUtility.DisplayDialog("Emotion Rooms",
-                    "Set the repo path under \"If something goes wrong\" first.\n\n" +
-                    "It is the folder holding pipeline/ and configs/.", "OK");
+                    "Cannot find the repo folder: the one holding pipeline/ and configs/." +
+                    "\n\nLooked at:\n  " + (string.IsNullOrEmpty(repoPath) ? "(nothing saved)" : repoPath) +
+                    "\n  " + GuessRepoPath() +
+                    "\n\nSet it under \"If something goes wrong\".", "OK");
                 return;
             }
 
@@ -936,6 +939,40 @@ namespace EmotionRooms.EditorTools
         {
             var project = Directory.GetParent(Application.dataPath);
             return project != null && project.Parent != null ? project.Parent.FullName : "";
+        }
+
+        /// <summary>
+        /// The repo folder, verified rather than remembered.
+        ///
+        /// This was read straight out of EditorPrefs, so moving or renaming the project
+        /// folder left the panel pointing at a directory that no longer existed - and
+        /// every pipeline command failed with an error about the command not being
+        /// found, which reads as a broken Python install rather than a stale setting.
+        /// A stored path is now only used if it still holds pipeline/; otherwise the
+        /// folder above the Unity project is used and saved, which is where the repo is
+        /// on both of our machines.
+        /// </summary>
+        static string ResolveRepoPath()
+        {
+            string stored = EditorPrefs.GetString(RepoKey, "");
+            if (LooksLikeRepo(stored)) return stored;
+
+            string guess = GuessRepoPath();
+            if (LooksLikeRepo(guess))
+            {
+                EditorPrefs.SetString(RepoKey, guess);
+                if (!string.IsNullOrEmpty(stored))
+                    Debug.Log("Study Control: the saved repo path no longer exists, so it " +
+                              "now points at " + guess + ".");
+                return guess;
+            }
+            return stored;
+        }
+
+        static bool LooksLikeRepo(string path)
+        {
+            return !string.IsNullOrEmpty(path) &&
+                   Directory.Exists(Path.Combine(path, "pipeline"));
         }
 
         // ------------------------------------------------------------------- chrome
