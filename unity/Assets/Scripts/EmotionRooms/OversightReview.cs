@@ -40,6 +40,15 @@ namespace EmotionRooms
         public string condition;
         public string target_emotion_shown;
         public string rationale_shown;
+
+        /// <summary>
+        /// Whether the system's stated reasoning is shown on this trial.
+        ///
+        /// The manipulated factor, crossed with fidelity: on corrupted trials the
+        /// reasoning describes the ORIGINAL design, so it is fluent, plausible and
+        /// quietly inconsistent with what is on the wall.
+        /// </summary>
+        public bool explanation_shown;
         public RoomConfig stimulus;
         public OversightGroundTruth ground_truth;
     }
@@ -86,6 +95,9 @@ namespace EmotionRooms
         /// <summary>Extra rounds of "anything else wrong": field=value@confidence,
         /// semicolon-joined. Perception data; the primary answer stays the scored one.</summary>
         public string extraAttributions;
+
+        /// <summary>The manipulated factor: was the system's reasoning shown here.</summary>
+        public bool explanationShown;
         public float attributionConfidence;
         public string correctedValue;
 
@@ -127,6 +139,7 @@ namespace EmotionRooms
                 arousalAfter.ToString(CultureInfo.InvariantCulture),
                 correctionApplied ? "1" : "0",
                 extraAttributions ?? "",
+                explanationShown ? "1" : "0",
             };
             var row = new StringBuilder();
             for (int i = 0; i < fields.Length; i++)
@@ -145,7 +158,7 @@ namespace EmotionRooms
                    "corrected_value,applied_value,correction_source," +
                    "duration_ms,swapped_field,started_utc," +
                    "valence_before,arousal_before,valence_after,arousal_after," +
-                   "correction_applied,extra_attributions";
+                   "correction_applied,extra_attributions,explanation_shown";
         }
     }
 
@@ -208,7 +221,12 @@ namespace EmotionRooms
         // and it is the one part that was cut on 9 Aug and restored by the unified
         // design. Turning this off returns to detect-attribute-propose and scores
         // corrections as repair accuracy offline instead.
-        public bool applyAndReRate = true;
+        // OFF to fit the session inside an hour (9 Aug). Applying the correction and
+        // re-rating cost a second grid rating on every detected trial - several minutes
+        // across the block - and the correction effect is not what the redesign turns
+        // on. The correction PROPOSAL is still collected and scored offline as repair
+        // accuracy against the trial file. One flag restores the effect measure.
+        public bool applyAndReRate = false;
 
         [Header("Output")]
         public string responsesFileName = "oversight_responses.csv";
@@ -347,6 +365,9 @@ namespace EmotionRooms
 
         [Tooltip("How long the task briefing stays up before the first review trial.")]
         public float briefingSeconds = 15f;
+
+        [Tooltip("How long the system's reasoning stays up, on the trials that show it.")]
+        public float explanationSeconds = 8f;
 
         [Tooltip("Where the briefing is drawn. Wired by scene setup.")]
         public MessageBoard board;
@@ -488,6 +509,29 @@ namespace EmotionRooms
                 if (events != null)
                     events.WriteGrid("review_rating_before", valenceBefore, arousalBefore, 0f, 0f, null);
                 loader.Load(trial.stimulus);
+            }
+
+            // Between her measure and mine, deliberately.
+            //
+            // The affect grid above is the thesis measure and is collected before any
+            // explanation has appeared on screen, so those ratings are uncontaminated
+            // and need no caveat. From here on the trial belongs to the oversight
+            // study, and the explanation is what that study manipulates.
+            if (trial.explanation_shown && !string.IsNullOrEmpty(trial.rationale_shown))
+            {
+                if (board != null)
+                    board.Show("The system's reasoning for this room:\n\n\"" +
+                               trial.rationale_shown + "\"");
+                if (events != null)
+                    events.WriteValues("explanation_shown", trial.target_emotion_shown,
+                        trial.rationale_shown, null);
+                yield return new WaitForSeconds(explanationSeconds);
+                if (board != null) board.Hide();
+            }
+            else if (events != null)
+            {
+                events.WriteValues("explanation_withheld", trial.target_emotion_shown,
+                    null, null);
             }
 
             detectionAnswered = false;
@@ -715,6 +759,7 @@ namespace EmotionRooms
                 detectionConfidence = pendingDetectionConfidence,
                 attributedField = pendingAttributedField,
                 extraAttributions = pendingExtras,
+                explanationShown = trial.explanation_shown,
                 attributionConfidence = pendingAttributionConfidence,
                 correctedValue = pendingCorrectedValue,
                 appliedValue = appliedValue,

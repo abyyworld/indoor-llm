@@ -518,9 +518,13 @@ namespace EmotionRooms
 
         void OnBlockFinished()
         {
-            // The rationale check follows the detection block, never precedes it: it
-            // shows the model's reasoning, which names what the system was trying to do.
-            if (rationaleReview != null)
+            // No separate rationale block any more. It asked whether the stated
+            // reasoning matched the room; the main trials now show that reasoning on
+            // half of themselves and ask a sharper question about it, so a tail block
+            // repeating it costs minutes the session does not have. RationaleReview is
+            // still wired and still runs if a block file is present, which is what the
+            // pilot path uses.
+            if (rationaleReview != null && rationaleReview.HasBlockFile)
             {
                 rationaleReview.BeginBlock();
                 return;

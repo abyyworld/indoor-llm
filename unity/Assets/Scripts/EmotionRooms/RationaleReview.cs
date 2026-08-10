@@ -86,6 +86,16 @@ namespace EmotionRooms
         }
         public bool IsRunning { get; private set; }
 
+        /// <summary>Whether a block file exists to run. Absent means skip, not fail.</summary>
+        public bool HasBlockFile
+        {
+            get
+            {
+                return !string.IsNullOrEmpty(blockFileName) &&
+                       File.Exists(Path.Combine(Application.persistentDataPath, blockFileName));
+            }
+        }
+
         [NonSerialized] public bool pendingMatches;
         bool answered;
         RationaleBlockData block;

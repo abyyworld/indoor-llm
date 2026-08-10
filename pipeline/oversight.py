@@ -308,6 +308,16 @@ def build_oversight_block(
 
     conditions = [FAITHFUL] + corrupt_kinds
 
+    # EXPLANATION is crossed with fidelity, balanced within each condition so the
+    # 2x2 is even: half of the faithful trials carry the system's stated reasoning
+    # and half do not, and likewise for each corrupted kind. Assigned per condition
+    # rather than over the whole block, because balancing globally can leave one
+    # condition entirely explained and another entirely bare - which turns the
+    # factor into a confound with fidelity rather than a crossing of it.
+    #
+    # On corrupted trials the reasoning describes the ORIGINAL design, not what is
+    # on the wall. That is the manipulation: a fluent, plausible justification for
+    # a room that no longer matches it.
     for condition in conditions:
         per_condition = counts[condition]
         # Spread each condition evenly over the configs rather than drawing with
@@ -322,16 +332,20 @@ def build_oversight_block(
             rng.shuffle(block)
             chosen.extend(block[: per_condition - len(chosen)])
 
-        for config in chosen:
-            trials.append(
-                make_trial(
-                    config,
-                    condition,
-                    rng=rng,
-                    donors=configs,
-                    pool_sampler=pool_sampler,
-                )
+        explained = [True] * (per_condition // 2)
+        explained += [False] * (per_condition - len(explained))
+        rng.shuffle(explained)
+
+        for config, show in zip(chosen, explained):
+            trial = make_trial(
+                config,
+                condition,
+                rng=rng,
+                donors=configs,
+                pool_sampler=pool_sampler,
             )
+            trial["explanation_shown"] = show
+            trials.append(trial)
 
     rng.shuffle(trials)
 

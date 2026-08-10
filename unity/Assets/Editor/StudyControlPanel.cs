@@ -252,11 +252,12 @@ namespace EmotionRooms.EditorTools
             }
 
             EditorGUILayout.LabelField(
-                "One session, about 45-55 minutes. Every trial is the same seven " +
-                "steps: room, affect grid, then was-it-altered and the follow-ups. " +
-                "32 trials, 16 of them the model's own output. The affect study reads " +
-                "the grid on those 16; the oversight study reads the rest. No phases, " +
-                "no block boundary, one trial format throughout.",
+                "One session, about 35-40 minutes. Every trial: room, affect grid, " +
+                "then on half of them the system's stated reasoning, then was-it-" +
+                "altered and the follow-ups. 32 trials, 2x2 over reasoning-shown and " +
+                "altered-or-not. The affect ratings are taken before any reasoning " +
+                "appears, so the thesis data is clean; the reasoning is what the " +
+                "oversight study manipulates.",
                 EditorStyles.wordWrappedMiniLabel);
 
             EditorGUILayout.LabelField(practiceOnly
