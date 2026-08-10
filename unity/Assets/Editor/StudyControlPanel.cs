@@ -759,14 +759,26 @@ namespace EmotionRooms.EditorTools
         /// Windows installs it as "python" (and "py" via the launcher); macOS and Linux
         /// as "python3", where bare "python" is often absent or still means 2.x.
         /// </summary>
-        static string PythonExe
+        static string[] PythonCandidates
         {
             get
             {
+                // Every name a working Python answers to, most likely first per platform.
+                //
+                // Windows installs the interpreter as "python" from python.org, as "py"
+                // through the launcher (which is on PATH even when python is not), and
+                // as "python3" only sometimes. The Microsoft Store stub answers to
+                // "python" but exits without running anything. Trying each in turn and
+                // reporting all of them beats asking a researcher mid-session which one
+                // their machine has.
                 return Application.platform == RuntimePlatform.WindowsEditor
-                    ? "python" : "python3";
+                    ? new[] { "python", "py", "python3" }
+                    : new[] { "python3", "python" };
             }
         }
+
+        /// <summary>The interpreter that answered last time, so we try it first.</summary>
+        static string pythonFound;
 
         /// <summary>
         /// Run a pipeline command directly, without a shell.
@@ -781,9 +793,35 @@ namespace EmotionRooms.EditorTools
         /// </summary>
         bool RunPipeline(string arguments)
         {
+            var tried = new System.Collections.Generic.List<string>();
+
+            if (!string.IsNullOrEmpty(pythonFound) && TryPython(pythonFound, arguments, tried))
+                return true;
+
+            foreach (var exe in PythonCandidates)
+            {
+                if (exe == pythonFound) continue;
+                if (TryPython(exe, arguments, tried)) { pythonFound = exe; return true; }
+            }
+
+            lastOutput = "Could not run Python. Tried: " + string.Join(", ", tried.ToArray()) +
+                         ".\n\nInstall Python 3 from python.org and tick \"Add python.exe " +
+                         "to PATH\" during setup, then restart Unity so it inherits the " +
+                         "new PATH. Restarting Unity matters: a Unity that was already " +
+                         "open will not see a PATH change.";
+            Debug.LogError("Study Control: " + lastOutput);
+            showTrouble = true;
+            return false;
+        }
+
+        /// <summary>One attempt with one interpreter name. Records what happened.</summary>
+        bool TryPython(string exe, string arguments, System.Collections.Generic.List<string> tried)
+        {
+            // "py" is the launcher, which needs -3 to pick a Python 3.
+            string full = (exe == "py" ? "-3 " : "") + "-m pipeline.cli " + arguments;
             try
             {
-                var info = new ProcessStartInfo(PythonExe, "-m pipeline.cli " + arguments)
+                var info = new ProcessStartInfo(exe, full)
                 {
                     WorkingDirectory = repoPath,
                     UseShellExecute = false,
@@ -800,6 +838,9 @@ namespace EmotionRooms.EditorTools
 
                     if (process.ExitCode != 0)
                     {
+                        // The interpreter ran and the pipeline failed: a real error,
+                        // worth showing rather than trying the next candidate.
+                        tried.Add(exe + " (ran, exit " + process.ExitCode + ")");
                         Debug.LogError("Study Control: command failed\n" + lastOutput);
                         showTrouble = true;
                         return false;
@@ -810,9 +851,8 @@ namespace EmotionRooms.EditorTools
             }
             catch (Exception e)
             {
-                lastOutput = e.Message;
-                Debug.LogError("Study Control: " + e.Message);
-                showTrouble = true;
+                // Could not start this interpreter at all; try the next name.
+                tried.Add(exe + " (" + e.Message.Split('\n')[0] + ")");
                 return false;
             }
         }
