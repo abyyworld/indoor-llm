@@ -82,14 +82,21 @@ namespace EmotionRooms
             mesh.alignment = TextAlignment.Center;
             mesh.color = Ink;
 
-            // Drawn after the surface it sits on, so it is never swallowed by it.
+            // Drawn after the surface it sits on, so it is never swallowed by it, and
+            // out of the lighting entirely: a label lit by the room is a label whose
+            // legibility changes with the stimulus, which is the whole complaint. Text
+            // has to read identically at 150 lux and at 750.
             var renderer = go.GetComponent<MeshRenderer>();
             if (renderer != null)
             {
                 renderer.sortingOrder = 200;
                 renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
                 renderer.receiveShadows = false;
+                renderer.lightProbeUsage = UnityEngine.Rendering.LightProbeUsage.Off;
+                renderer.reflectionProbeUsage = UnityEngine.Rendering.ReflectionProbeUsage.Off;
             }
+
+            Plate(go.transform, text, height);
 
             Outline(go.transform, mesh, height);
             return mesh;
@@ -122,6 +129,50 @@ namespace EmotionRooms
                 if (child.name != "Outline") continue;
                 var copy = child.GetComponent<TextMesh>();
                 if (copy != null) copy.text = value;
+            }
+        }
+
+        /// <summary>
+        /// A dark plate behind the glyphs, sized to the text.
+        ///
+        /// The outline alone still lost against a bright wall: an outline only separates
+        /// a glyph from what is immediately around it, and a pale 750 lux wall behind
+        /// thin strokes still swamps them. A plate replaces the background instead of
+        /// fighting it, so contrast is fixed by us rather than by the stimulus.
+        /// </summary>
+        static void Plate(Transform parent, string text, float height)
+        {
+            int longest = 0, lines = 1;
+            int run = 0;
+            foreach (char c in text ?? "")
+            {
+                if (c == '\n') { lines++; if (run > longest) longest = run; run = 0; }
+                else run++;
+            }
+            if (run > longest) longest = run;
+            if (longest == 0) return;
+
+            var quad = GameObject.CreatePrimitive(PrimitiveType.Quad);
+            quad.name = "Plate";
+            quad.transform.SetParent(parent, false);
+            // Behind the glyphs in the same local space, with a margin round the text.
+            quad.transform.localPosition = new Vector3(0f, 0f, 0.004f);
+            quad.transform.localScale = new Vector3(longest * height * 0.62f + height * 0.5f,
+                                                    lines * height * 1.45f, 1f);
+
+            var collider = quad.GetComponent<Collider>();
+            if (collider != null) Object.Destroy(collider);
+
+            var shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
+            var renderer = quad.GetComponent<Renderer>();
+            if (renderer != null && shader != null)
+            {
+                renderer.material = new Material(shader) { color = new Color(0.05f, 0.05f, 0.07f) };
+                renderer.sortingOrder = 198;
+                renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                renderer.receiveShadows = false;
+                renderer.lightProbeUsage = UnityEngine.Rendering.LightProbeUsage.Off;
+                renderer.reflectionProbeUsage = UnityEngine.Rendering.ReflectionProbeUsage.Off;
             }
         }
 

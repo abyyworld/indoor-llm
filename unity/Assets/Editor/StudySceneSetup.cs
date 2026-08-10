@@ -351,6 +351,24 @@ namespace EmotionRooms.EditorTools
             return grid;
         }
 
+        /// <summary>
+        /// Take a renderer out of the lighting entirely.
+        ///
+        /// Panels and buttons float between the participant and the room, so anything
+        /// they cast lands on the wall being judged. In a study where the wall IS the
+        /// stimulus, a question panel throwing a shadow across it is not cosmetic: it
+        /// changes the thing under evaluation. Receiving shadows is off for the same
+        /// reason in reverse - a panel darkened by room geometry is a panel that cannot
+        /// be read in a dim room.
+        /// </summary>
+        static void NoShadow(Renderer renderer)
+        {
+            if (renderer == null) return;
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+            renderer.lightProbeUsage = UnityEngine.Rendering.LightProbeUsage.Off;
+        }
+
         const string MaterialFolder = "Assets/EmotionRooms/Materials";
 
         /// <summary>
@@ -609,7 +627,9 @@ namespace EmotionRooms.EditorTools
 
                 var material = new Material(DefaultShader()) { name = values[i] };
                 material.color = new Color(0.16f, 0.17f, 0.20f);
-                cell.GetComponent<Renderer>().sharedMaterial = material;
+                var cellRenderer = cell.GetComponent<Renderer>();
+                cellRenderer.sharedMaterial = material;
+                NoShadow(cellRenderer);
 
                 // The face of the button says what it is -- in plain words. The value
                 // in the data stays canonical; only the face is translated, because
@@ -644,8 +664,10 @@ namespace EmotionRooms.EditorTools
             backing.transform.localScale = new Vector3(1.5f, 1.15f, 1f);
             Object.DestroyImmediate(backing.GetComponent<Collider>());
             var backingMaterial = new Material(DefaultShader()) { name = "Panel Backing" };
-            backingMaterial.color = new Color(0.10f, 0.10f, 0.13f);
-            backing.GetComponent<Renderer>().sharedMaterial = backingMaterial;
+            backingMaterial.color = new Color(0.06f, 0.06f, 0.08f);
+            var backingRenderer = backing.GetComponent<Renderer>();
+            backingRenderer.sharedMaterial = backingMaterial;
+            NoShadow(backingRenderer);
 
             if (withConfidence)
             {
@@ -674,6 +696,7 @@ namespace EmotionRooms.EditorTools
 
                     var material = new Material(DefaultShader()) { name = step.name };
                     material.color = new Color(0.16f, 0.17f, 0.20f);
+                    NoShadow(step.GetComponent<Renderer>());
                     step.GetComponent<Renderer>().sharedMaterial = material;
 
                     WorldLabel.Attach(step.transform,

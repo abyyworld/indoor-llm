@@ -130,6 +130,39 @@ def swappable_fields(config: dict, donor: dict) -> list[str]:
     ]
 
 
+def pool_distance(config: dict, donor: dict, field: str) -> float:
+    """How far apart two values sit inside their own pool, as a 0..1 fraction.
+
+    Perceptibility is not comparable across variables -- degrees of hue and lux are
+    different units -- so each is normalised by its own pool's span. Categorical
+    fields (material, roughness) are either the same or different, and a difference
+    is always fully visible, so they score 1.
+    """
+    from pipeline import pools
+
+    a, b = config.get(field), donor.get(field)
+    if a is None or b is None or a == b:
+        return 0.0
+
+    table = {
+        "hue": pools.HUES,
+        "saturation": pools.SATURATIONS,
+        "brightness": pools.BRIGHTNESSES,
+    }
+    values = table.get(field)
+    if values is None:
+        return 1.0            # texture, roughness: categorical, fully visible
+
+    span = max(values) - min(values)
+    if span <= 0:
+        return 1.0
+    if field == "hue":
+        # Hue is a circle: 330 and 0 are neighbours, not opposites.
+        gap = abs(float(a) - float(b)) % 360.0
+        return min(gap, 360.0 - gap) / 180.0
+    return abs(float(a) - float(b)) / float(span)
+
+
 def make_trial(
     config: dict,
     condition: str,
@@ -173,8 +206,24 @@ def make_trial(
                 f"so nothing can be swapped. If this happens often the emotions are not "
                 f"being separated by the pool, which is a finding rather than a bug."
             )
-        donor, fields = rng.choice(usable)
-        field = rng.choice(fields)
+        # Prefer the swap a person could actually see.
+        #
+        # A donor value one pool step from the original is a real manipulation and an
+        # invisible one: saturation 0.20 -> 0.40 in a dim room, or one hue category
+        # over, changes the data and not the experience. Detection and attribution
+        # then sit at floor and measure nothing except that the swap was too small,
+        # which is a property of our sampling rather than a finding about oversight.
+        # Ranking candidates by how far the value moves within its own pool keeps the
+        # manipulation perceptible; ties and non-numeric fields fall back to chance,
+        # so this narrows the draw without ever emptying it.
+        candidates = [(d, f) for d, fields in usable for f in fields]
+        best = max(pool_distance(config, d, f) for d, f in candidates)
+        if best > 0:
+            candidates = [
+                (d, f) for d, f in candidates
+                if pool_distance(config, d, f) >= best * 0.5
+            ]
+        donor, field = rng.choice(candidates)
 
         trial["stimulus"] = swap(config, donor, field)
         trial["ground_truth"] = {
