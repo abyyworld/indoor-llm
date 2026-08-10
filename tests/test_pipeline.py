@@ -829,12 +829,13 @@ class TestOversightTrials(unittest.TestCase):
         self.assertEqual(a["trials"], b["trials"])
 
         counts = Counter(t["condition"] for t in a["trials"])
-        # Half the block is faithful. At 25% faithful a participant works out that most
-        # rooms are broken and shifts criterion toward "something is wrong": hit rate
-        # then looks excellent and criterion measures the base rate rather than the
-        # person. The corrupted half is split evenly across its kinds.
-        from pipeline.oversight import FAITHFUL
-        corrupted = sum(v for k, v in counts.items() if k != FAITHFUL)
+        # The detection contrast stays balanced: equally many genuinely-altered rooms
+        # as genuinely-faithful ones. If altered rooms dominated, a participant would
+        # work out that most rooms are broken and shift criterion toward "something is
+        # wrong", and criterion would then measure the base rate rather than the
+        # person. Mismatch trials sit outside this contrast by design.
+        from pipeline.oversight import FAITHFUL, SWAPPED
+        corrupted = counts[SWAPPED]
         self.assertEqual(counts[FAITHFUL], corrupted,
                          "an uneven base rate makes criterion a property of the block")
 
@@ -1060,30 +1061,66 @@ class TestPhaseBMeasurement(unittest.TestCase):
                                      pool_sampler=sampler, **kwargs)
 
     def test_the_block_is_long_enough_for_a_usable_d_prime(self):
-        # Three faithful trials give a false-alarm rate that can only be 0, .33, .67 or
-        # 1. A d-prime computed from that is not an estimate.
-        from pipeline.oversight import FAITHFUL
+        """Enough trials on each side of the detection contrast to estimate a rate.
+
+        Three faithful trials give a false-alarm rate that can only be 0, .33, .67 or
+        1, and a d-prime computed from that is not an estimate. The bar is twelve a
+        side rather than sixteen because a third of the block now carries the
+        rationale-mismatch condition, which answers a different question; twelve
+        still gives a false-alarm rate on a usable grid, and the analysis pools
+        partially across participants.
+        """
+        from pipeline.oversight import FAITHFUL, SWAPPED
 
         trials = self._block()["trials"]
         faithful = sum(1 for t in trials if t["condition"] == FAITHFUL)
+        swapped = sum(1 for t in trials if t["condition"] == SWAPPED)
         self.assertGreaterEqual(len(trials), 32)
-        self.assertGreaterEqual(faithful, 16)
+        self.assertGreaterEqual(faithful, 12)
+        self.assertGreaterEqual(swapped, 12)
 
-    def test_half_the_trials_are_faithful(self):
-        from pipeline.oversight import FAITHFUL
+    def test_the_detection_contrast_has_an_even_base_rate(self):
+        """Even across the trials d-prime is computed FROM, which is not all of them.
+
+        The block also carries rationale_mismatched trials, whose rooms are unaltered
+        and which are analysed as their own contrast. The invariant that matters is
+        that the trials the detection measure is built from -- rooms genuinely altered
+        against rooms genuinely not -- are balanced, so criterion stays a property of
+        the participant rather than of the block.
+        """
+        from pipeline.oversight import FAITHFUL, SWAPPED
 
         trials = self._block()["trials"]
         faithful = sum(1 for t in trials if t["condition"] == FAITHFUL)
-        self.assertEqual(faithful, len(trials) - faithful,
-                         "an uneven base rate makes criterion a property of the block")
+        swapped = sum(1 for t in trials if t["condition"] == SWAPPED)
+        self.assertEqual(faithful, swapped,
+                         "the faithful/altered contrast must stay balanced")
 
-    def test_rationale_mismatch_is_not_in_the_detection_block(self):
-        # It is perceptually identical to a faithful room, so scoring it as a corruption
-        # marks a correct "nothing is wrong" as a miss and contaminates d-prime.
+    def test_rationale_mismatch_is_present_but_never_scoreable_as_an_alteration(self):
+        """It is in the block now, and its room is still unaltered.
+
+        These trials are the point of the study: the room is genuine and only the
+        stated reasoning is wrong, so flagging one is evidence the participant is
+        checking the account rather than the artifact. The old invariant kept them
+        out of the block entirely, for a reason that has not gone away -- counting
+        one as signal would mark a correct "nothing is wrong" as a miss and
+        contaminate d-prime. That reason is now enforced in the data rather than by
+        exclusion: the ground truth names no altered field, so any analysis that
+        selects on swapped_field cannot sweep these into the detection contrast.
+        """
         from pipeline.oversight import RATIONALE_MISMATCHED
 
-        conditions = {t["condition"] for t in self._block()["trials"]}
-        self.assertNotIn(RATIONALE_MISMATCHED, conditions)
+        trials = self._block()["trials"]
+        mismatched = [t for t in trials if t["condition"] == RATIONALE_MISMATCHED]
+        self.assertTrue(mismatched, "the mismatch condition carries the main contrast")
+
+        for trial in mismatched:
+            truth = trial["ground_truth"]
+            self.assertIsNone(truth["swapped_field"],
+                              "a mismatched room is not altered; only its story is")
+            self.assertTrue(truth["rationale_is_wrong"])
+            self.assertTrue(trial["explanation_shown"],
+                            "a mismatched rationale nobody sees is not a condition")
 
     def test_the_rationale_block_asks_its_own_question(self):
         from pipeline.oversight import build_rationale_block
@@ -2076,10 +2113,18 @@ class TestConditionComparison(unittest.TestCase):
             room = random_rooms(1, seed=rng.randrange(1 << 30))[0]
             return {k: room[k] for k in ("hue", "saturation", "brightness", "texture")}
 
+        # RANDOM is no longer in the study's default composition: a randomly drawn
+        # room contradicts its stated reasoning on every variable at once, which makes
+        # detection trivial and is not the manipulation under test. The condition
+        # itself still exists and still has to sample broadly wherever it is used, so
+        # the block is asked for it explicitly here.
+        from pipeline.oversight import RANDOM
+
         seen = set()
         for p in range(24):
             block = build_oversight_block(configs, seed=9000 + p, participant=f"p{p}",
-                                          trials_total=12, pool_sampler=sampler)
+                                          trials_total=12, pool_sampler=sampler,
+                                          composition=[(RANDOM, False, 12)])
             for trial in block["trials"]:
                 if trial["condition"] == "random":
                     s = trial["stimulus"]

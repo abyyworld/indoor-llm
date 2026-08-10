@@ -275,6 +275,7 @@ def build_oversight_block(
     participant: str,
     trials_total: int = 32,
     pool_sampler=None,
+    composition: list | None = None,
 ) -> dict:
     """One participant's Phase B block: half faithful, half corrupted, shuffled.
 
@@ -294,6 +295,37 @@ def build_oversight_block(
 
     rng = random.Random(seed)
     trials: list[dict] = []
+
+    # Explicit composition, because the block now answers two questions with
+    # different appetites for trials.
+    #
+    # The primary contrast is between two rooms that are BOTH unaltered and differ
+    # only in whether the stated reasoning describes them: faithful-explained
+    # against rationale_mismatched. If those are flagged at different rates, the
+    # participant is checking the account rather than the artifact, and that is the
+    # finding. It gets the most trials.
+    #
+    # The secondary contrast is explained against unexplained on the same fidelity
+    # levels, which is the older does-explanation-help question. It keeps enough
+    # trials to be estimated and no more.
+    if composition is None:
+        # Proportions, not counts, so trials_total still means something. At the
+        # default 32 this is 8/8/8/4/4; a shorter block keeps the same shape.
+        shares = [
+            (FAITHFUL, True, 0.25),               # room right, reasoning right
+            (SWAPPED, True, 0.25),                # room wrong, reasoning right about intent
+            (RATIONALE_MISMATCHED, True, 0.25),   # room right, reasoning wrong
+            (FAITHFUL, False, 0.125),             # unexplained controls
+            (SWAPPED, False, 0.125),
+        ]
+        composition = []
+        assigned = 0
+        for i, (condition, explained, share) in enumerate(shares):
+            count = (trials_total - assigned if i == len(shares) - 1
+                     else int(round(trials_total * share)))
+            assigned += count
+            if count > 0:
+                composition.append((condition, explained, count))
 
     faithful_count = int(round(trials_total * FAITHFUL_SHARE))
     corrupted_count = trials_total - faithful_count
@@ -318,25 +350,17 @@ def build_oversight_block(
     # On corrupted trials the reasoning describes the ORIGINAL design, not what is
     # on the wall. That is the manipulation: a fluent, plausible justification for
     # a room that no longer matches it.
-    for condition in conditions:
-        per_condition = counts[condition]
-        # Spread each condition evenly over the configs rather than drawing with
-        # replacement. Sampling independently lets a condition cluster on one or two
-        # emotions by chance, which confounds condition with emotion: if most swapped
-        # trials happen to be calm rooms, attribution accuracy for "swapped" is partly
-        # an accuracy figure for calm. Cycling a reshuffled list caps the imbalance at
-        # one trial per config.
+    for condition, explained, count in composition:
+        # Spread each cell evenly over the configs rather than drawing with
+        # replacement, so a cell cannot land on one emotion by chance and turn
+        # condition into a proxy for emotion.
         chosen: list[dict] = []
-        while len(chosen) < per_condition:
+        while len(chosen) < count:
             block = list(configs)
             rng.shuffle(block)
-            chosen.extend(block[: per_condition - len(chosen)])
+            chosen.extend(block[: count - len(chosen)])
 
-        explained = [True] * (per_condition // 2)
-        explained += [False] * (per_condition - len(explained))
-        rng.shuffle(explained)
-
-        for config, show in zip(chosen, explained):
+        for config in chosen:
             trial = make_trial(
                 config,
                 condition,
@@ -344,7 +368,9 @@ def build_oversight_block(
                 donors=configs,
                 pool_sampler=pool_sampler,
             )
-            trial["explanation_shown"] = show
+            # A mismatched rationale nobody sees is not a condition, so these are
+            # explained by definition rather than by assignment.
+            trial["explanation_shown"] = bool(explained) or condition == RATIONALE_MISMATCHED
             trials.append(trial)
 
     rng.shuffle(trials)

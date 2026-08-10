@@ -455,10 +455,12 @@ namespace EmotionRooms
             if (board != null)
                 board.Show("Checking the system's work\n\n" +
                            "Each room was designed by a system to convey the feeling " +
-                           "named with it.\nIn about half of the rooms, ONE setting was " +
-                           "changed after design.\n\nSay whether each room is as " +
-                           "designed or has been changed.\nYou are not judging whether " +
-                           "the design is good -- only whether\nthe room matches it.");
+                           "named with it,\nand on some rooms the system also explains " +
+                           "its reasoning.\n\nIn about a third of the rooms, ONE " +
+                           "setting was changed after design.\nSay whether each room " +
+                           "is as designed or has been changed.\n\nYou are not judging " +
+                           "whether the design is good, only whether\nthe room matches " +
+                           "what it was designed to be.");
             if (events != null) events.Write("review_briefing_shown", null);
             yield return new WaitForSeconds(briefingSeconds);
             if (board != null) board.Hide();
