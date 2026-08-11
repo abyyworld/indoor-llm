@@ -381,11 +381,13 @@ namespace EmotionRooms.EditorTools
         /// </summary>
         public static void BatchInstall()
         {
-            UnityEditor.SceneManagement.EditorSceneManager.OpenScene("Assets/indoor room.unity");
-            XRSetup.AllowLocalHttp();
-            StudySceneSetup.SetUp(true);
-            ClearBuildCache();
-            BuildAndDeploy(false);
+            // The scene has to be open before InstallAndRun can reload it, and in
+            // batchmode nothing is open. Beyond that this is deliberately the same
+            // path the panel takes: two build routines that differed by one line is
+            // what produced a build that ran from the command line and crashed from
+            // the button, on the same machine, from the same source.
+            EditorSceneManager.OpenScene("Assets/indoor room.unity");
+            InstallAndRun();
         }
 
         /// <summary>
@@ -435,6 +437,30 @@ namespace EmotionRooms.EditorTools
         {
             // The permission the panel needs to talk to the app. Idempotent.
             XRSetup.AllowLocalHttp();
+
+            // Reload the scene from disk before touching it.
+            //
+            // This is the difference between a build that runs and one that dies at
+            // scene load, and it took a long time to see because the two build paths
+            // looked equivalent. A command-line build opens the scene fresh; the panel
+            // built whatever was in the editor's memory. An open scene accumulates
+            // state that never round-trips through the file - objects created and
+            // destroyed across a session, components added by a play-mode run, hidden
+            // objects left by a previous SetUp - and BuildPipeline serializes that
+            // in-memory graph rather than the file on disk. Reloading makes the panel
+            // build exactly what a fresh checkout would.
+            var open = EditorSceneManager.GetActiveScene();
+            if (!string.IsNullOrEmpty(open.path))
+            {
+                if (open.isDirty &&
+                    !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+                {
+                    Debug.Log("Study build: cancelled, the open scene has unsaved changes.");
+                    return;
+                }
+                EditorSceneManager.OpenScene(open.path,
+                    UnityEditor.SceneManagement.OpenSceneMode.Single);
+            }
 
             // Regenerate the scene from the code that is about to be built, so the two
             // can never disagree. Stale scenes produced dead script references, missing
