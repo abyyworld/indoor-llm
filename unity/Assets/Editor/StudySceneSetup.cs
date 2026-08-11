@@ -314,26 +314,7 @@ namespace EmotionRooms.EditorTools
             // reached inward and collided over the middle of the grid. Right-aligning the
             // left label and left-aligning the right one makes them grow outward, away
             // from the cells, however long the word is.
-            WorldLabel.Attach(labels, "How did that room make you feel?", 0.035f,
-                              new Vector3(0f, 0.78f, 0f));
-            // Say what to do. The four axis words on their own read like four emotions to
-            // choose between, and nothing on screen said a square was the thing to aim at.
-            WorldLabel.Attach(labels, "Point at a square and pull the trigger", 0.024f,
-                              new Vector3(0f, 0.68f, 0f));
-            WorldLabel.Attach(labels, "unpleasant", 0.028f, new Vector3(-0.62f, 0f, 0f),
-                              TextAnchor.MiddleRight);
-            WorldLabel.Attach(labels, "pleasant", 0.028f, new Vector3(0.62f, 0f, 0f),
-                              TextAnchor.MiddleLeft);
-            // Arousal axis anchors. Russell, Weiss and Mendelsohn print "high arousal"
-            // and "sleepiness"; these are plain-language glosses of the same poles,
-            // chosen after two participant complaints. "calm" collided with calm being a
-            // target emotion (the axis read as describing the room, not the person),
-            // and "worked up" simply did not parse. The gloss is worth a line in the
-            // methods section; the axis meaning is unchanged.
-            WorldLabel.Attach(labels, "full of energy", 0.028f, new Vector3(0f, 0.58f, 0f),
-                              TextAnchor.LowerCenter);
-            WorldLabel.Attach(labels, "sleepy", 0.028f, new Vector3(0f, -0.58f, 0f),
-                              TextAnchor.UpperCenter);
+            // The axis words are drawn at runtime by AffectGrid, not stored here.
             grid.labels = labels.gameObject;
             // Hidden until the grid is shown. Saved active, the four axis words floated
             // in space from app start, looking like a question nobody could answer.
@@ -631,27 +612,18 @@ namespace EmotionRooms.EditorTools
                 cellRenderer.sharedMaterial = material;
                 NoShadow(cellRenderer);
 
-                // The face of the button says what it is -- in plain words. The value
-                // in the data stays canonical; only the face is translated, because
-                // "saturation" means nothing to most participants and less to someone
-                // whose first language is not English.
-                WorldLabel.Attach(cell.transform,
-                                  faces != null ? faces[i] : FaceFor(values[i]), 0.03f,
-                                  new Vector3(0f, 0f, -0.6f));
-
+                // The face is stored as a string and drawn at runtime. Text objects
+                // are the bulk of this scene and the player was dying deserializing
+                // it; a caption does not need to exist before the panel is shown.
                 panel.options.Add(new QuestionPanel.Option
                 {
                     value = values[i],
                     target = cell.transform,
                     group = groups != null ? groups[i] : null,
+                    face = faces != null ? faces[i] : FaceFor(values[i]),
                 });
             }
 
-            // The question itself, above the options.
-            var prompt = new GameObject("Prompt").transform;
-            prompt.SetParent(go.transform, false);
-            prompt.localPosition = new Vector3(0f, 0.46f, 0f);
-            panel.promptLabel = WorldLabel.Attach(prompt, "", 0.035f);
 
             // A dark slab behind everything. Phase B keeps the room visible while it
             // asks -- the room is the thing being judged -- and white text floating
@@ -677,12 +649,6 @@ namespace EmotionRooms.EditorTools
                 panel.confidenceStrip = strip;
                 panel.confidenceSteps = 5;
 
-                // Says what the row is and that it is required. Five unlabelled grey
-                // cells read as decoration, and the answer now waits for one of them.
-                var stripLabel = new GameObject("Confidence Label").transform;
-                stripLabel.SetParent(strip, false);
-                WorldLabel.Attach(stripLabel, "How sure are you? Pick one.", 0.024f,
-                                  new Vector3(0f, 0.09f, 0f));
 
                 for (int i = 0; i < panel.confidenceSteps; i++)
                 {
@@ -699,9 +665,6 @@ namespace EmotionRooms.EditorTools
                     NoShadow(step.GetComponent<Renderer>());
                     step.GetComponent<Renderer>().sharedMaterial = material;
 
-                    WorldLabel.Attach(step.transform,
-                        i == 0 ? "not sure" : i == panel.confidenceSteps - 1 ? "certain" : "",
-                        0.022f, new Vector3(0f, -1.6f, 0f));
                 }
             }
 

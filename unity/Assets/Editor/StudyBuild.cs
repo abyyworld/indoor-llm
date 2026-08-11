@@ -95,6 +95,31 @@ namespace EmotionRooms.EditorTools
             // first frame rather than from whenever Awake happens to run.
             PlayerSettings.runInBackground = true;
 
+            // One signing key for the whole project, checked in.
+            //
+            // Unity signs with a per-machine debug keystore by default, so an APK built
+            // on the Mac cannot install over one built on the Windows laptop: Android
+            // refuses with INSTALL_FAILED_UPDATE_INCOMPATIBLE, "signatures do not
+            // match". Two researchers building for the same headset hit that every time
+            // they alternate, and the error arrives as a failed install whose message
+            // says nothing about machines. A shared keystore makes every build
+            // interchangeable.
+            //
+            // Not a secret: it signs a research build that is never distributed, and the
+            // password is here so nobody has to be told it. Do not reuse it for anything
+            // published.
+            string keystore = Path.Combine(
+                Directory.GetParent(Application.dataPath).FullName,
+                "keystore/emotionrooms.keystore");
+            if (File.Exists(keystore))
+            {
+                PlayerSettings.Android.useCustomKeystore = true;
+                PlayerSettings.Android.keystoreName = keystore;
+                PlayerSettings.Android.keystorePass = "emotionrooms";
+                PlayerSettings.Android.keyaliasName = "emotionrooms";
+                PlayerSettings.Android.keyaliasPass = "emotionrooms";
+            }
+
             // Engine-code stripping OFF, deliberately, 9 Aug 2026. It was never set
             // here before - the project default (on) applied silently. Every scene-load
             // SIGTRAP this project has seen came off a release build with stripping on,
@@ -873,6 +898,20 @@ namespace EmotionRooms.EditorTools
                 string output = process.StandardOutput.ReadToEnd() +
                                 process.StandardError.ReadToEnd();
                 process.WaitForExit();
+
+                // A signature mismatch means an APK from another machine or another
+                // keystore is installed. The data is pulled first because uninstalling
+                // takes the participant logs with it.
+                if (output.Contains("INSTALL_FAILED_UPDATE_INCOMPATIBLE"))
+                {
+                    Debug.LogWarning("Study build: an incompatible build is installed " +
+                                     "(built with a different key). Saving its data, " +
+                                     "removing it, and installing again.");
+                    PullData();
+                    Run("uninstall " + Package);
+                    Install(apk);
+                    return;
+                }
 
                 if (output.Contains("Success"))
                 {

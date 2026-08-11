@@ -113,6 +113,7 @@ namespace EmotionRooms
         public void Show()
         {
             EnsureCells();
+            EnsureLabels();
             PlaceInFrontOfViewer();
             EnsureVisible();
 
@@ -179,6 +180,38 @@ namespace EmotionRooms
             var own = GetComponent<Renderer>();
             if (own != null && shader != null)
                 own.material = new Material(shader) { color = new Color(0.08f, 0.08f, 0.11f) };
+        }
+
+        bool labelsBuilt;
+
+        /// <summary>
+        /// Draw the question and the axis words, at runtime.
+        ///
+        /// Serialized, these and their outline copies were a large share of the scene,
+        /// and the player was dying while deserializing scene text. Anchored outward so
+        /// each word grows away from the cells rather than over them, whatever its
+        /// length. The arousal poles are plain-language glosses of Russell, Weiss and
+        /// Mendelsohn's "high arousal" and "sleepiness"; the valence poles are theirs
+        /// unchanged.
+        /// </summary>
+        void EnsureLabels()
+        {
+            if (labelsBuilt || labels == null) return;
+            labelsBuilt = true;
+
+            var parent = labels.transform;
+            WorldLabel.Attach(parent, "How did that room make you feel?", 0.035f,
+                              new Vector3(0f, 0.78f, 0f));
+            WorldLabel.Attach(parent, "Point at a square and pull the trigger", 0.024f,
+                              new Vector3(0f, 0.68f, 0f));
+            WorldLabel.Attach(parent, "unpleasant", 0.028f, new Vector3(-0.62f, 0f, 0f),
+                              TextAnchor.MiddleRight);
+            WorldLabel.Attach(parent, "pleasant", 0.028f, new Vector3(0.62f, 0f, 0f),
+                              TextAnchor.MiddleLeft);
+            WorldLabel.Attach(parent, "full of energy", 0.028f, new Vector3(0f, 0.58f, 0f),
+                              TextAnchor.LowerCenter);
+            WorldLabel.Attach(parent, "sleepy", 0.028f, new Vector3(0f, -0.58f, 0f),
+                              TextAnchor.UpperCenter);
         }
 
         int Index(int valence, int arousal)

@@ -35,3 +35,9 @@ unity/.utmp/
 # Compiled builds never belong in the repo
 *.app/
 unity/*.app/
+
+# The shared signing key IS committed: two researchers building for one
+# headset need identical signatures or their APKs will not replace each
+# other. It signs a research build that is never distributed.
+!unity/keystore/
+!unity/keystore/*.keystore
