@@ -481,6 +481,22 @@ namespace EmotionRooms.EditorTools
 
         static void CheckStillRunning()
         {
+            // Record what produced this build before reporting on it.
+            //
+            // The same source builds and runs here and crashes on the other
+            // researcher's machine, which means the difference is in the build
+            // environment rather than the project. Guessing at that one error message
+            // at a time has cost days, so the panel now states the things that could
+            // differ, in the console, next to the failure.
+            string expected = "6000.3.19f1";
+            if (!Application.unityVersion.StartsWith(expected))
+                Debug.LogError("Study build: this Unity is " + Application.unityVersion +
+                               " but the project is built for " + expected + ". A " +
+                               "different editor version rebuilds the engine and the " +
+                               "serialized scene, and is the most likely reason a build " +
+                               "that runs on one machine fails on another. Install " +
+                               expected + " from Unity Hub and open the project with it.");
+
             string pid = Run("shell pidof " + Package).Trim();
             if (!string.IsNullOrEmpty(pid))
             {
@@ -494,6 +510,7 @@ namespace EmotionRooms.EditorTools
                         crash.Contains("SIGSEGV");
 
             Debug.LogError("Study build: the app installed and launched, then stopped." +
+                " Built by Unity " + Application.unityVersion + "." +
                 (died ? " It crashed while loading -- the headset log has a native stack." +
                         " This is not something to fix by launching it again."
                       : " Put the headset on and try Install again; an idle headset " +
