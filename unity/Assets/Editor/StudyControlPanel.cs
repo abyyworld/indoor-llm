@@ -763,110 +763,6 @@ namespace EmotionRooms.EditorTools
         /// Windows installs it as "python" (and "py" via the launcher); macOS and Linux
         /// as "python3", where bare "python" is often absent or still means 2.x.
         /// </summary>
-        static string[] PythonCandidates
-        {
-            get
-            {
-                // Every name a working Python answers to, most likely first per platform.
-                //
-                // Windows installs the interpreter as "python" from python.org, as "py"
-                // through the launcher (which is on PATH even when python is not), and
-                // as "python3" only sometimes. The Microsoft Store stub answers to
-                // "python" but exits without running anything. Trying each in turn and
-                // reporting all of them beats asking a researcher mid-session which one
-                // their machine has.
-                return Application.platform == RuntimePlatform.WindowsEditor
-                    ? new[] { "python", "py", "python3" }
-                    : new[] { "python3", "python" };
-            }
-        }
-
-        /// <summary>The interpreter that answered last time, so we try it first.</summary>
-        static string pythonFound;
-
-        /// <summary>
-        /// Run a pipeline command directly, without a shell.
-        ///
-        /// This used to call /bin/bash -c, which does not exist on Windows: the panel's
-        /// Prepare button failed for the researcher running sessions on a Windows laptop
-        /// with "the system cannot find the file specified", and every step downstream
-        /// of it was unreachable. The study is run by two people on two operating
-        /// systems, so anything the panel does has to work on both. Invoking the
-        /// interpreter directly removes the shell from the path entirely - no quoting
-        /// rules, no cp, no here-documents to translate.
-        /// </summary>
-        bool RunPipeline(string arguments)
-        {
-            var tried = new System.Collections.Generic.List<string>();
-
-            if (!string.IsNullOrEmpty(pythonFound) && TryPython(pythonFound, arguments, tried))
-                return true;
-
-            foreach (var exe in PythonCandidates)
-            {
-                if (exe == pythonFound) continue;
-                if (TryPython(exe, arguments, tried)) { pythonFound = exe; return true; }
-            }
-
-            lastOutput = "Could not run Python. Tried: " + string.Join(", ", tried.ToArray()) +
-                         ".\n\nInstall Python 3 from python.org and tick \"Add python.exe " +
-                         "to PATH\" during setup, then restart Unity so it inherits the " +
-                         "new PATH. Restarting Unity matters: a Unity that was already " +
-                         "open will not see a PATH change.";
-            Debug.LogError("Study Control: " + lastOutput);
-            showTrouble = true;
-            return false;
-        }
-
-        /// <summary>One attempt with one interpreter name. Records what happened.</summary>
-        bool TryPython(string exe, string arguments, System.Collections.Generic.List<string> tried)
-        {
-            // "py" is the launcher, which needs -3 to pick a Python 3.
-            string full = (exe == "py" ? "-3 " : "") + "-m pipeline.cli " + arguments;
-            try
-            {
-                var info = new ProcessStartInfo(exe, full)
-                {
-                    WorkingDirectory = repoPath,
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    CreateNoWindow = true,
-                };
-                using (var process = Process.Start(info))
-                {
-                    string output = process.StandardOutput.ReadToEnd();
-                    string error = process.StandardError.ReadToEnd();
-                    process.WaitForExit();
-                    lastOutput = (output + "\n" + error).Trim();
-
-                    if (process.ExitCode != 0)
-                    {
-                        // The interpreter ran and the pipeline failed: a real error,
-                        // worth showing rather than trying the next candidate.
-                        tried.Add(exe + " (ran, exit " + process.ExitCode + ")");
-                        Debug.LogError("Study Control: command failed\n" + lastOutput);
-                        showTrouble = true;
-                        return false;
-                    }
-                    Debug.Log("Study Control:\n" + lastOutput);
-                    return true;
-                }
-            }
-            catch (Exception e)
-            {
-                // Could not start this interpreter at all; try the next name.
-                tried.Add(exe + " (" + e.Message.Split('\n')[0] + ")");
-                return false;
-            }
-        }
-
-        /// <summary>Quote an argument so a path with spaces survives the process call.</summary>
-        static string Quote(string value)
-        {
-            return "\"" + value.Replace("\"", "\\\"") + "\"";
-        }
-
         /// <summary>Copy a generated file into the app's data folder, loudly on failure.</summary>
         bool Stage(string from, string to)
         {
@@ -890,6 +786,34 @@ namespace EmotionRooms.EditorTools
                 showTrouble = true;
                 return false;
             }
+        }
+
+        /// <summary>Quote an argument so a path with spaces survives the process call.</summary>
+        static string Quote(string value)
+        {
+            return "\"" + value.Replace("\"", "\\\"") + "\"";
+        }
+
+        /// <summary>
+        /// Run one pipeline command. Interpreter discovery lives in PythonTool, which
+        /// the study server uses too: the same /bin/bash assumption broke both, and a
+        /// single implementation is what stops it breaking a third thing.
+        /// </summary>
+        bool RunPipeline(string arguments)
+        {
+            string output;
+            bool ok = PythonTool.Run("-m pipeline.cli " + arguments, repoPath, out output);
+            lastOutput = output;
+
+            if (ok)
+            {
+                Debug.Log("Study Control:\n" + output);
+                return true;
+            }
+
+            Debug.LogError("Study Control: " + output);
+            showTrouble = true;
+            return false;
         }
 
         // ------------------------------------------------------------------ helpers

@@ -59,15 +59,16 @@ namespace EmotionRooms.EditorTools
 
             try
             {
-                process = Process.Start(new ProcessStartInfo("/bin/bash",
-                    "-c \"python3 serve-study.py\"")
+                // Through PythonTool, never a shell: /bin/bash does not exist on
+                // Windows, and the researcher running most of the sessions is on
+                // Windows. See PythonTool for the interpreter-name rules.
+                string problem;
+                process = PythonTool.Launch("serve-study.py", repoPath, true, out problem);
+                if (process == null)
                 {
-                    WorkingDirectory = repoPath,
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    CreateNoWindow = true,
-                });
+                    Debug.LogError("Could not start the study server. " + problem);
+                    return;
+                }
 
                 process.OutputDataReceived += (_, e) =>
                 {

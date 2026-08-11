@@ -5,47 +5,17 @@
   "sham_rule": "same-pool value, excluding the participant's choice and the original (correct) value",
   "conditions": [
     "faithful",
-    "swapped",
-    "random"
+    "swapped"
   ],
   "counts": {
     "faithful": 16,
-    "swapped": 8,
-    "random": 8
+    "swapped": 16
   },
   "trials_total": 32,
   "faithful_share": 0.5,
   "trials": [
     {
-      "condition": "swapped",
-      "target_emotion_shown": "excited",
-      "stimulus": {
-        "id": "excited_linear",
-        "target_emotion": "excited",
-        "source": "llm",
-        "shape": "linear",
-        "hue": 60,
-        "saturation": 0.4,
-        "brightness": 750.0,
-        "texture": "plaster",
-        "roughness": "smooth",
-        "rationale": "electric acid yellow on a hard slick surface"
-      },
-      "rationale_shown": "electric acid yellow on a hard slick surface",
-      "ground_truth": {
-        "swapped_field": "texture",
-        "original_value": "concrete",
-        "swapped_in_value": "plaster",
-        "donor_emotion": "calm",
-        "rationale_is_wrong": false
-      },
-      "correction_source": "own",
-      "sham_seed": 227792055,
-      "trial_index": 1,
-      "trial_id": "p13_b001"
-    },
-    {
-      "condition": "swapped",
+      "condition": "rationale_mismatched",
       "target_emotion_shown": "depressed",
       "stimulus": {
         "id": "depressed_linear",
@@ -54,65 +24,37 @@
         "shape": "linear",
         "hue": 240,
         "saturation": 0.4,
-        "brightness": 300.0,
+        "brightness": 150.0,
         "texture": "textile",
         "roughness": "rough",
         "rationale": "deep cold denim blue, heavy and airless"
       },
-      "rationale_shown": "deep cold denim blue, heavy and airless",
-      "ground_truth": {
-        "swapped_field": "brightness",
-        "original_value": 150.0,
-        "swapped_in_value": 300.0,
-        "donor_emotion": "calm",
-        "rationale_is_wrong": false
-      },
-      "correction_source": "yoked",
-      "sham_seed": 806636140,
-      "trial_index": 2,
-      "trial_id": "p13_b002"
-    },
-    {
-      "condition": "random",
-      "target_emotion_shown": "depressed",
-      "stimulus": {
-        "id": "depressed_curved",
-        "target_emotion": "depressed",
-        "source": "llm",
-        "shape": "curved",
-        "hue": 330,
-        "saturation": 0.4,
-        "brightness": 300,
-        "texture": "plaster",
-        "roughness": "rough",
-        "rationale": "deep cold denim blue, heavy and airless"
-      },
-      "rationale_shown": "deep cold denim blue, heavy and airless",
+      "rationale_shown": "pale warm cream, faintly buttery",
       "ground_truth": {
         "swapped_field": null,
         "original_value": null,
         "swapped_in_value": null,
-        "donor_emotion": null,
-        "rationale_is_wrong": false,
-        "all_variables_random": true
+        "donor_emotion": "calm",
+        "rationale_is_wrong": true
       },
-      "correction_source": "own",
+      "explanation_shown": true,
+      "correction_source": "yoked",
       "sham_seed": 11375559,
-      "trial_index": 3,
-      "trial_id": "p13_b003"
+      "trial_index": 1,
+      "trial_id": "p13_b001"
     },
     {
-      "condition": "random",
+      "condition": "faithful",
       "target_emotion_shown": "calm",
       "stimulus": {
         "id": "calm_linear",
         "target_emotion": "calm",
         "source": "llm",
         "shape": "linear",
-        "hue": 300,
+        "hue": 60,
         "saturation": 0.2,
-        "brightness": 750,
-        "texture": "concrete",
+        "brightness": 300.0,
+        "texture": "plaster",
         "roughness": "smooth",
         "rationale": "pale warm cream, faintly buttery"
       },
@@ -122,11 +64,66 @@
         "original_value": null,
         "swapped_in_value": null,
         "donor_emotion": null,
-        "rationale_is_wrong": false,
-        "all_variables_random": true
+        "rationale_is_wrong": false
       },
-      "correction_source": "yoked",
-      "sham_seed": 323887239,
+      "explanation_shown": false,
+      "correction_source": "",
+      "trial_index": 2,
+      "trial_id": "p13_b002"
+    },
+    {
+      "condition": "faithful",
+      "target_emotion_shown": "tense",
+      "stimulus": {
+        "id": "tense_linear",
+        "target_emotion": "tense",
+        "source": "llm",
+        "shape": "linear",
+        "hue": 180,
+        "saturation": 0.2,
+        "brightness": 150.0,
+        "texture": "concrete",
+        "roughness": "rough",
+        "rationale": "cold damp blue-green concrete, basement tone"
+      },
+      "rationale_shown": "cold damp blue-green concrete, basement tone",
+      "ground_truth": {
+        "swapped_field": null,
+        "original_value": null,
+        "swapped_in_value": null,
+        "donor_emotion": null,
+        "rationale_is_wrong": false
+      },
+      "explanation_shown": true,
+      "correction_source": "",
+      "trial_index": 3,
+      "trial_id": "p13_b003"
+    },
+    {
+      "condition": "faithful",
+      "target_emotion_shown": "excited",
+      "stimulus": {
+        "id": "excited_linear",
+        "target_emotion": "excited",
+        "source": "llm",
+        "shape": "linear",
+        "hue": 60,
+        "saturation": 0.4,
+        "brightness": 750.0,
+        "texture": "concrete",
+        "roughness": "smooth",
+        "rationale": "electric acid yellow on a hard slick surface"
+      },
+      "rationale_shown": "electric acid yellow on a hard slick surface",
+      "ground_truth": {
+        "swapped_field": null,
+        "original_value": null,
+        "swapped_in_value": null,
+        "donor_emotion": null,
+        "rationale_is_wrong": false
+      },
+      "explanation_shown": true,
+      "correction_source": "",
       "trial_index": 4,
       "trial_id": "p13_b004"
     },
@@ -153,69 +150,71 @@
         "donor_emotion": null,
         "rationale_is_wrong": false
       },
+      "explanation_shown": true,
       "correction_source": "",
       "trial_index": 5,
       "trial_id": "p13_b005"
     },
     {
-      "condition": "swapped",
-      "target_emotion_shown": "depressed",
+      "condition": "rationale_mismatched",
+      "target_emotion_shown": "calm",
       "stimulus": {
-        "id": "depressed_curved",
-        "target_emotion": "depressed",
+        "id": "calm_curved",
+        "target_emotion": "calm",
         "source": "llm",
         "shape": "curved",
-        "hue": 240,
-        "saturation": 0.4,
-        "brightness": 750.0,
-        "texture": "textile",
-        "roughness": "rough",
-        "rationale": "deep cold denim blue, heavy and airless"
+        "hue": 60,
+        "saturation": 0.2,
+        "brightness": 300.0,
+        "texture": "plaster",
+        "roughness": "smooth",
+        "rationale": "pale warm cream, faintly buttery"
       },
-      "rationale_shown": "deep cold denim blue, heavy and airless",
+      "rationale_shown": "cold damp blue-green concrete, basement tone",
       "ground_truth": {
-        "swapped_field": "brightness",
-        "original_value": 150.0,
-        "swapped_in_value": 750.0,
-        "donor_emotion": "excited",
-        "rationale_is_wrong": false
+        "swapped_field": null,
+        "original_value": null,
+        "swapped_in_value": null,
+        "donor_emotion": "tense",
+        "rationale_is_wrong": true
       },
-      "correction_source": "yoked",
-      "sham_seed": 645898061,
+      "explanation_shown": true,
+      "correction_source": "own",
+      "sham_seed": 323887239,
       "trial_index": 6,
       "trial_id": "p13_b006"
     },
     {
-      "condition": "random",
-      "target_emotion_shown": "excited",
+      "condition": "rationale_mismatched",
+      "target_emotion_shown": "depressed",
       "stimulus": {
-        "id": "excited_curved",
-        "target_emotion": "excited",
+        "id": "depressed_curved",
+        "target_emotion": "depressed",
         "source": "llm",
         "shape": "curved",
-        "hue": 270,
+        "hue": 240,
         "saturation": 0.4,
-        "brightness": 150,
-        "texture": "plaster",
-        "roughness": "smooth",
-        "rationale": "electric acid yellow on a hard slick surface"
+        "brightness": 150.0,
+        "texture": "textile",
+        "roughness": "rough",
+        "rationale": "deep cold denim blue, heavy and airless"
       },
-      "rationale_shown": "electric acid yellow on a hard slick surface",
+      "rationale_shown": "pale warm cream, faintly buttery",
       "ground_truth": {
         "swapped_field": null,
         "original_value": null,
         "swapped_in_value": null,
-        "donor_emotion": null,
-        "rationale_is_wrong": false,
-        "all_variables_random": true
+        "donor_emotion": "calm",
+        "rationale_is_wrong": true
       },
-      "correction_source": "own",
-      "sham_seed": 984217636,
+      "explanation_shown": true,
+      "correction_source": "yoked",
+      "sham_seed": 645898061,
       "trial_index": 7,
       "trial_id": "p13_b007"
     },
     {
-      "condition": "faithful",
+      "condition": "swapped",
       "target_emotion_shown": "depressed",
       "stimulus": {
         "id": "depressed_linear",
@@ -225,602 +224,23 @@
         "hue": 240,
         "saturation": 0.4,
         "brightness": 150.0,
-        "texture": "textile",
-        "roughness": "rough",
-        "rationale": "deep cold denim blue, heavy and airless"
-      },
-      "rationale_shown": "deep cold denim blue, heavy and airless",
-      "ground_truth": {
-        "swapped_field": null,
-        "original_value": null,
-        "swapped_in_value": null,
-        "donor_emotion": null,
-        "rationale_is_wrong": false
-      },
-      "correction_source": "",
-      "trial_index": 8,
-      "trial_id": "p13_b008"
-    },
-    {
-      "condition": "random",
-      "target_emotion_shown": "excited",
-      "stimulus": {
-        "id": "excited_linear",
-        "target_emotion": "excited",
-        "source": "llm",
-        "shape": "linear",
-        "hue": 270,
-        "saturation": 0.4,
-        "brightness": 300,
-        "texture": "concrete",
-        "roughness": "smooth",
-        "rationale": "electric acid yellow on a hard slick surface"
-      },
-      "rationale_shown": "electric acid yellow on a hard slick surface",
-      "ground_truth": {
-        "swapped_field": null,
-        "original_value": null,
-        "swapped_in_value": null,
-        "donor_emotion": null,
-        "rationale_is_wrong": false,
-        "all_variables_random": true
-      },
-      "correction_source": "yoked",
-      "sham_seed": 99200202,
-      "trial_index": 9,
-      "trial_id": "p13_b009"
-    },
-    {
-      "condition": "faithful",
-      "target_emotion_shown": "excited",
-      "stimulus": {
-        "id": "excited_curved",
-        "target_emotion": "excited",
-        "source": "llm",
-        "shape": "curved",
-        "hue": 60,
-        "saturation": 0.4,
-        "brightness": 750.0,
-        "texture": "concrete",
-        "roughness": "smooth",
-        "rationale": "electric acid yellow on a hard slick surface"
-      },
-      "rationale_shown": "electric acid yellow on a hard slick surface",
-      "ground_truth": {
-        "swapped_field": null,
-        "original_value": null,
-        "swapped_in_value": null,
-        "donor_emotion": null,
-        "rationale_is_wrong": false
-      },
-      "correction_source": "",
-      "trial_index": 10,
-      "trial_id": "p13_b010"
-    },
-    {
-      "condition": "swapped",
-      "target_emotion_shown": "tense",
-      "stimulus": {
-        "id": "tense_curved",
-        "target_emotion": "tense",
-        "source": "llm",
-        "shape": "curved",
-        "hue": 60,
-        "saturation": 0.2,
-        "brightness": 150.0,
-        "texture": "concrete",
-        "roughness": "rough",
-        "rationale": "cold damp blue-green concrete, basement tone"
-      },
-      "rationale_shown": "cold damp blue-green concrete, basement tone",
-      "ground_truth": {
-        "swapped_field": "hue",
-        "original_value": 180,
-        "swapped_in_value": 60,
-        "donor_emotion": "excited",
-        "rationale_is_wrong": false
-      },
-      "correction_source": "yoked",
-      "sham_seed": 399621744,
-      "trial_index": 11,
-      "trial_id": "p13_b011"
-    },
-    {
-      "condition": "faithful",
-      "target_emotion_shown": "depressed",
-      "stimulus": {
-        "id": "depressed_curved",
-        "target_emotion": "depressed",
-        "source": "llm",
-        "shape": "curved",
-        "hue": 240,
-        "saturation": 0.4,
-        "brightness": 150.0,
-        "texture": "textile",
-        "roughness": "rough",
-        "rationale": "deep cold denim blue, heavy and airless"
-      },
-      "rationale_shown": "deep cold denim blue, heavy and airless",
-      "ground_truth": {
-        "swapped_field": null,
-        "original_value": null,
-        "swapped_in_value": null,
-        "donor_emotion": null,
-        "rationale_is_wrong": false
-      },
-      "correction_source": "",
-      "trial_index": 12,
-      "trial_id": "p13_b012"
-    },
-    {
-      "condition": "random",
-      "target_emotion_shown": "calm",
-      "stimulus": {
-        "id": "calm_curved",
-        "target_emotion": "calm",
-        "source": "llm",
-        "shape": "curved",
-        "hue": 180,
-        "saturation": 0.4,
-        "brightness": 500,
-        "texture": "textile",
-        "roughness": "smooth",
-        "rationale": "pale warm cream, faintly buttery"
-      },
-      "rationale_shown": "pale warm cream, faintly buttery",
-      "ground_truth": {
-        "swapped_field": null,
-        "original_value": null,
-        "swapped_in_value": null,
-        "donor_emotion": null,
-        "rationale_is_wrong": false,
-        "all_variables_random": true
-      },
-      "correction_source": "own",
-      "sham_seed": 328490351,
-      "trial_index": 13,
-      "trial_id": "p13_b013"
-    },
-    {
-      "condition": "faithful",
-      "target_emotion_shown": "tense",
-      "stimulus": {
-        "id": "tense_curved",
-        "target_emotion": "tense",
-        "source": "llm",
-        "shape": "curved",
-        "hue": 180,
-        "saturation": 0.2,
-        "brightness": 150.0,
-        "texture": "concrete",
-        "roughness": "rough",
-        "rationale": "cold damp blue-green concrete, basement tone"
-      },
-      "rationale_shown": "cold damp blue-green concrete, basement tone",
-      "ground_truth": {
-        "swapped_field": null,
-        "original_value": null,
-        "swapped_in_value": null,
-        "donor_emotion": null,
-        "rationale_is_wrong": false
-      },
-      "correction_source": "",
-      "trial_index": 14,
-      "trial_id": "p13_b014"
-    },
-    {
-      "condition": "faithful",
-      "target_emotion_shown": "excited",
-      "stimulus": {
-        "id": "excited_linear",
-        "target_emotion": "excited",
-        "source": "llm",
-        "shape": "linear",
-        "hue": 60,
-        "saturation": 0.4,
-        "brightness": 750.0,
-        "texture": "concrete",
-        "roughness": "smooth",
-        "rationale": "electric acid yellow on a hard slick surface"
-      },
-      "rationale_shown": "electric acid yellow on a hard slick surface",
-      "ground_truth": {
-        "swapped_field": null,
-        "original_value": null,
-        "swapped_in_value": null,
-        "donor_emotion": null,
-        "rationale_is_wrong": false
-      },
-      "correction_source": "",
-      "trial_index": 15,
-      "trial_id": "p13_b015"
-    },
-    {
-      "condition": "faithful",
-      "target_emotion_shown": "tense",
-      "stimulus": {
-        "id": "tense_linear",
-        "target_emotion": "tense",
-        "source": "llm",
-        "shape": "linear",
-        "hue": 180,
-        "saturation": 0.2,
-        "brightness": 150.0,
-        "texture": "concrete",
-        "roughness": "rough",
-        "rationale": "cold damp blue-green concrete, basement tone"
-      },
-      "rationale_shown": "cold damp blue-green concrete, basement tone",
-      "ground_truth": {
-        "swapped_field": null,
-        "original_value": null,
-        "swapped_in_value": null,
-        "donor_emotion": null,
-        "rationale_is_wrong": false
-      },
-      "correction_source": "",
-      "trial_index": 16,
-      "trial_id": "p13_b016"
-    },
-    {
-      "condition": "swapped",
-      "target_emotion_shown": "tense",
-      "stimulus": {
-        "id": "tense_linear",
-        "target_emotion": "tense",
-        "source": "llm",
-        "shape": "linear",
-        "hue": 180,
-        "saturation": 0.2,
-        "brightness": 150.0,
-        "texture": "concrete",
-        "roughness": "smooth",
-        "rationale": "cold damp blue-green concrete, basement tone"
-      },
-      "rationale_shown": "cold damp blue-green concrete, basement tone",
-      "ground_truth": {
-        "swapped_field": "roughness",
-        "original_value": "rough",
-        "swapped_in_value": "smooth",
-        "donor_emotion": "calm",
-        "rationale_is_wrong": false
-      },
-      "correction_source": "yoked",
-      "sham_seed": 323363035,
-      "trial_index": 17,
-      "trial_id": "p13_b017"
-    },
-    {
-      "condition": "faithful",
-      "target_emotion_shown": "excited",
-      "stimulus": {
-        "id": "excited_linear",
-        "target_emotion": "excited",
-        "source": "llm",
-        "shape": "linear",
-        "hue": 60,
-        "saturation": 0.4,
-        "brightness": 750.0,
-        "texture": "concrete",
-        "roughness": "smooth",
-        "rationale": "electric acid yellow on a hard slick surface"
-      },
-      "rationale_shown": "electric acid yellow on a hard slick surface",
-      "ground_truth": {
-        "swapped_field": null,
-        "original_value": null,
-        "swapped_in_value": null,
-        "donor_emotion": null,
-        "rationale_is_wrong": false
-      },
-      "correction_source": "",
-      "trial_index": 18,
-      "trial_id": "p13_b018"
-    },
-    {
-      "condition": "random",
-      "target_emotion_shown": "depressed",
-      "stimulus": {
-        "id": "depressed_linear",
-        "target_emotion": "depressed",
-        "source": "llm",
-        "shape": "linear",
-        "hue": 270,
-        "saturation": 0.4,
-        "brightness": 150,
         "texture": "concrete",
         "roughness": "rough",
         "rationale": "deep cold denim blue, heavy and airless"
       },
       "rationale_shown": "deep cold denim blue, heavy and airless",
       "ground_truth": {
-        "swapped_field": null,
-        "original_value": null,
-        "swapped_in_value": null,
-        "donor_emotion": null,
-        "rationale_is_wrong": false,
-        "all_variables_random": true
-      },
-      "correction_source": "own",
-      "sham_seed": 330974054,
-      "trial_index": 19,
-      "trial_id": "p13_b019"
-    },
-    {
-      "condition": "random",
-      "target_emotion_shown": "tense",
-      "stimulus": {
-        "id": "tense_linear",
-        "target_emotion": "tense",
-        "source": "llm",
-        "shape": "linear",
-        "hue": 30,
-        "saturation": 0.4,
-        "brightness": 750,
-        "texture": "concrete",
-        "roughness": "rough",
-        "rationale": "cold damp blue-green concrete, basement tone"
-      },
-      "rationale_shown": "cold damp blue-green concrete, basement tone",
-      "ground_truth": {
-        "swapped_field": null,
-        "original_value": null,
-        "swapped_in_value": null,
-        "donor_emotion": null,
-        "rationale_is_wrong": false,
-        "all_variables_random": true
-      },
-      "correction_source": "own",
-      "sham_seed": 191238372,
-      "trial_index": 20,
-      "trial_id": "p13_b020"
-    },
-    {
-      "condition": "faithful",
-      "target_emotion_shown": "calm",
-      "stimulus": {
-        "id": "calm_curved",
-        "target_emotion": "calm",
-        "source": "llm",
-        "shape": "curved",
-        "hue": 60,
-        "saturation": 0.2,
-        "brightness": 300.0,
-        "texture": "plaster",
-        "roughness": "smooth",
-        "rationale": "pale warm cream, faintly buttery"
-      },
-      "rationale_shown": "pale warm cream, faintly buttery",
-      "ground_truth": {
-        "swapped_field": null,
-        "original_value": null,
-        "swapped_in_value": null,
-        "donor_emotion": null,
-        "rationale_is_wrong": false
-      },
-      "correction_source": "",
-      "trial_index": 21,
-      "trial_id": "p13_b021"
-    },
-    {
-      "condition": "random",
-      "target_emotion_shown": "tense",
-      "stimulus": {
-        "id": "tense_curved",
-        "target_emotion": "tense",
-        "source": "llm",
-        "shape": "curved",
-        "hue": 330,
-        "saturation": 0.2,
-        "brightness": 500,
-        "texture": "concrete",
-        "roughness": "rough",
-        "rationale": "cold damp blue-green concrete, basement tone"
-      },
-      "rationale_shown": "cold damp blue-green concrete, basement tone",
-      "ground_truth": {
-        "swapped_field": null,
-        "original_value": null,
-        "swapped_in_value": null,
-        "donor_emotion": null,
-        "rationale_is_wrong": false,
-        "all_variables_random": true
-      },
-      "correction_source": "yoked",
-      "sham_seed": 529892154,
-      "trial_index": 22,
-      "trial_id": "p13_b022"
-    },
-    {
-      "condition": "faithful",
-      "target_emotion_shown": "excited",
-      "stimulus": {
-        "id": "excited_curved",
-        "target_emotion": "excited",
-        "source": "llm",
-        "shape": "curved",
-        "hue": 60,
-        "saturation": 0.4,
-        "brightness": 750.0,
-        "texture": "concrete",
-        "roughness": "smooth",
-        "rationale": "electric acid yellow on a hard slick surface"
-      },
-      "rationale_shown": "electric acid yellow on a hard slick surface",
-      "ground_truth": {
-        "swapped_field": null,
-        "original_value": null,
-        "swapped_in_value": null,
-        "donor_emotion": null,
-        "rationale_is_wrong": false
-      },
-      "correction_source": "",
-      "trial_index": 23,
-      "trial_id": "p13_b023"
-    },
-    {
-      "condition": "faithful",
-      "target_emotion_shown": "depressed",
-      "stimulus": {
-        "id": "depressed_curved",
-        "target_emotion": "depressed",
-        "source": "llm",
-        "shape": "curved",
-        "hue": 240,
-        "saturation": 0.4,
-        "brightness": 150.0,
-        "texture": "textile",
-        "roughness": "rough",
-        "rationale": "deep cold denim blue, heavy and airless"
-      },
-      "rationale_shown": "deep cold denim blue, heavy and airless",
-      "ground_truth": {
-        "swapped_field": null,
-        "original_value": null,
-        "swapped_in_value": null,
-        "donor_emotion": null,
-        "rationale_is_wrong": false
-      },
-      "correction_source": "",
-      "trial_index": 24,
-      "trial_id": "p13_b024"
-    },
-    {
-      "condition": "faithful",
-      "target_emotion_shown": "tense",
-      "stimulus": {
-        "id": "tense_curved",
-        "target_emotion": "tense",
-        "source": "llm",
-        "shape": "curved",
-        "hue": 180,
-        "saturation": 0.2,
-        "brightness": 150.0,
-        "texture": "concrete",
-        "roughness": "rough",
-        "rationale": "cold damp blue-green concrete, basement tone"
-      },
-      "rationale_shown": "cold damp blue-green concrete, basement tone",
-      "ground_truth": {
-        "swapped_field": null,
-        "original_value": null,
-        "swapped_in_value": null,
-        "donor_emotion": null,
-        "rationale_is_wrong": false
-      },
-      "correction_source": "",
-      "trial_index": 25,
-      "trial_id": "p13_b025"
-    },
-    {
-      "condition": "faithful",
-      "target_emotion_shown": "calm",
-      "stimulus": {
-        "id": "calm_curved",
-        "target_emotion": "calm",
-        "source": "llm",
-        "shape": "curved",
-        "hue": 60,
-        "saturation": 0.2,
-        "brightness": 300.0,
-        "texture": "plaster",
-        "roughness": "smooth",
-        "rationale": "pale warm cream, faintly buttery"
-      },
-      "rationale_shown": "pale warm cream, faintly buttery",
-      "ground_truth": {
-        "swapped_field": null,
-        "original_value": null,
-        "swapped_in_value": null,
-        "donor_emotion": null,
-        "rationale_is_wrong": false
-      },
-      "correction_source": "",
-      "trial_index": 26,
-      "trial_id": "p13_b026"
-    },
-    {
-      "condition": "faithful",
-      "target_emotion_shown": "calm",
-      "stimulus": {
-        "id": "calm_linear",
-        "target_emotion": "calm",
-        "source": "llm",
-        "shape": "linear",
-        "hue": 60,
-        "saturation": 0.2,
-        "brightness": 300.0,
-        "texture": "plaster",
-        "roughness": "smooth",
-        "rationale": "pale warm cream, faintly buttery"
-      },
-      "rationale_shown": "pale warm cream, faintly buttery",
-      "ground_truth": {
-        "swapped_field": null,
-        "original_value": null,
-        "swapped_in_value": null,
-        "donor_emotion": null,
-        "rationale_is_wrong": false
-      },
-      "correction_source": "",
-      "trial_index": 27,
-      "trial_id": "p13_b027"
-    },
-    {
-      "condition": "swapped",
-      "target_emotion_shown": "calm",
-      "stimulus": {
-        "id": "calm_curved",
-        "target_emotion": "calm",
-        "source": "llm",
-        "shape": "curved",
-        "hue": 60,
-        "saturation": 0.4,
-        "brightness": 300.0,
-        "texture": "plaster",
-        "roughness": "smooth",
-        "rationale": "pale warm cream, faintly buttery"
-      },
-      "rationale_shown": "pale warm cream, faintly buttery",
-      "ground_truth": {
-        "swapped_field": "saturation",
-        "original_value": 0.2,
-        "swapped_in_value": 0.4,
-        "donor_emotion": "excited",
-        "rationale_is_wrong": false
-      },
-      "correction_source": "own",
-      "sham_seed": 694884407,
-      "trial_index": 28,
-      "trial_id": "p13_b028"
-    },
-    {
-      "condition": "swapped",
-      "target_emotion_shown": "calm",
-      "stimulus": {
-        "id": "calm_linear",
-        "target_emotion": "calm",
-        "source": "llm",
-        "shape": "linear",
-        "hue": 60,
-        "saturation": 0.2,
-        "brightness": 150.0,
-        "texture": "plaster",
-        "roughness": "smooth",
-        "rationale": "pale warm cream, faintly buttery"
-      },
-      "rationale_shown": "pale warm cream, faintly buttery",
-      "ground_truth": {
-        "swapped_field": "brightness",
-        "original_value": 300.0,
-        "swapped_in_value": 150.0,
+        "swapped_field": "texture",
+        "original_value": "textile",
+        "swapped_in_value": "concrete",
         "donor_emotion": "tense",
         "rationale_is_wrong": false
       },
+      "explanation_shown": true,
       "correction_source": "yoked",
-      "sham_seed": 447341323,
-      "trial_index": 29,
-      "trial_id": "p13_b029"
+      "sham_seed": 984217636,
+      "trial_index": 8,
+      "trial_id": "p13_b008"
     },
     {
       "condition": "swapped",
@@ -845,10 +265,299 @@
         "donor_emotion": "depressed",
         "rationale_is_wrong": false
       },
+      "explanation_shown": false,
       "correction_source": "own",
-      "sham_seed": 784936518,
-      "trial_index": 30,
-      "trial_id": "p13_b030"
+      "sham_seed": 99200202,
+      "trial_index": 9,
+      "trial_id": "p13_b009"
+    },
+    {
+      "condition": "rationale_mismatched",
+      "target_emotion_shown": "calm",
+      "stimulus": {
+        "id": "calm_linear",
+        "target_emotion": "calm",
+        "source": "llm",
+        "shape": "linear",
+        "hue": 60,
+        "saturation": 0.2,
+        "brightness": 300.0,
+        "texture": "plaster",
+        "roughness": "smooth",
+        "rationale": "pale warm cream, faintly buttery"
+      },
+      "rationale_shown": "deep cold denim blue, heavy and airless",
+      "ground_truth": {
+        "swapped_field": null,
+        "original_value": null,
+        "swapped_in_value": null,
+        "donor_emotion": "depressed",
+        "rationale_is_wrong": true
+      },
+      "explanation_shown": true,
+      "correction_source": "own",
+      "sham_seed": 399621744,
+      "trial_index": 10,
+      "trial_id": "p13_b010"
+    },
+    {
+      "condition": "faithful",
+      "target_emotion_shown": "excited",
+      "stimulus": {
+        "id": "excited_linear",
+        "target_emotion": "excited",
+        "source": "llm",
+        "shape": "linear",
+        "hue": 60,
+        "saturation": 0.4,
+        "brightness": 750.0,
+        "texture": "concrete",
+        "roughness": "smooth",
+        "rationale": "electric acid yellow on a hard slick surface"
+      },
+      "rationale_shown": "electric acid yellow on a hard slick surface",
+      "ground_truth": {
+        "swapped_field": null,
+        "original_value": null,
+        "swapped_in_value": null,
+        "donor_emotion": null,
+        "rationale_is_wrong": false
+      },
+      "explanation_shown": false,
+      "correction_source": "",
+      "trial_index": 11,
+      "trial_id": "p13_b011"
+    },
+    {
+      "condition": "swapped",
+      "target_emotion_shown": "excited",
+      "stimulus": {
+        "id": "excited_curved",
+        "target_emotion": "excited",
+        "source": "llm",
+        "shape": "curved",
+        "hue": 180,
+        "saturation": 0.4,
+        "brightness": 750.0,
+        "texture": "concrete",
+        "roughness": "smooth",
+        "rationale": "electric acid yellow on a hard slick surface"
+      },
+      "rationale_shown": "electric acid yellow on a hard slick surface",
+      "ground_truth": {
+        "swapped_field": "hue",
+        "original_value": 60,
+        "swapped_in_value": 180,
+        "donor_emotion": "tense",
+        "rationale_is_wrong": false
+      },
+      "explanation_shown": true,
+      "correction_source": "yoked",
+      "sham_seed": 328490351,
+      "trial_index": 12,
+      "trial_id": "p13_b012"
+    },
+    {
+      "condition": "swapped",
+      "target_emotion_shown": "depressed",
+      "stimulus": {
+        "id": "depressed_curved",
+        "target_emotion": "depressed",
+        "source": "llm",
+        "shape": "curved",
+        "hue": 60,
+        "saturation": 0.4,
+        "brightness": 150.0,
+        "texture": "textile",
+        "roughness": "rough",
+        "rationale": "deep cold denim blue, heavy and airless"
+      },
+      "rationale_shown": "deep cold denim blue, heavy and airless",
+      "ground_truth": {
+        "swapped_field": "hue",
+        "original_value": 240,
+        "swapped_in_value": 60,
+        "donor_emotion": "excited",
+        "rationale_is_wrong": false
+      },
+      "explanation_shown": true,
+      "correction_source": "own",
+      "sham_seed": 323363035,
+      "trial_index": 13,
+      "trial_id": "p13_b013"
+    },
+    {
+      "condition": "swapped",
+      "target_emotion_shown": "calm",
+      "stimulus": {
+        "id": "calm_linear",
+        "target_emotion": "calm",
+        "source": "llm",
+        "shape": "linear",
+        "hue": 60,
+        "saturation": 0.2,
+        "brightness": 750.0,
+        "texture": "plaster",
+        "roughness": "smooth",
+        "rationale": "pale warm cream, faintly buttery"
+      },
+      "rationale_shown": "pale warm cream, faintly buttery",
+      "ground_truth": {
+        "swapped_field": "brightness",
+        "original_value": 300.0,
+        "swapped_in_value": 750.0,
+        "donor_emotion": "excited",
+        "rationale_is_wrong": false
+      },
+      "explanation_shown": true,
+      "correction_source": "own",
+      "sham_seed": 330974054,
+      "trial_index": 14,
+      "trial_id": "p13_b014"
+    },
+    {
+      "condition": "swapped",
+      "target_emotion_shown": "tense",
+      "stimulus": {
+        "id": "tense_curved",
+        "target_emotion": "tense",
+        "source": "llm",
+        "shape": "curved",
+        "hue": 60,
+        "saturation": 0.2,
+        "brightness": 150.0,
+        "texture": "concrete",
+        "roughness": "rough",
+        "rationale": "cold damp blue-green concrete, basement tone"
+      },
+      "rationale_shown": "cold damp blue-green concrete, basement tone",
+      "ground_truth": {
+        "swapped_field": "hue",
+        "original_value": 180,
+        "swapped_in_value": 60,
+        "donor_emotion": "calm",
+        "rationale_is_wrong": false
+      },
+      "explanation_shown": true,
+      "correction_source": "yoked",
+      "sham_seed": 191238372,
+      "trial_index": 15,
+      "trial_id": "p13_b015"
+    },
+    {
+      "condition": "faithful",
+      "target_emotion_shown": "excited",
+      "stimulus": {
+        "id": "excited_curved",
+        "target_emotion": "excited",
+        "source": "llm",
+        "shape": "curved",
+        "hue": 60,
+        "saturation": 0.4,
+        "brightness": 750.0,
+        "texture": "concrete",
+        "roughness": "smooth",
+        "rationale": "electric acid yellow on a hard slick surface"
+      },
+      "rationale_shown": "electric acid yellow on a hard slick surface",
+      "ground_truth": {
+        "swapped_field": null,
+        "original_value": null,
+        "swapped_in_value": null,
+        "donor_emotion": null,
+        "rationale_is_wrong": false
+      },
+      "explanation_shown": false,
+      "correction_source": "",
+      "trial_index": 16,
+      "trial_id": "p13_b016"
+    },
+    {
+      "condition": "swapped",
+      "target_emotion_shown": "tense",
+      "stimulus": {
+        "id": "tense_linear",
+        "target_emotion": "tense",
+        "source": "llm",
+        "shape": "linear",
+        "hue": 60,
+        "saturation": 0.2,
+        "brightness": 150.0,
+        "texture": "concrete",
+        "roughness": "rough",
+        "rationale": "cold damp blue-green concrete, basement tone"
+      },
+      "rationale_shown": "cold damp blue-green concrete, basement tone",
+      "ground_truth": {
+        "swapped_field": "hue",
+        "original_value": 180,
+        "swapped_in_value": 60,
+        "donor_emotion": "calm",
+        "rationale_is_wrong": false
+      },
+      "explanation_shown": true,
+      "correction_source": "yoked",
+      "sham_seed": 529892154,
+      "trial_index": 17,
+      "trial_id": "p13_b017"
+    },
+    {
+      "condition": "rationale_mismatched",
+      "target_emotion_shown": "excited",
+      "stimulus": {
+        "id": "excited_curved",
+        "target_emotion": "excited",
+        "source": "llm",
+        "shape": "curved",
+        "hue": 60,
+        "saturation": 0.4,
+        "brightness": 750.0,
+        "texture": "concrete",
+        "roughness": "smooth",
+        "rationale": "electric acid yellow on a hard slick surface"
+      },
+      "rationale_shown": "pale warm cream, faintly buttery",
+      "ground_truth": {
+        "swapped_field": null,
+        "original_value": null,
+        "swapped_in_value": null,
+        "donor_emotion": "calm",
+        "rationale_is_wrong": true
+      },
+      "explanation_shown": true,
+      "correction_source": "yoked",
+      "sham_seed": 694884407,
+      "trial_index": 18,
+      "trial_id": "p13_b018"
+    },
+    {
+      "condition": "swapped",
+      "target_emotion_shown": "excited",
+      "stimulus": {
+        "id": "excited_linear",
+        "target_emotion": "excited",
+        "source": "llm",
+        "shape": "linear",
+        "hue": 60,
+        "saturation": 0.4,
+        "brightness": 750.0,
+        "texture": "plaster",
+        "roughness": "smooth",
+        "rationale": "electric acid yellow on a hard slick surface"
+      },
+      "rationale_shown": "electric acid yellow on a hard slick surface",
+      "ground_truth": {
+        "swapped_field": "texture",
+        "original_value": "concrete",
+        "swapped_in_value": "plaster",
+        "donor_emotion": "calm",
+        "rationale_is_wrong": false
+      },
+      "explanation_shown": true,
+      "correction_source": "own",
+      "sham_seed": 447341323,
+      "trial_index": 19,
+      "trial_id": "p13_b019"
     },
     {
       "condition": "faithful",
@@ -873,9 +582,154 @@
         "donor_emotion": null,
         "rationale_is_wrong": false
       },
+      "explanation_shown": true,
       "correction_source": "",
-      "trial_index": 31,
-      "trial_id": "p13_b031"
+      "trial_index": 20,
+      "trial_id": "p13_b020"
+    },
+    {
+      "condition": "rationale_mismatched",
+      "target_emotion_shown": "tense",
+      "stimulus": {
+        "id": "tense_curved",
+        "target_emotion": "tense",
+        "source": "llm",
+        "shape": "curved",
+        "hue": 180,
+        "saturation": 0.2,
+        "brightness": 150.0,
+        "texture": "concrete",
+        "roughness": "rough",
+        "rationale": "cold damp blue-green concrete, basement tone"
+      },
+      "rationale_shown": "deep cold denim blue, heavy and airless",
+      "ground_truth": {
+        "swapped_field": null,
+        "original_value": null,
+        "swapped_in_value": null,
+        "donor_emotion": "depressed",
+        "rationale_is_wrong": true
+      },
+      "explanation_shown": true,
+      "correction_source": "yoked",
+      "sham_seed": 784936518,
+      "trial_index": 21,
+      "trial_id": "p13_b021"
+    },
+    {
+      "condition": "rationale_mismatched",
+      "target_emotion_shown": "tense",
+      "stimulus": {
+        "id": "tense_linear",
+        "target_emotion": "tense",
+        "source": "llm",
+        "shape": "linear",
+        "hue": 180,
+        "saturation": 0.2,
+        "brightness": 150.0,
+        "texture": "concrete",
+        "roughness": "rough",
+        "rationale": "cold damp blue-green concrete, basement tone"
+      },
+      "rationale_shown": "electric acid yellow on a hard slick surface",
+      "ground_truth": {
+        "swapped_field": null,
+        "original_value": null,
+        "swapped_in_value": null,
+        "donor_emotion": "excited",
+        "rationale_is_wrong": true
+      },
+      "explanation_shown": true,
+      "correction_source": "yoked",
+      "sham_seed": 542033230,
+      "trial_index": 22,
+      "trial_id": "p13_b022"
+    },
+    {
+      "condition": "swapped",
+      "target_emotion_shown": "tense",
+      "stimulus": {
+        "id": "tense_curved",
+        "target_emotion": "tense",
+        "source": "llm",
+        "shape": "curved",
+        "hue": 60,
+        "saturation": 0.2,
+        "brightness": 150.0,
+        "texture": "concrete",
+        "roughness": "rough",
+        "rationale": "cold damp blue-green concrete, basement tone"
+      },
+      "rationale_shown": "cold damp blue-green concrete, basement tone",
+      "ground_truth": {
+        "swapped_field": "hue",
+        "original_value": 180,
+        "swapped_in_value": 60,
+        "donor_emotion": "excited",
+        "rationale_is_wrong": false
+      },
+      "explanation_shown": false,
+      "correction_source": "yoked",
+      "sham_seed": 416929958,
+      "trial_index": 23,
+      "trial_id": "p13_b023"
+    },
+    {
+      "condition": "faithful",
+      "target_emotion_shown": "calm",
+      "stimulus": {
+        "id": "calm_curved",
+        "target_emotion": "calm",
+        "source": "llm",
+        "shape": "curved",
+        "hue": 60,
+        "saturation": 0.2,
+        "brightness": 300.0,
+        "texture": "plaster",
+        "roughness": "smooth",
+        "rationale": "pale warm cream, faintly buttery"
+      },
+      "rationale_shown": "pale warm cream, faintly buttery",
+      "ground_truth": {
+        "swapped_field": null,
+        "original_value": null,
+        "swapped_in_value": null,
+        "donor_emotion": null,
+        "rationale_is_wrong": false
+      },
+      "explanation_shown": true,
+      "correction_source": "",
+      "trial_index": 24,
+      "trial_id": "p13_b024"
+    },
+    {
+      "condition": "swapped",
+      "target_emotion_shown": "tense",
+      "stimulus": {
+        "id": "tense_linear",
+        "target_emotion": "tense",
+        "source": "llm",
+        "shape": "linear",
+        "hue": 60,
+        "saturation": 0.2,
+        "brightness": 150.0,
+        "texture": "concrete",
+        "roughness": "rough",
+        "rationale": "cold damp blue-green concrete, basement tone"
+      },
+      "rationale_shown": "cold damp blue-green concrete, basement tone",
+      "ground_truth": {
+        "swapped_field": "hue",
+        "original_value": 180,
+        "swapped_in_value": 60,
+        "donor_emotion": "calm",
+        "rationale_is_wrong": false
+      },
+      "explanation_shown": false,
+      "correction_source": "own",
+      "sham_seed": 294916676,
+      "trial_index": 25,
+      "trial_id": "p13_b025"
     },
     {
       "condition": "faithful",
@@ -900,7 +754,179 @@
         "donor_emotion": null,
         "rationale_is_wrong": false
       },
+      "explanation_shown": false,
       "correction_source": "",
+      "trial_index": 26,
+      "trial_id": "p13_b026"
+    },
+    {
+      "condition": "faithful",
+      "target_emotion_shown": "excited",
+      "stimulus": {
+        "id": "excited_curved",
+        "target_emotion": "excited",
+        "source": "llm",
+        "shape": "curved",
+        "hue": 60,
+        "saturation": 0.4,
+        "brightness": 750.0,
+        "texture": "concrete",
+        "roughness": "smooth",
+        "rationale": "electric acid yellow on a hard slick surface"
+      },
+      "rationale_shown": "electric acid yellow on a hard slick surface",
+      "ground_truth": {
+        "swapped_field": null,
+        "original_value": null,
+        "swapped_in_value": null,
+        "donor_emotion": null,
+        "rationale_is_wrong": false
+      },
+      "explanation_shown": true,
+      "correction_source": "",
+      "trial_index": 27,
+      "trial_id": "p13_b027"
+    },
+    {
+      "condition": "rationale_mismatched",
+      "target_emotion_shown": "excited",
+      "stimulus": {
+        "id": "excited_linear",
+        "target_emotion": "excited",
+        "source": "llm",
+        "shape": "linear",
+        "hue": 60,
+        "saturation": 0.4,
+        "brightness": 750.0,
+        "texture": "concrete",
+        "roughness": "smooth",
+        "rationale": "electric acid yellow on a hard slick surface"
+      },
+      "rationale_shown": "deep cold denim blue, heavy and airless",
+      "ground_truth": {
+        "swapped_field": null,
+        "original_value": null,
+        "swapped_in_value": null,
+        "donor_emotion": "depressed",
+        "rationale_is_wrong": true
+      },
+      "explanation_shown": true,
+      "correction_source": "own",
+      "sham_seed": 173021176,
+      "trial_index": 28,
+      "trial_id": "p13_b028"
+    },
+    {
+      "condition": "faithful",
+      "target_emotion_shown": "depressed",
+      "stimulus": {
+        "id": "depressed_curved",
+        "target_emotion": "depressed",
+        "source": "llm",
+        "shape": "curved",
+        "hue": 240,
+        "saturation": 0.4,
+        "brightness": 150.0,
+        "texture": "textile",
+        "roughness": "rough",
+        "rationale": "deep cold denim blue, heavy and airless"
+      },
+      "rationale_shown": "deep cold denim blue, heavy and airless",
+      "ground_truth": {
+        "swapped_field": null,
+        "original_value": null,
+        "swapped_in_value": null,
+        "donor_emotion": null,
+        "rationale_is_wrong": false
+      },
+      "explanation_shown": true,
+      "correction_source": "",
+      "trial_index": 29,
+      "trial_id": "p13_b029"
+    },
+    {
+      "condition": "faithful",
+      "target_emotion_shown": "tense",
+      "stimulus": {
+        "id": "tense_curved",
+        "target_emotion": "tense",
+        "source": "llm",
+        "shape": "curved",
+        "hue": 180,
+        "saturation": 0.2,
+        "brightness": 150.0,
+        "texture": "concrete",
+        "roughness": "rough",
+        "rationale": "cold damp blue-green concrete, basement tone"
+      },
+      "rationale_shown": "cold damp blue-green concrete, basement tone",
+      "ground_truth": {
+        "swapped_field": null,
+        "original_value": null,
+        "swapped_in_value": null,
+        "donor_emotion": null,
+        "rationale_is_wrong": false
+      },
+      "explanation_shown": true,
+      "correction_source": "",
+      "trial_index": 30,
+      "trial_id": "p13_b030"
+    },
+    {
+      "condition": "swapped",
+      "target_emotion_shown": "calm",
+      "stimulus": {
+        "id": "calm_curved",
+        "target_emotion": "calm",
+        "source": "llm",
+        "shape": "curved",
+        "hue": 60,
+        "saturation": 0.4,
+        "brightness": 300.0,
+        "texture": "plaster",
+        "roughness": "smooth",
+        "rationale": "pale warm cream, faintly buttery"
+      },
+      "rationale_shown": "pale warm cream, faintly buttery",
+      "ground_truth": {
+        "swapped_field": "saturation",
+        "original_value": 0.2,
+        "swapped_in_value": 0.4,
+        "donor_emotion": "depressed",
+        "rationale_is_wrong": false
+      },
+      "explanation_shown": true,
+      "correction_source": "own",
+      "sham_seed": 561704313,
+      "trial_index": 31,
+      "trial_id": "p13_b031"
+    },
+    {
+      "condition": "swapped",
+      "target_emotion_shown": "depressed",
+      "stimulus": {
+        "id": "depressed_curved",
+        "target_emotion": "depressed",
+        "source": "llm",
+        "shape": "curved",
+        "hue": 60,
+        "saturation": 0.4,
+        "brightness": 150.0,
+        "texture": "textile",
+        "roughness": "rough",
+        "rationale": "deep cold denim blue, heavy and airless"
+      },
+      "rationale_shown": "deep cold denim blue, heavy and airless",
+      "ground_truth": {
+        "swapped_field": "hue",
+        "original_value": 240,
+        "swapped_in_value": 60,
+        "donor_emotion": "calm",
+        "rationale_is_wrong": false
+      },
+      "explanation_shown": false,
+      "correction_source": "own",
+      "sham_seed": 132968281,
       "trial_index": 32,
       "trial_id": "p13_b032"
     }
