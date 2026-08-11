@@ -155,13 +155,57 @@ namespace EmotionRooms.EditorTools
                 Path.Combine(root ?? "", "Data/PlaybackEngines/AndroidPlayer/SDK/platform-tools/" + AdbName),
                 Path.Combine(EditorPrefs.GetString("AndroidSdkRoot", ""), "platform-tools/" + AdbName),
             };
-            foreach (var path in candidates)
-                if (!string.IsNullOrEmpty(path) && File.Exists(path)) return path;
+            // Whichever copy actually sees a headset wins, and it is remembered.
+            //
+            // Preferring Unity's adb is right when it works, but on a machine with a
+            // separate platform-tools install the two are different versions, adb
+            // demands an exact client/server match, and each kills the other's server.
+            // The visible result is a panel reporting no headset while the same
+            // headset is listed by adb devices in a terminal one alt-tab away. Asking
+            // each candidate rather than assuming one settles it empirically, which is
+            // the only thing that has worked on this problem.
+            if (!string.IsNullOrEmpty(workingAdb) && Sees(workingAdb)) return workingAdb;
 
-            // Last resort: whatever is on PATH. Only reached when Unity's own copy
-            // cannot be located, so the version-match warning above does not apply -
-            // there is no Unity adb to conflict with.
-            return AdbName;
+            string firstPresent = null;
+            foreach (var path in candidates)
+            {
+                if (string.IsNullOrEmpty(path) || !File.Exists(path)) continue;
+                if (firstPresent == null) firstPresent = path;
+                if (Sees(path)) { workingAdb = path; return path; }
+            }
+
+            // Nothing found a device. Try PATH before giving up, then fall back to the
+            // copy that at least exists so error messages name a real binary.
+            if (Sees(AdbName)) { workingAdb = AdbName; return AdbName; }
+            return firstPresent ?? AdbName;
+        }
+
+        /// <summary>The adb copy that last listed a device, tried first from then on.</summary>
+        static string workingAdb;
+
+        /// <summary>Does this adb list at least one device, in any state.</summary>
+        static bool Sees(string adb)
+        {
+            try
+            {
+                var info = new System.Diagnostics.ProcessStartInfo(adb, "devices")
+                {
+                    UseShellExecute = false, RedirectStandardOutput = true,
+                    RedirectStandardError = true, CreateNoWindow = true,
+                };
+                using (var process = System.Diagnostics.Process.Start(info))
+                {
+                    string output = process.StandardOutput.ReadToEnd();
+                    process.WaitForExit();
+                    foreach (var line in output.Split('\n'))
+                    {
+                        var parts = line.Trim().Split('\t');
+                        if (parts.Length == 2) return true;   // device, unauthorized, offline
+                    }
+                }
+            }
+            catch (Exception) { }
+            return false;
         }
 
         /// <summary>The adb binary's file name for this platform.</summary>
@@ -239,13 +283,8 @@ namespace EmotionRooms.EditorTools
 
             // Distinguish "adb cannot be found" from "adb found nothing". They read
             // identically in the panel and have completely different fixes.
-            string adb = AdbPath();
-            if (adb == AdbName && Application.platform == RuntimePlatform.WindowsEditor)
-                return "Using \"" + AdbName + "\" from PATH because Unity's own copy was " +
-                       "not found. If the headset is visible in a terminal but not here, " +
-                       "check that Android Build Support is installed for this Unity " +
-                       "version, then restart Unity.";
-
+            // Every adb on this machine was asked and none listed a device, so a
+            // terminal will not be seeing one either.
             if (unauthorised.Count > 0)
                 return "Headset " + unauthorised[0] + " is connected but has not " +
                        "authorised this computer. Put it on: there is an \"Allow USB " +
