@@ -160,8 +160,21 @@ namespace EmotionRooms
             quad.transform.localScale = new Vector3(longest * height * 0.62f + height * 0.5f,
                                                     lines * height * 1.45f, 1f);
 
+            // DestroyImmediate outside play mode, Destroy inside it.
+            //
+            // Object.Destroy is deferred to the end of the frame, and in the editor
+            // there is no frame: it silently does nothing. Scene setup runs in the
+            // editor, so every one of these plates kept a MeshCollider it was never
+            // meant to have - 41 of them, saved into the scene. They sit between the
+            // participant and the buttons, so the pointer would hit a plate instead of
+            // the option behind it, and they are the bulk of what the scene gained
+            // since the last build verified on device.
             var collider = quad.GetComponent<Collider>();
-            if (collider != null) Object.Destroy(collider);
+            if (collider != null)
+            {
+                if (Application.isPlaying) Object.Destroy(collider);
+                else Object.DestroyImmediate(collider);
+            }
 
             var shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
             var renderer = quad.GetComponent<Renderer>();
