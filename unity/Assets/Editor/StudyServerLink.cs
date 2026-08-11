@@ -173,7 +173,7 @@ namespace EmotionRooms.EditorTools
                 return;
             }
 
-            string url = "http://" + headsetIp + ":8752/set?participant=" +
+            string url = Root(headsetIp) + "/set?participant=" +
                          UnityWebRequest.EscapeURL(participant ?? "") +
                          "&practice=" + (practiceOnly ? "1" : "0") +
                          "&phases=" + sessionMode +
@@ -192,7 +192,7 @@ namespace EmotionRooms.EditorTools
                 if (onDone != null) onDone(false);
                 return;
             }
-            string url = "http://" + headsetIp + ":8752/start?participant=" +
+            string url = Root(headsetIp) + "/start?participant=" +
                          UnityWebRequest.EscapeURL(participant ?? "");
             Send(UnityWebRequest.Get(url), body =>
             {
@@ -201,12 +201,26 @@ namespace EmotionRooms.EditorTools
         }
 
         /// <summary>What the app on the headset is doing right now, or null.</summary>
+        /// <summary>
+        /// Turn an address into a base URL.
+        ///
+        /// The address is either a bare IP on the network or, when the panel is
+        /// tunnelling over the USB cable, host:port. Appending a port unconditionally
+        /// produced 127.0.0.1:18752:8752, which fails as a malformed URL rather than as
+        /// anything that names the cause.
+        /// </summary>
+        static string Root(string headsetIp)
+        {
+            if (string.IsNullOrEmpty(headsetIp)) return null;
+            return "http://" + (headsetIp.Contains(":") ? headsetIp : headsetIp + ":8752");
+        }
+
         public static void QueryHeadset(string headsetIp, Action<HeadsetState> onDone)
         {
             if (string.IsNullOrEmpty(headsetIp)) { onDone(null); return; }
 
             // /set with no parameters changes nothing and reports everything.
-            Send(UnityWebRequest.Get("http://" + headsetIp + ":8752/set"), body =>
+            Send(UnityWebRequest.Get(Root(headsetIp) + "/set"), body =>
             {
                 if (body == null) { onDone(null); return; }
                 try { onDone(JsonUtility.FromJson<HeadsetState>(body)); }
@@ -216,7 +230,7 @@ namespace EmotionRooms.EditorTools
 
         public static string HeadsetPage(string headsetIp, string path)
         {
-            return "http://" + headsetIp + ":8752/" + path;
+            return Root(headsetIp) + "/" + path;
         }
 
         public static string FormUrl(string group, string participant, int sessionMode)

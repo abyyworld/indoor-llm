@@ -722,6 +722,35 @@ namespace EmotionRooms.EditorTools
             Debug.Log("Study: app was not running; relaunched it on the headset.");
         }
 
+        /// <summary>
+        /// Reach the app over the USB cable rather than the network.
+        ///
+        /// The panel used to find the headset's WiFi address and talk to it over the
+        /// local network, which quietly requires both machines on the same subnet, no
+        /// client isolation on the router, and a firewall that permits it. When any of
+        /// that fails there is no error: the panel simply never sees the app, so the
+        /// Start button never appears and the researcher is told to install a build
+        /// that is already installed and already running.
+        ///
+        /// adb forward tunnels a local port to the device over the cable that is
+        /// already there for installing. It needs no network at all, so it works on a
+        /// university WiFi that isolates clients, and it works with the WiFi off.
+        /// </summary>
+        public static string ForwardedAddress()
+        {
+            if (ConnectedDevices().Length == 0) return null;
+
+            // Idempotent: repeating an existing forward is a no-op.
+            string result = Run("forward tcp:" + LocalPort + " tcp:8752");
+            if (result != null && result.IndexOf("error", StringComparison.OrdinalIgnoreCase) >= 0)
+                return null;
+            return "127.0.0.1:" + LocalPort;
+        }
+
+        /// <summary>Local end of the USB tunnel. Not 8752, so a study server running on
+        /// this laptop for the browser route cannot collide with it.</summary>
+        public const int LocalPort = 18752;
+
         public static string HeadsetAddress()
         {
             string adb = AdbPath();

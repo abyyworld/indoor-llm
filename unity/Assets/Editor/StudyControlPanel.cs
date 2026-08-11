@@ -97,7 +97,11 @@ namespace EmotionRooms.EditorTools
 
             // Two adb processes. Worth it every few seconds, ruinous every frame.
             cachedDevices = StudyBuild.ConnectedDevices();
-            cachedHeadsetIp = cachedDevices.Length > 0 ? StudyBuild.HeadsetAddress() : null;
+            // Cable first, network second. The cable is present whenever the panel can
+            // see the headset at all, and it does not depend on the room's WiFi.
+            cachedHeadsetIp = cachedDevices.Length > 0
+                ? (StudyBuild.ForwardedAddress() ?? StudyBuild.HeadsetAddress())
+                : null;
             if (cachedHeadsetIp != null)
                 StudyServerLink.QueryHeadset(cachedHeadsetIp,
                     state => { headsetApp = state; Repaint(); });
