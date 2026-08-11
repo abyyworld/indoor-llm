@@ -518,13 +518,9 @@ namespace EmotionRooms
 
         void OnBlockFinished()
         {
-            // No separate rationale block any more. It asked whether the stated
-            // reasoning matched the room; the main trials now show that reasoning on
-            // half of themselves and ask a sharper question about it, so a tail block
-            // repeating it costs minutes the session does not have. RationaleReview is
-            // still wired and still runs if a block file is present, which is what the
-            // pilot path uses.
-            if (rationaleReview != null && rationaleReview.HasBlockFile)
+            // The rationale check follows the detection block, never precedes it: it
+            // shows the model's reasoning, which names what the system was trying to do.
+            if (rationaleReview != null)
             {
                 rationaleReview.BeginBlock();
                 return;
@@ -566,16 +562,6 @@ namespace EmotionRooms
                 return;
             }
             if (oversightReview == null) return;
-
-            // The same two-option panel serves the reasoning-match question and the
-            // room-alteration question; whichever is on screen owns the answer.
-            if (oversightReview.AwaitingExplanationMatch)
-            {
-                oversightReview.pendingExplanationConfidence = confidence;
-                oversightReview.CommitExplanationMatch(value == "yes");
-                return;
-            }
-
             oversightReview.pendingDetectionConfidence = confidence;
             // POLARITY INVARIANT: the detection question asks whether the room HAS BEEN
             // CHANGED, so yes means detected. This line once read yes -> false -- the

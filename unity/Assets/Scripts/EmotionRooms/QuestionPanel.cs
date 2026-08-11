@@ -28,10 +28,6 @@ namespace EmotionRooms
             // faces, so the correction panel builds one cell per (field, value) and
             // shows only the attributed field's group.
             public string group;
-
-            /// <summary>What the button says. The text object itself is built at
-            /// runtime; only this string is serialized.</summary>
-            public string face;
         }
 
         [Tooltip("Question text. Set at runtime and rendered above the options.")]
@@ -109,7 +105,6 @@ namespace EmotionRooms
         /// <summary>Show with only <paramref name="group"/>'s options selectable.</summary>
         public void Show(string questionText, ICollection<string> allowed, string group)
         {
-            EnsureLabels();
             prompt = questionText ?? prompt;
             pendingValue = null;
             confidenceChosen = false;
@@ -216,52 +211,6 @@ namespace EmotionRooms
                 return CommitIfComplete();
             }
             return false;
-        }
-
-        bool built;
-
-        /// <summary>
-        /// Build every piece of text this panel shows, at runtime.
-        ///
-        /// These used to be created by scene setup and serialized. Text is by far the
-        /// bulkiest thing in this scene - 291 of 412 objects were labels, their outline
-        /// copies and their backing plates - and the player was dying while
-        /// deserializing it. Nothing here needs to exist before the panel is first
-        /// shown, so none of it belongs in the scene file. Same rule as the grid tiles,
-        /// the buttons and the rating stage.
-        /// </summary>
-        void EnsureLabels()
-        {
-            if (built) return;
-            built = true;
-
-            if (promptLabel == null)
-            {
-                var prompt = new GameObject("Prompt").transform;
-                prompt.SetParent(transform, false);
-                prompt.localPosition = new Vector3(0f, 0.46f, 0f);
-                promptLabel = WorldLabel.Attach(prompt, "", 0.035f);
-            }
-
-            foreach (var option in options)
-            {
-                if (option.target == null || string.IsNullOrEmpty(option.face)) continue;
-                WorldLabel.Attach(option.target, option.face, 0.03f,
-                                  new Vector3(0f, 0f, -0.6f));
-            }
-
-            if (confidenceStrip == null) return;
-            WorldLabel.Attach(confidenceStrip, "How sure are you? Pick one.", 0.024f,
-                              new Vector3(0f, 0.09f, 0f));
-            int last = confidenceStrip.childCount - 1;
-            for (int i = 0; i <= last; i++)
-            {
-                var step = confidenceStrip.GetChild(i);
-                if (step.name.StartsWith("conf_") == false) continue;
-                string caption = i == 0 ? "not sure" : i == last ? "certain" : "";
-                if (caption.Length > 0)
-                    WorldLabel.Attach(step, caption, 0.022f, new Vector3(0f, -1.6f, 0f));
-            }
         }
 
         bool StripRequired()

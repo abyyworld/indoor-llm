@@ -130,39 +130,6 @@ def swappable_fields(config: dict, donor: dict) -> list[str]:
     ]
 
 
-def pool_distance(config: dict, donor: dict, field: str) -> float:
-    """How far apart two values sit inside their own pool, as a 0..1 fraction.
-
-    Perceptibility is not comparable across variables -- degrees of hue and lux are
-    different units -- so each is normalised by its own pool's span. Categorical
-    fields (material, roughness) are either the same or different, and a difference
-    is always fully visible, so they score 1.
-    """
-    from pipeline import pools
-
-    a, b = config.get(field), donor.get(field)
-    if a is None or b is None or a == b:
-        return 0.0
-
-    table = {
-        "hue": pools.HUES,
-        "saturation": pools.SATURATIONS,
-        "brightness": pools.BRIGHTNESSES,
-    }
-    values = table.get(field)
-    if values is None:
-        return 1.0            # texture, roughness: categorical, fully visible
-
-    span = max(values) - min(values)
-    if span <= 0:
-        return 1.0
-    if field == "hue":
-        # Hue is a circle: 330 and 0 are neighbours, not opposites.
-        gap = abs(float(a) - float(b)) % 360.0
-        return min(gap, 360.0 - gap) / 180.0
-    return abs(float(a) - float(b)) / float(span)
-
-
 def make_trial(
     config: dict,
     condition: str,
@@ -206,24 +173,8 @@ def make_trial(
                 f"so nothing can be swapped. If this happens often the emotions are not "
                 f"being separated by the pool, which is a finding rather than a bug."
             )
-        # Prefer the swap a person could actually see.
-        #
-        # A donor value one pool step from the original is a real manipulation and an
-        # invisible one: saturation 0.20 -> 0.40 in a dim room, or one hue category
-        # over, changes the data and not the experience. Detection and attribution
-        # then sit at floor and measure nothing except that the swap was too small,
-        # which is a property of our sampling rather than a finding about oversight.
-        # Ranking candidates by how far the value moves within its own pool keeps the
-        # manipulation perceptible; ties and non-numeric fields fall back to chance,
-        # so this narrows the draw without ever emptying it.
-        candidates = [(d, f) for d, fields in usable for f in fields]
-        best = max(pool_distance(config, d, f) for d, f in candidates)
-        if best > 0:
-            candidates = [
-                (d, f) for d, f in candidates
-                if pool_distance(config, d, f) >= best * 0.5
-            ]
-        donor, field = rng.choice(candidates)
+        donor, fields = rng.choice(usable)
+        field = rng.choice(fields)
 
         trial["stimulus"] = swap(config, donor, field)
         trial["ground_truth"] = {
@@ -275,7 +226,6 @@ def build_oversight_block(
     participant: str,
     trials_total: int = 32,
     pool_sampler=None,
-    composition: list | None = None,
 ) -> dict:
     """One participant's Phase B block: half faithful, half corrupted, shuffled.
 
@@ -296,37 +246,6 @@ def build_oversight_block(
     rng = random.Random(seed)
     trials: list[dict] = []
 
-    # Explicit composition, because the block now answers two questions with
-    # different appetites for trials.
-    #
-    # The primary contrast is between two rooms that are BOTH unaltered and differ
-    # only in whether the stated reasoning describes them: faithful-explained
-    # against rationale_mismatched. If those are flagged at different rates, the
-    # participant is checking the account rather than the artifact, and that is the
-    # finding. It gets the most trials.
-    #
-    # The secondary contrast is explained against unexplained on the same fidelity
-    # levels, which is the older does-explanation-help question. It keeps enough
-    # trials to be estimated and no more.
-    if composition is None:
-        # Proportions, not counts, so trials_total still means something. At the
-        # default 32 this is 8/8/8/4/4; a shorter block keeps the same shape.
-        shares = [
-            (FAITHFUL, True, 0.25),               # room right, reasoning right
-            (SWAPPED, True, 0.25),                # room wrong, reasoning right about intent
-            (RATIONALE_MISMATCHED, True, 0.25),   # room right, reasoning wrong
-            (FAITHFUL, False, 0.125),             # unexplained controls
-            (SWAPPED, False, 0.125),
-        ]
-        composition = []
-        assigned = 0
-        for i, (condition, explained, share) in enumerate(shares):
-            count = (trials_total - assigned if i == len(shares) - 1
-                     else int(round(trials_total * share)))
-            assigned += count
-            if count > 0:
-                composition.append((condition, explained, count))
-
     faithful_count = int(round(trials_total * FAITHFUL_SHARE))
     corrupted_count = trials_total - faithful_count
 
@@ -340,38 +259,30 @@ def build_oversight_block(
 
     conditions = [FAITHFUL] + corrupt_kinds
 
-    # EXPLANATION is crossed with fidelity, balanced within each condition so the
-    # 2x2 is even: half of the faithful trials carry the system's stated reasoning
-    # and half do not, and likewise for each corrupted kind. Assigned per condition
-    # rather than over the whole block, because balancing globally can leave one
-    # condition entirely explained and another entirely bare - which turns the
-    # factor into a confound with fidelity rather than a crossing of it.
-    #
-    # On corrupted trials the reasoning describes the ORIGINAL design, not what is
-    # on the wall. That is the manipulation: a fluent, plausible justification for
-    # a room that no longer matches it.
-    for condition, explained, count in composition:
-        # Spread each cell evenly over the configs rather than drawing with
-        # replacement, so a cell cannot land on one emotion by chance and turn
-        # condition into a proxy for emotion.
+    for condition in conditions:
+        per_condition = counts[condition]
+        # Spread each condition evenly over the configs rather than drawing with
+        # replacement. Sampling independently lets a condition cluster on one or two
+        # emotions by chance, which confounds condition with emotion: if most swapped
+        # trials happen to be calm rooms, attribution accuracy for "swapped" is partly
+        # an accuracy figure for calm. Cycling a reshuffled list caps the imbalance at
+        # one trial per config.
         chosen: list[dict] = []
-        while len(chosen) < count:
+        while len(chosen) < per_condition:
             block = list(configs)
             rng.shuffle(block)
-            chosen.extend(block[: count - len(chosen)])
+            chosen.extend(block[: per_condition - len(chosen)])
 
         for config in chosen:
-            trial = make_trial(
-                config,
-                condition,
-                rng=rng,
-                donors=configs,
-                pool_sampler=pool_sampler,
+            trials.append(
+                make_trial(
+                    config,
+                    condition,
+                    rng=rng,
+                    donors=configs,
+                    pool_sampler=pool_sampler,
+                )
             )
-            # A mismatched rationale nobody sees is not a condition, so these are
-            # explained by definition rather than by assignment.
-            trial["explanation_shown"] = bool(explained) or condition == RATIONALE_MISMATCHED
-            trials.append(trial)
 
     rng.shuffle(trials)
 
