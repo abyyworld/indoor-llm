@@ -145,12 +145,33 @@ namespace EmotionRooms.EditorTools
                 // a time on "Scanning For ADB Devices". Unity cannot be told to use
                 // another adb, so everything else defers to Unity's. Any shell work
                 // against the headset must use this same binary.
-                Path.Combine(root ?? "", "PlaybackEngines/AndroidPlayer/SDK/platform-tools/adb"),
-                Path.Combine(EditorPrefs.GetString("AndroidSdkRoot", ""), "platform-tools/adb"),
+                // macOS layout: .../<version>/PlaybackEngines/...
+                Path.Combine(root ?? "", "PlaybackEngines/AndroidPlayer/SDK/platform-tools/" + AdbName),
+                // Windows layout: the engines live under Editor\Data, one level deeper,
+                // and the binary is adb.exe. Missing both is why a Windows machine that
+                // could see the headset from a terminal was told by this panel that
+                // nothing was connected: adb was never found, so the device list was
+                // empty for a reason that had nothing to do with the device.
+                Path.Combine(root ?? "", "Data/PlaybackEngines/AndroidPlayer/SDK/platform-tools/" + AdbName),
+                Path.Combine(EditorPrefs.GetString("AndroidSdkRoot", ""), "platform-tools/" + AdbName),
             };
             foreach (var path in candidates)
                 if (!string.IsNullOrEmpty(path) && File.Exists(path)) return path;
-            return null;
+
+            // Last resort: whatever is on PATH. Only reached when Unity's own copy
+            // cannot be located, so the version-match warning above does not apply -
+            // there is no Unity adb to conflict with.
+            return AdbName;
+        }
+
+        /// <summary>The adb binary's file name for this platform.</summary>
+        static string AdbName
+        {
+            get
+            {
+                return Application.platform == RuntimePlatform.WindowsEditor
+                    ? "adb.exe" : "adb";
+            }
         }
 
         /// <summary>Serial numbers of headsets adb can see. Empty means none.</summary>
@@ -215,6 +236,16 @@ namespace EmotionRooms.EditorTools
             ReadDevices(out ready, out unauthorised);
 
             if (ready.Count > 0) return null;
+
+            // Distinguish "adb cannot be found" from "adb found nothing". They read
+            // identically in the panel and have completely different fixes.
+            string adb = AdbPath();
+            if (adb == AdbName && Application.platform == RuntimePlatform.WindowsEditor)
+                return "Using \"" + AdbName + "\" from PATH because Unity's own copy was " +
+                       "not found. If the headset is visible in a terminal but not here, " +
+                       "check that Android Build Support is installed for this Unity " +
+                       "version, then restart Unity.";
+
             if (unauthorised.Count > 0)
                 return "Headset " + unauthorised[0] + " is connected but has not " +
                        "authorised this computer. Put it on: there is an \"Allow USB " +
