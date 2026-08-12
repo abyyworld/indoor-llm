@@ -81,6 +81,49 @@ def describe(room: dict) -> str:
     return "; ".join(str(p) for p in parts)
 
 
+#: Plain-language readings of each pool value, for the offline composer. These are
+#: the same words the correction buttons use, so a rationale never names a property
+#: in vocabulary the participant is not offered back.
+HUE_WORDS = {0: "red", 30: "orange", 60: "yellow", 90: "yellow-green", 120: "green",
+             180: "blue-green", 240: "blue", 270: "blue-violet", 300: "purple",
+             330: "pink"}
+LIGHT_WORDS = {150: "low", 300: "moderate", 500: "generous", 750: "bright"}
+#: Material without any smoothness claim in it: roughness is a separate variable and
+#: saying "a smooth painted finish left rough" is both nonsense and a giveaway.
+MATERIAL_WORDS = {"plaster": "painted plaster", "concrete": "bare concrete",
+                  "textile": "woven cloth"}
+
+
+def compose(room: dict) -> str:
+    """Write a room's rationale from its own parameters, with no API call.
+
+    The manipulation needs reasoning that is fluent, specific and plausible. It does
+    not need to be authored by a language model: what matters is that it names the
+    choices actually made and ties them to the target emotion, and that it reads the
+    same way across rooms so the explanation condition differs from its control by
+    content rather than by style.
+
+    Composing it is also better controlled than sampling it. Every rationale gets the
+    same structure and roughly the same length, so a difference between conditions
+    cannot be a difference in how well one sentence happened to be written. The
+    write-up should say the reasoning is generated from the system's parameter
+    choices by template, which is true and is not a weakness.
+    """
+    hue = HUE_WORDS.get(int(room.get("hue", 0)), "muted")
+    sat = "restrained" if float(room.get("saturation", 0.2)) <= 0.3 else "saturated"
+    lux = LIGHT_WORDS.get(int(float(room.get("brightness", 300))), "moderate")
+    material = MATERIAL_WORDS.get(room.get("texture"), "a plain surface")
+    rough = room.get("roughness")
+    surface = (("coarse " if rough == "rough" else "smooth ") + material) if rough else material
+    emotion = room.get("target_emotion", "the target feeling")
+
+    return (
+        f"I chose a {sat} {hue} for the walls and floor, lit at a {lux} level, on "
+        f"{surface}. Together the colour, the light and the surface are what carry "
+        f"{emotion} in a room this size."
+    )
+
+
 def generate(rooms: list[dict], model: str = DEFAULT_MODEL, client: Any = None) -> dict:
     """Return {room id: rationale}. Needs ANTHROPIC_API_KEY unless a client is given."""
     if not rooms:

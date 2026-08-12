@@ -615,6 +615,38 @@ namespace EmotionRooms
             // stays about the artifact, and whether a wrong explanation drives false
             // alarms on the room question becomes something the data can show rather
             // than something the instrument confounds.
+            detectionAnswered = false;
+            if (detectionPanel != null)
+                // Wording and the yes/no mapping in StudyBootstrap.OnDetectionAnswered
+                // are a pair: yes must always mean "altered", i.e. detected.
+                //
+                // The question restates the frame every trial rather than leaning on the
+                // one-off briefing: "has this room been changed?" read as "changed since
+                // the previous room / since the first half", which on the very first
+                // room has no answer at all and confused everyone it was shown to.
+                detectionPanel.Show("The system designed this room to feel: " +
+                                    trial.target_emotion_shown + ".\n" +
+                                    "About a third of the rooms had one setting secretly " +
+                                    "altered.\n" +
+                                    "Was this room altered?");
+            if (telemetry != null) { telemetry.SetReviewSegment(true, false, false); telemetry.Mark("detection_shown"); }
+            if (events != null) events.Write("detection_shown", null);
+            while (!detectionAnswered) yield return null;
+            if (detectionPanel != null) detectionPanel.Hide();
+            if (telemetry != null) telemetry.SetDetection(pendingDetected, pendingDetectionConfidence);
+            if (events != null)
+                events.WriteValues("detection_answered", pendingDetected ? "noticed_swap" : "looks_consistent",
+                    pendingDetectionConfidence.ToString("0.##"), null);
+
+            // The reasoning question comes AFTER the detection judgement, deliberately.
+            //
+            // Asked first, it instructs the participant to compare the reasoning against
+            // the room - and the whole point of the mismatch condition is to find out
+            // whether they do that unprompted. Telling them to check, then measuring
+            // whether checking changed their verdict, measures compliance rather than
+            // behaviour, and would inflate the effect the study exists to estimate. Now
+            // the verdict is given first and uncontaminated, and this records whether
+            // they also noticed the reasoning did not fit.
             if (trial.explanation_shown && !string.IsNullOrEmpty(trial.rationale_shown))
             {
                 explanationAnswered = false;
@@ -631,27 +663,6 @@ namespace EmotionRooms
                             ? "truth=mismatched" : "truth=matched");
             }
 
-            detectionAnswered = false;
-            if (detectionPanel != null)
-                // Wording and the yes/no mapping in StudyBootstrap.OnDetectionAnswered
-                // are a pair: yes must always mean "altered", i.e. detected.
-                //
-                // The question restates the frame every trial rather than leaning on the
-                // one-off briefing: "has this room been changed?" read as "changed since
-                // the previous room / since the first half", which on the very first
-                // room has no answer at all and confused everyone it was shown to.
-                detectionPanel.Show("The system designed this room to feel: " +
-                                    trial.target_emotion_shown + ".\n" +
-                                    "About half the rooms had one setting secretly altered.\n" +
-                                    "Was this room altered?");
-            if (telemetry != null) { telemetry.SetReviewSegment(true, false, false); telemetry.Mark("detection_shown"); }
-            if (events != null) events.Write("detection_shown", null);
-            while (!detectionAnswered) yield return null;
-            if (detectionPanel != null) detectionPanel.Hide();
-            if (telemetry != null) telemetry.SetDetection(pendingDetected, pendingDetectionConfidence);
-            if (events != null)
-                events.WriteValues("detection_answered", pendingDetected ? "noticed_swap" : "looks_consistent",
-                    pendingDetectionConfidence.ToString("0.##"), null);
 
             // Attribution and correction are only asked when they said something is
             // wrong. Forcing an attribution out of someone who noticed nothing would

@@ -16,10 +16,10 @@
         "brightness": 750.0,
         "texture": "concrete",
         "roughness": "smooth",
-        "rationale": "electric acid yellow on a hard slick surface"
+        "rationale": "I chose a saturated yellow for the walls and floor, lit at a bright level, on smooth bare concrete. Together the colour, the light and the surface are what carry excited in a room this size."
       },
       "target_emotion_shown": "excited",
-      "rationale_shown": "pale warm cream, faintly buttery",
+      "rationale_shown": "I chose a restrained yellow for the walls and floor, lit at a moderate level, on smooth painted plaster. Together the colour, the light and the surface are what carry calm in a room this size.",
       "ground_truth": {
         "rationale_is_wrong": true,
         "donor_emotion": "calm"
@@ -39,10 +39,10 @@
         "brightness": 150.0,
         "texture": "concrete",
         "roughness": "rough",
-        "rationale": "cold damp blue-green concrete, basement tone"
+        "rationale": "I chose a restrained blue-green for the walls and floor, lit at a low level, on coarse bare concrete. Together the colour, the light and the surface are what carry tense in a room this size."
       },
       "target_emotion_shown": "tense",
-      "rationale_shown": "cold damp blue-green concrete, basement tone",
+      "rationale_shown": "I chose a restrained blue-green for the walls and floor, lit at a low level, on coarse bare concrete. Together the colour, the light and the surface are what carry tense in a room this size.",
       "ground_truth": {
         "rationale_is_wrong": false,
         "donor_emotion": null
@@ -62,10 +62,10 @@
         "brightness": 150.0,
         "texture": "textile",
         "roughness": "rough",
-        "rationale": "deep cold denim blue, heavy and airless"
+        "rationale": "I chose a saturated blue for the walls and floor, lit at a low level, on coarse woven cloth. Together the colour, the light and the surface are what carry depressed in a room this size."
       },
       "target_emotion_shown": "depressed",
-      "rationale_shown": "deep cold denim blue, heavy and airless",
+      "rationale_shown": "I chose a saturated blue for the walls and floor, lit at a low level, on coarse woven cloth. Together the colour, the light and the surface are what carry depressed in a room this size.",
       "ground_truth": {
         "rationale_is_wrong": false,
         "donor_emotion": null
@@ -85,10 +85,10 @@
         "brightness": 150.0,
         "texture": "concrete",
         "roughness": "rough",
-        "rationale": "cold damp blue-green concrete, basement tone"
+        "rationale": "I chose a restrained blue-green for the walls and floor, lit at a low level, on coarse bare concrete. Together the colour, the light and the surface are what carry tense in a room this size."
       },
       "target_emotion_shown": "tense",
-      "rationale_shown": "cold damp blue-green concrete, basement tone",
+      "rationale_shown": "I chose a restrained blue-green for the walls and floor, lit at a low level, on coarse bare concrete. Together the colour, the light and the surface are what carry tense in a room this size.",
       "ground_truth": {
         "rationale_is_wrong": false,
         "donor_emotion": null
@@ -108,10 +108,10 @@
         "brightness": 750.0,
         "texture": "concrete",
         "roughness": "smooth",
-        "rationale": "electric acid yellow on a hard slick surface"
+        "rationale": "I chose a saturated yellow for the walls and floor, lit at a bright level, on smooth bare concrete. Together the colour, the light and the surface are what carry excited in a room this size."
       },
       "target_emotion_shown": "excited",
-      "rationale_shown": "pale warm cream, faintly buttery",
+      "rationale_shown": "I chose a restrained yellow for the walls and floor, lit at a moderate level, on smooth painted plaster. Together the colour, the light and the surface are what carry calm in a room this size.",
       "ground_truth": {
         "rationale_is_wrong": true,
         "donor_emotion": "calm"
@@ -131,10 +131,10 @@
         "brightness": 150.0,
         "texture": "textile",
         "roughness": "rough",
-        "rationale": "deep cold denim blue, heavy and airless"
+        "rationale": "I chose a saturated blue for the walls and floor, lit at a low level, on coarse woven cloth. Together the colour, the light and the surface are what carry depressed in a room this size."
       },
       "target_emotion_shown": "depressed",
-      "rationale_shown": "cold damp blue-green concrete, basement tone",
+      "rationale_shown": "I chose a restrained blue-green for the walls and floor, lit at a low level, on coarse bare concrete. Together the colour, the light and the surface are what carry tense in a room this size.",
       "ground_truth": {
         "rationale_is_wrong": true,
         "donor_emotion": "tense"

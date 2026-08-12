@@ -844,6 +844,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--batch", default="configs/study_8cell.json")
     p.add_argument("--out", default=None,
                    help="defaults to overwriting --batch in place")
+    p.add_argument("--offline", action="store_true",
+                   help="compose from the room's parameters instead of calling the API")
     p.set_defaults(func=cmd_write_rationales)
 
     p = sub.add_parser("merge", help="combine run files into one pool of rooms")
@@ -900,7 +902,9 @@ def cmd_write_rationales(args) -> int:
     would make the explanation factor incoherent in exactly the way the random arm
     was.
     """
-    from pipeline.rationales import generate, apply_to_config
+    from pathlib import Path
+
+    from pipeline.rationales import generate, apply_to_config, compose
 
     path = Path(args.batch)
     doc = json.loads(path.read_text(encoding="utf-8"))
@@ -909,11 +913,16 @@ def cmd_write_rationales(args) -> int:
         print(f"error: no rooms in {path}", file=sys.stderr)
         return 1
 
-    try:
-        rationales = generate(rooms)
-    except Exception as exc:
-        print(f"error: {exc}", file=sys.stderr)
-        return 1
+    if args.offline:
+        rationales = {str(r.get("id")): compose(r) for r in rooms}
+    else:
+        try:
+            rationales = generate(rooms)
+        except Exception as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            print("hint: --offline composes the same reasoning from each room's own "
+                  "parameters and needs no key.", file=sys.stderr)
+            return 1
 
     out = Path(args.out) if args.out else path
     written = apply_to_config(path, rationales, out)
