@@ -751,6 +751,54 @@ namespace EmotionRooms.EditorTools
         /// this laptop for the browser route cannot collide with it.</summary>
         public const int LocalPort = 18752;
 
+        /// <summary>
+        /// Switch the headset's adb connection to WiFi, so the cable can come off.
+        ///
+        /// This is protocol, not comfort. Participants walk around the room in this
+        /// study, and a USB cable is a tether and a trip hazard: someone who cannot
+        /// step freely is not experiencing the room the design intends, and the
+        /// telemetry would record a movement pattern shaped by the cable.
+        ///
+        /// Everything else keeps working untouched. adb forward tunnels through
+        /// whichever transport adb is using, so the panel still talks to 127.0.0.1 and
+        /// neither knows nor cares that the cable is gone.
+        ///
+        /// Needs both devices on the same network with client isolation off, which is
+        /// exactly what the cable route exists for when a university network refuses.
+        /// </summary>
+        [MenuItem("Emotion Rooms/Advanced/Untether the headset (adb over WiFi)", priority = 116)]
+        public static void GoWireless()
+        {
+            if (ConnectedDevices().Length == 0)
+            {
+                Debug.LogError("Study: plug the headset in first. Going wireless is a " +
+                               "switch performed over the cable, once.");
+                return;
+            }
+
+            string ip = HeadsetAddress();
+            if (string.IsNullOrEmpty(ip))
+            {
+                Debug.LogError("Study: the headset has no WiFi address. Connect it to " +
+                               "the same network as this laptop, then try again.");
+                return;
+            }
+
+            Run("tcpip 5555");
+            System.Threading.Thread.Sleep(1500);   // the daemon restarts on the device
+            string result = Run("connect " + ip + ":5555");
+
+            if (result != null && result.IndexOf("connected", StringComparison.OrdinalIgnoreCase) >= 0)
+                Debug.Log("Study: connected to " + ip + ":5555. The cable can come off " +
+                          "now. Everything in the panel keeps working; if the headset " +
+                          "changes network or reboots, plug in and do this again.");
+            else
+                Debug.LogError("Study: could not connect to " + ip + ":5555. " +
+                               (result ?? "no reply") + "\nMost likely the two are on " +
+                               "different networks, or the network isolates clients. " +
+                               "The cable route works regardless.");
+        }
+
         public static string HeadsetAddress()
         {
             string adb = AdbPath();

@@ -86,6 +86,22 @@ namespace EmotionRooms
         }
         public bool IsRunning { get; private set; }
 
+        /// <summary>
+        /// Whether a block file exists to run.
+        ///
+        /// The reasoning question is asked inside the main trials now, so this tail
+        /// block is optional: absent means skip it, not fail. Without this the session
+        /// would stall at the end waiting for a block that was never written.
+        /// </summary>
+        public bool HasBlockFile
+        {
+            get
+            {
+                return !string.IsNullOrEmpty(blockFileName) &&
+                       File.Exists(Path.Combine(Application.persistentDataPath, blockFileName));
+            }
+        }
+
         [NonSerialized] public bool pendingMatches;
         bool answered;
         RationaleBlockData block;

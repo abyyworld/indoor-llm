@@ -428,6 +428,14 @@ namespace EmotionRooms.EditorTools
                 EditorGUILayout.LabelField(
                     "If the headset is asleep, put it on for a moment to wake it.",
                     EditorStyles.wordWrappedMiniLabel);
+
+                // Offered here because a session should not be run on a tether: this
+                // study has people walking around the room.
+                if (GUILayout.Button(new GUIContent("Untether (adb over WiFi)",
+                        "Switches the headset's connection to WiFi so the cable can " +
+                        "come off. Everything in the panel keeps working. Needs both " +
+                        "on the same network; the cable works regardless.")))
+                    Later(() => { StudyBuild.GoWireless(); Probe(true); });
             }
 
             Step(1, live, "First questionnaires, then start",
