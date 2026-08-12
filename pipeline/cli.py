@@ -396,9 +396,20 @@ def cmd_build_participants(args: argparse.Namespace) -> int:
                 return {k: room[k] for k in
                         ("hue", "saturation", "brightness", "texture") if k in room}
 
+            # No random arm once explanations are crossed in.
+            #
+            # The explanation shown on a corrupted trial describes the ORIGINAL design.
+            # For a swapped trial that is exactly right: one variable is off and the
+            # reasoning is subtly, arguably wrong. For a random trial every variable is
+            # off, so the reasoning contradicts the room outright - "electric acid
+            # yellow on a hard slick surface" over a red plaster wall. That is not the
+            # manipulation under test, it is a grossly-wrong stimulus wearing its
+            # costume, and it would have been a quarter of the block. Passing no sampler
+            # keeps the corrupted half entirely swapped: 16 faithful, 16 swapped, and
+            # the 2x2 with explanation comes out at 8 per cell.
             block = build_oversight_block(
                 rooms, participant=participant, seed=args.seed + i,
-                trials_total=32, pool_sampler=sampler,
+                trials_total=32, pool_sampler=None,
             )
             rationale = build_rationale_block(
                 rooms, participant=participant, seed=args.seed + i
@@ -827,6 +838,14 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--out", default="runs/random_control.json")
     p.set_defaults(func=cmd_random_control)
 
+    p = sub.add_parser(
+        "write-rationales",
+        help="generate the system's stated reasoning per room (needs ANTHROPIC_API_KEY)")
+    p.add_argument("--batch", default="configs/study_8cell.json")
+    p.add_argument("--out", default=None,
+                   help="defaults to overwriting --batch in place")
+    p.set_defaults(func=cmd_write_rationales)
+
     p = sub.add_parser("merge", help="combine run files into one pool of rooms")
     p.add_argument("files", nargs="+")
     p.add_argument("--out", default="-")
@@ -870,6 +889,40 @@ def build_parser() -> argparse.ArgumentParser:
     p.set_defaults(func=cmd_export_unity)
 
     return parser
+
+
+def cmd_write_rationales(args) -> int:
+    """Replace each room's rationale with one the model writes for its own choices.
+
+    Offline and one-off: the result is written into the config and ships with the
+    build, so a session needs no key and no network. Run again only if the pools or
+    the chosen rooms change -- rationales that describe values no longer in the room
+    would make the explanation factor incoherent in exactly the way the random arm
+    was.
+    """
+    from pipeline.rationales import generate, apply_to_config
+
+    path = Path(args.batch)
+    doc = json.loads(path.read_text(encoding="utf-8"))
+    rooms = doc.get("rooms") or doc.get("cells") or []
+    if not rooms:
+        print(f"error: no rooms in {path}", file=sys.stderr)
+        return 1
+
+    try:
+        rationales = generate(rooms)
+    except Exception as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+
+    out = Path(args.out) if args.out else path
+    written = apply_to_config(path, rationales, out)
+
+    print(f"wrote {written} rationales to {out}")
+    for room in rooms:
+        text = rationales.get(str(room.get("id")), "")
+        print(f"  {room.get('target_emotion'):10} {room.get('shape'):7} {text[:88]}")
+    return 0
 
 
 def main(argv: list[str] | None = None) -> int:

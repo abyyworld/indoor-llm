@@ -40,6 +40,15 @@ namespace EmotionRooms
         public string condition;
         public string target_emotion_shown;
         public string rationale_shown;
+
+        /// <summary>
+        /// Whether the system's stated reasoning is shown on this trial.
+        ///
+        /// The manipulated factor, crossed with fidelity: on corrupted trials the
+        /// reasoning describes the ORIGINAL design, so it is fluent, plausible and
+        /// quietly inconsistent with what is on the wall.
+        /// </summary>
+        public bool explanation_shown;
         public RoomConfig stimulus;
         public OversightGroundTruth ground_truth;
     }
@@ -86,6 +95,16 @@ namespace EmotionRooms
         /// <summary>Extra rounds of "anything else wrong": field=value@confidence,
         /// semicolon-joined. Perception data; the primary answer stays the scored one.</summary>
         public string extraAttributions;
+
+        /// <summary>The manipulated factor: was the system's reasoning shown here.</summary>
+        public bool explanationShown;
+
+        /// <summary>Did they judge the reasoning to match the room, and how sure.</summary>
+        public bool explanationMatched;
+        public float explanationMatchConfidence;
+
+        /// <summary>Ground truth: was the reasoning actually wrong for this room.</summary>
+        public bool rationaleWasWrong;
         public float attributionConfidence;
         public string correctedValue;
 
@@ -127,6 +146,10 @@ namespace EmotionRooms
                 arousalAfter.ToString(CultureInfo.InvariantCulture),
                 correctionApplied ? "1" : "0",
                 extraAttributions ?? "",
+                explanationShown ? "1" : "0",
+                explanationMatched ? "1" : "0",
+                explanationMatchConfidence.ToString("0.###", CultureInfo.InvariantCulture),
+                rationaleWasWrong ? "1" : "0",
             };
             var row = new StringBuilder();
             for (int i = 0; i < fields.Length; i++)
@@ -145,7 +168,8 @@ namespace EmotionRooms
                    "corrected_value,applied_value,correction_source," +
                    "duration_ms,swapped_field,started_utc," +
                    "valence_before,arousal_before,valence_after,arousal_after," +
-                   "correction_applied,extra_attributions";
+                   "correction_applied,extra_attributions,explanation_shown," +
+                   "explanation_matched,explanation_match_confidence,rationale_was_wrong";
         }
     }
 
@@ -180,10 +204,15 @@ namespace EmotionRooms
 
         public string blockFileName = "";
 
-        [Tooltip("Seconds the room is shown before the questions appear. Shorter than " +
-                 "the main trial exposure: they have already stood in these rooms and " +
-                 "this is a review, not a fresh affective response.")]
-        public float reviewExposureSeconds = 8f;
+        [Tooltip("Seconds the room is shown before the affect grid appears.")]
+        ///
+        /// Twenty, matching the thesis specification, not the eight this carried while
+        /// the review block sat after a separate exposure phase. There is no separate
+        /// phase now: the grid rating at the start of each trial IS the affect measure,
+        /// so it has to follow the exposure the thesis says it follows. Eight seconds
+        /// would have made every scored affect rating non-comparable with the design
+        /// document, quietly, in the direction of less exposure.
+        public float reviewExposureSeconds = 20f;
 
         [Header("Correction loop")]
         [Tooltip("After a correction, rebuild the room with it and let the participant " +
@@ -208,6 +237,11 @@ namespace EmotionRooms
         // and it is the one part that was cut on 9 Aug and restored by the unified
         // design. Turning this off returns to detect-attribute-propose and scores
         // corrections as repair accuracy offline instead.
+        // OFF to fit the session inside an hour (9 Aug). Applying the correction and
+        // re-rating cost a second grid rating on every detected trial - several minutes
+        // across the block - and the correction effect is not what the redesign turns
+        // on. The correction PROPOSAL is still collected and scored offline as repair
+        // accuracy against the trial file. One flag restores the effect measure.
         public bool applyAndReRate = true;
 
         [Header("Output")]
@@ -303,6 +337,20 @@ namespace EmotionRooms
         }
 
         /// <summary>Call these from the UI buttons.</summary>
+        /// <summary>Set by the panel handler for the reasoning-match question.</summary>
+        public bool pendingExplanationMatched;
+        public float pendingExplanationConfidence;
+        bool explanationAnswered;
+
+        public void CommitExplanationMatch(bool matched)
+        {
+            pendingExplanationMatched = matched;
+            explanationAnswered = true;
+        }
+
+        /// <summary>True while the reasoning-match question is the one on screen.</summary>
+        public bool AwaitingExplanationMatch { get { return IsRunning && !explanationAnswered; } }
+
         public void CommitDetection(bool noticedSwap)
         {
             pendingDetected = noticedSwap;
@@ -348,8 +396,39 @@ namespace EmotionRooms
         [Tooltip("How long the task briefing stays up before the first review trial.")]
         public float briefingSeconds = 15f;
 
+        [Tooltip("How long the system's reasoning stays up, on the trials that show it.")]
+        public float explanationSeconds = 8f;
+
         [Tooltip("Where the briefing is drawn. Wired by scene setup.")]
         public MessageBoard board;
+
+        /// <summary>
+        /// Length-matched filler for the no-explanation arm: says what, never why.
+        ///
+        /// Padded toward the rationale's own length so the two arms present a similar
+        /// amount of text. It deliberately contains no causal language - no "because",
+        /// no appeal to the emotion - so it cannot function as a justification.
+        /// </summary>
+        static string NeutralText(OversightTrialData trial)
+        {
+            string body = "This room was produced by the system for: " +
+                          trial.target_emotion_shown + ".";
+            int target = string.IsNullOrEmpty(trial.rationale_shown)
+                ? 0 : trial.rationale_shown.Length;
+
+            // One clause at a time until the lengths are comparable, rather than
+            // padding with filler characters a participant would read as broken.
+            string[] extras =
+            {
+                " It is one of the rooms in this session.",
+                " The room is shown exactly as it was produced.",
+                " No further detail about it is given here.",
+            };
+            for (int i = 0; i < extras.Length && body.Length + 12 < target; i++)
+                body += extras[i];
+
+            return "About this room:\n\n" + body;
+        }
 
         static string PlainField(string field)
         {
@@ -406,10 +485,12 @@ namespace EmotionRooms
             if (board != null)
                 board.Show("Checking the system's work\n\n" +
                            "Each room was designed by a system to convey the feeling " +
-                           "named with it.\nIn about half of the rooms, ONE setting was " +
-                           "changed after design.\n\nSay whether each room is as " +
-                           "designed or has been changed.\nYou are not judging whether " +
-                           "the design is good -- only whether\nthe room matches it.");
+                           "named with it,\nand on some rooms the system also explains " +
+                           "its reasoning.\n\nIn about a third of the rooms, ONE " +
+                           "setting was changed after design.\nSay whether each room " +
+                           "is as designed or has been changed.\n\nYou are not judging " +
+                           "whether the design is good, only whether\nthe room matches " +
+                           "what it was designed to be.");
             if (events != null) events.Write("review_briefing_shown", null);
             yield return new WaitForSeconds(briefingSeconds);
             if (board != null) board.Hide();
@@ -488,6 +569,66 @@ namespace EmotionRooms
                 if (events != null)
                     events.WriteGrid("review_rating_before", valenceBefore, arousalBefore, 0f, 0f, null);
                 loader.Load(trial.stimulus);
+            }
+
+            // Between her measure and mine, deliberately.
+            //
+            // The affect grid above is the thesis measure and is collected before any
+            // explanation has appeared on screen, so those ratings are uncontaminated
+            // and need no caveat. From here on the trial belongs to the oversight
+            // study, and the explanation is what that study manipulates.
+            // Both arms read text for the same time. Only one of them is reasoning.
+            //
+            // Showing the rationale on half the trials and nothing on the other half
+            // confounds the factor with time on task and with reading load: a d-prime
+            // difference could then be "they had eight more seconds and something to
+            // do" rather than anything about explanation content. The control arm gets
+            // length-matched text that states what the room is for without justifying
+            // it, held for the same duration, so what differs between arms is the
+            // presence of reasoning and not the presence of words.
+            string shown = trial.explanation_shown
+                ? "The system's reasoning for this room:\n\n\"" + trial.rationale_shown + "\""
+                : NeutralText(trial);
+            float readingFrom = Time.time;
+
+            if (!string.IsNullOrEmpty(shown))
+            {
+                if (board != null) board.Show(shown);
+                yield return new WaitForSeconds(explanationSeconds);
+                if (board != null) board.Hide();
+            }
+
+            if (events != null)
+                events.WriteValues(
+                    trial.explanation_shown ? "explanation_shown" : "explanation_control",
+                    trial.target_emotion_shown,
+                    trial.explanation_shown ? trial.rationale_shown : shown,
+                    "held_ms=" + ((long)((Time.time - readingFrom) * 1000f)).ToString());
+
+            // Ask about the reasoning separately, and only where reasoning was shown.
+            //
+            // Without this the mismatch condition is unrecordable: the detection
+            // question asks whether the ROOM was altered, and on a mismatched trial the
+            // room was not, so "no" is the correct answer and a participant who spotted
+            // that the reasoning does not fit has nowhere to say so. Keeping it as its
+            // own yes/no also keeps the room measure clean - the detection contrast
+            // stays about the artifact, and whether a wrong explanation drives false
+            // alarms on the room question becomes something the data can show rather
+            // than something the instrument confounds.
+            if (trial.explanation_shown && !string.IsNullOrEmpty(trial.rationale_shown))
+            {
+                explanationAnswered = false;
+                if (detectionPanel != null)
+                    detectionPanel.Show("Did the system's reasoning match this room?");
+                if (events != null) events.Write("explanation_match_shown", null);
+                while (!explanationAnswered) yield return null;
+                if (detectionPanel != null) detectionPanel.Hide();
+                if (events != null)
+                    events.WriteValues("explanation_match_answered",
+                        pendingExplanationMatched ? "matched" : "did_not_match",
+                        pendingExplanationConfidence.ToString("0.##"),
+                        trial.ground_truth != null && trial.ground_truth.rationale_is_wrong
+                            ? "truth=mismatched" : "truth=matched");
             }
 
             detectionAnswered = false;
@@ -715,6 +856,10 @@ namespace EmotionRooms
                 detectionConfidence = pendingDetectionConfidence,
                 attributedField = pendingAttributedField,
                 extraAttributions = pendingExtras,
+                explanationShown = trial.explanation_shown,
+                explanationMatched = pendingExplanationMatched,
+                explanationMatchConfidence = pendingExplanationConfidence,
+                rationaleWasWrong = trial.ground_truth != null && trial.ground_truth.rationale_is_wrong,
                 attributionConfidence = pendingAttributionConfidence,
                 correctedValue = pendingCorrectedValue,
                 appliedValue = appliedValue,
