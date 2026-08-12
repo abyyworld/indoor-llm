@@ -1,12 +1,24 @@
-// Walking, on the thumbstick.
+// Turning, on the thumbstick. Walking is built and switched off.
 //
-// The standing point was researcher-fixed so both room shells presented identical
-// sightlines, and that was the right default -- but it is a default, not a law, and the
-// researcher has asked for movement. It is enabled here with the cost recorded rather
-// than argued about: once participants walk, the two shapes are no longer experienced
-// from a matched viewpoint, so a shape difference could in principle be a difference in
-// where people chose to stand. The telemetry already logs head position at 20 Hz, which
-// is what makes that checkable afterwards instead of merely assumed.
+// The two shells were dimensioned so linear and curved present identical sightlines
+// from one fixed point: same entry position, same distance to the side wall and to the
+// facing wall or vault apex. Walking discards that match, and the cost lands exactly on
+// the thesis question - if people wander, a difference between shapes can be a
+// difference in where they chose to stand rather than in the geometry. Seated and
+// still, every participant sees each shape from the viewpoint the rooms were designed
+// around, and the contrast is between the rooms rather than between their occupants.
+//
+// Three smaller things follow the same way. A seated participant cannot trip over a
+// cable or walk into a wall, which is what let the headset go wireless. Sickness risk
+// drops, because smooth thumbstick translation is the largest contributor to it and it
+// is now absent. And a 35 minute session is more comfortable sitting than standing.
+//
+// Snap turning stays: looking behind you is part of judging a room, and snapping is the
+// biggest sickness reduction available here.
+//
+// enableMovement flips it back for anyone who wants free walking. If it is turned on,
+// the 20 Hz head telemetry is what makes the viewpoint spread checkable afterwards
+// rather than merely assumed.
 //
 // Bounded to the room. Walking through a wall would end the illusion the study depends
 // on, and a participant outside the room is rating nothing.
@@ -40,7 +52,14 @@ namespace EmotionRooms
         [Tooltip("How close a participant may get to a wall.")]
         public float wallMargin = 0.45f;
 
-        public bool enableMovement = true;
+        [Tooltip("Walking on the thumbstick. OFF by default: see the note at the top " +
+                 "of this file. Turn it on only with a reason that outweighs losing the " +
+                 "matched viewpoint.")]
+        public bool enableMovement = false;
+
+        [Tooltip("Snap turning. Stays on: a seated participant has to be able to look " +
+                 "behind them, and snapping is the single biggest reduction in " +
+                 "simulator sickness available here.")]
         public bool enableSnapTurn = true;
 
         bool turnArmed = true;

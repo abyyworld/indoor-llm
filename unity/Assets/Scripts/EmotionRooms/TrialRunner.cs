@@ -327,6 +327,15 @@ namespace EmotionRooms
             if (events != null)
             {
                 events.Phase = isPractice ? "practice" : "A";
+                // Posture is a design parameter now, not a default, so the file says
+                // which one produced these rows. Seated and fixed is what makes the two
+                // shapes comparable; free walking would need saying in the write-up.
+                var walking = FindAnyObjectByType<Locomotion>();
+                events.WriteValues("posture",
+                    walking != null && walking.enableMovement ? "free_walking" : "seated_fixed",
+                    walking != null && walking.enableSnapTurn ? "snap_turn" : "no_turn",
+                    "viewpoint is matched across shapes only when seated and fixed");
+
                 events.WriteValues("session_begin", participantId,
                     session.rooms.Length.ToString(), "trial runner starting");
             }
