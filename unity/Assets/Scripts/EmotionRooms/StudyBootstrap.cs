@@ -135,6 +135,10 @@ namespace EmotionRooms
                  "whichever emotion the counterbalancing put first.")]
         public bool practiceRooms = true;
 
+        [Tooltip("How many real trials a practice run includes, after the warm-up rooms. " +
+                 "Enough to meet every question once without spending a participant id.")]
+        public int practiceTrialCount = 2;
+
         [Tooltip("Which halves this participant does.\n\n" +
                  "0 = both (Phase A then Phase B), 1 = Phase A only, 2 = Phase B only.\n\n" +
                  "Phase B is never run first for someone doing both: its attribution " +
@@ -399,7 +403,12 @@ namespace EmotionRooms
             // the grid for the first time on a scored trial. practiceOnly stops there.
             if (trialRunner != null && practiceRooms)
             {
-                runBlockAfterPractice = !practiceOnly;
+                // Practice goes on into the block too, just a short way in. A
+                // rehearsal that stops before the questions rehearses nothing that
+                // matters, and it is the questions a pilot needs to check.
+                runBlockAfterPractice = true;
+                if (oversightReview != null)
+                    oversightReview.trialLimit = practiceOnly ? practiceTrialCount : 0;
                 trialRunner.practiceOnly = true;   // warm-up only; the block follows
                 trialRunner.BeginSession();
                 return;                            // OnSessionFinished starts the block
@@ -542,14 +551,6 @@ namespace EmotionRooms
             // Reached when the warm-up ends. A pilot asked for practice only stops
             // here; everyone else goes straight into the 32 unified trials, which is
             // the whole session under design-unified.md.
-            if (practiceOnly && !runBlockAfterPractice)
-            {
-                Debug.Log("StudyBootstrap: practice run finished. Nothing was scored.");
-                if (questionnaires != null) questionnaires.ShowSummary();
-                BundleNow("practice run finished");
-                return;
-            }
-
             practiceOnly = false;
             Debug.Log("StudyBootstrap: warm-up finished, starting the trials.");
             BeginReviewBlock();
@@ -777,9 +778,40 @@ namespace EmotionRooms
             skipButton = slab.transform;
         }
 
+        float skipArmedAt = -999f;
+
+        /// <summary>
+        /// Skip the running part. Two presses, because one press ends a block.
+        ///
+        /// This slab sits high and to the right so it takes a deliberate look to reach.
+        /// That stopped being true the moment the eye-height bug lifted the viewpoint by
+        /// 1.2 m: the button is at 2.35 m and the participant's head went to about 2.4 m,
+        /// which put it straight down the middle of where they were looking. One stray
+        /// trigger press ended the whole review block, and from the inside it simply
+        /// looked like the study finishing after the familiarisation rooms.
+        ///
+        /// The height bug is fixed. This is the second lock, because the cost of an
+        /// accidental press is an entire session and the cost of a deliberate one is
+        /// pressing twice.
+        /// </summary>
         bool SkipActivePart()
         {
             if (events != null) events.Write("pilot_skip_pressed", null);
+
+            if (Time.time - skipArmedAt > 4f)
+            {
+                skipArmedAt = Time.time;
+                if (board != null)
+                    board.Show("Skip this part?\n\nPress the button again to skip.\n" +
+                               "Do nothing and this goes away.");
+                if (events != null) events.Write("pilot_skip_armed", null);
+                return true;
+            }
+
+            skipArmedAt = -999f;
+            if (board != null) board.Hide();
+            if (events != null) events.Write("phase_skipped", null);
+
             if (trialRunner != null && trialRunner.IsRunning) trialRunner.SkipSession();
             else if (oversightReview != null && oversightReview.IsRunning) oversightReview.SkipBlock();
             else if (rationaleReview != null && rationaleReview.IsRunning) rationaleReview.SkipBlock();

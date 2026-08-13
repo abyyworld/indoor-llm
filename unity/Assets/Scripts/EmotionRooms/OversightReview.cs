@@ -270,6 +270,11 @@ namespace EmotionRooms
 
         public bool IsRunning { get; private set; }
 
+        [Tooltip("Run only the first N trials. 0 runs all of them.\n\n" +
+                 "Practice mode sets this so a rehearsal is the real task in miniature " +
+                 "rather than a different, shorter thing.")]
+        public int trialLimit;
+
         /// <summary>
         /// The room this trial is about, so the researcher can put it back on screen.
         ///
@@ -551,9 +556,20 @@ namespace EmotionRooms
             yield return new WaitForSeconds(briefingSeconds);
             if (board != null) board.Hide();
             completed.Clear();
-            TotalTrials = block.trials.Count;
 
-            for (int i = 0; i < block.trials.Count; i++)
+            // Practice runs the real thing, just less of it.
+            //
+            // Practice used to be two rooms and an affect grid, which rehearses the
+            // grid and nothing else -- not the reasoning, not the was-it-altered
+            // question, not repairing a room. The first time anybody met the actual
+            // task was on a scored trial, and a researcher testing the kit never saw
+            // the part most likely to be wrong.
+            int count = trialLimit > 0
+                ? Mathf.Min(trialLimit, block.trials.Count)
+                : block.trials.Count;
+            TotalTrials = count;
+
+            for (int i = 0; i < count; i++)
             {
                 yield return RunTrial(block.trials[i], i + 1);
             }
