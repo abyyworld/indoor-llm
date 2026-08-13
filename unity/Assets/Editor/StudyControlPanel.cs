@@ -59,6 +59,7 @@ namespace EmotionRooms.EditorTools
         string lastOutput = "";
         bool showScript;
         bool showTrouble;
+        bool showReplay;
 
         [MenuItem("Emotion Rooms/Study Control Panel _%#e", priority = -100)]
         public static void Open()
@@ -503,6 +504,31 @@ namespace EmotionRooms.EditorTools
                         EditorStyles.wordWrappedMiniLabel);
                     EditorGUILayout.Space(4f);
                 }
+
+                // Collapsed by default. It is used rarely, and a session panel that is
+                // mostly buttons the researcher must not press is a panel that gets
+                // misread under time pressure.
+                showReplay = EditorGUILayout.Foldout(showReplay,
+                    "If they ask to see the room again", true);
+                if (showReplay)
+                {
+                    EditorGUILayout.LabelField(
+                        "Puts the current room back in front of them. The trial is not " +
+                        "restarted and nothing they have answered changes. It is written " +
+                        "to the event log, so trials with an extra look can be identified " +
+                        "in the analysis rather than hidden inside a longer duration.",
+                        EditorStyles.wordWrappedMiniLabel);
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        if (GUILayout.Button("Show it for 5s"))
+                            StudyServerLink.Replay(cachedHeadsetIp, 5f);
+                        if (GUILayout.Button("10s"))
+                            StudyServerLink.Replay(cachedHeadsetIp, 10f);
+                        if (GUILayout.Button("20s (a full look)"))
+                            StudyServerLink.Replay(cachedHeadsetIp, 20f);
+                    }
+                }
+                EditorGUILayout.Space(4f);
 
                 EditorGUILayout.LabelField(
                     "If they want to stop, they take the headset off. Everything recorded " +

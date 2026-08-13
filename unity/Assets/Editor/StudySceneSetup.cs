@@ -652,6 +652,10 @@ namespace EmotionRooms.EditorTools
                     WorldLabel.Attach(step.transform,
                         i == 0 ? "not sure" : i == panel.confidenceSteps - 1 ? "certain" : "",
                         0.022f, new Vector3(0f, -1.6f, 0f));
+
+                    // Registered in order. The panel reads the scale off this list, not
+                    // off sibling index, because the caption above is also a child.
+                    panel.confidenceCells.Add(step.transform);
                 }
             }
 

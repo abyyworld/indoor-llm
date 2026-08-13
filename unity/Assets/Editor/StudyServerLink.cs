@@ -165,6 +165,21 @@ namespace EmotionRooms.EditorTools
         /// again on the other side. Two places to set a participant id is two places to
         /// get it different, and a mismatched id is a session whose files never join up.
         /// </summary>
+        /// <summary>
+        /// Ask the headset to put the current room back up for a few seconds.
+        ///
+        /// Researcher-initiated. Fire and forget: the answer is a participant seeing the
+        /// room, not a response the panel needs, and blocking the panel on a network
+        /// round trip is how it starts feeling slow.
+        /// </summary>
+        public static void Replay(string headsetIp, float seconds)
+        {
+            if (string.IsNullOrEmpty(headsetIp)) return;
+            Send(UnityWebRequest.Get(Root(headsetIp) + "/replay?seconds=" +
+                 seconds.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture)),
+                 body => { });
+        }
+
         public static void PushToHeadset(string headsetIp, string participant,
                                          bool practiceOnly, int sessionMode,
                                          bool pilotSkip,

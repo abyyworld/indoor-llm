@@ -347,6 +347,43 @@ namespace EmotionRooms
             // headset. Localhost only, like everything this server does, and every
             // answer it lands is marked REMOTE in the event log, so a driven session is
             // unmistakable in the data.
+            // Show the participant the room again, on the researcher's say-so.
+            //
+            // Not a participant control and not on any page they see. The questions come
+            // after the room is hidden, so "can I look again?" currently has to be
+            // answered no, and the answer that follows is given from memory.
+            if (path == "/replay")
+            {
+                var values = ParseForm(query);
+                string seconds;
+                float hold = values.TryGetValue("seconds", out seconds) &&
+                             float.TryParse(seconds, NumberStyles.Float,
+                                            CultureInfo.InvariantCulture, out float parsed)
+                    ? parsed : 8f;
+
+                var shown = new ManualResetEvent(false);
+                string outcome = "no room to show";
+                lock (mainThread)
+                {
+                    mainThread.Enqueue(() =>
+                    {
+                        try
+                        {
+                            if (review != null && review.IsRunning &&
+                                review.CurrentStimulus != null)
+                            {
+                                review.ReplayCurrentRoom(hold);
+                                outcome = "showing for " +
+                                          hold.ToString("0.#", CultureInfo.InvariantCulture) + "s";
+                            }
+                        }
+                        finally { shown.Set(); }
+                    });
+                }
+                shown.WaitOne(5000);
+                return "{\"replay\":\"" + Escape(outcome) + "\"}";
+            }
+
             if (path == "/answer")
             {
                 var values = ParseForm(query);

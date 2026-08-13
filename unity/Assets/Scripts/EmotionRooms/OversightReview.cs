@@ -270,6 +270,38 @@ namespace EmotionRooms
 
         public bool IsRunning { get; private set; }
 
+        /// <summary>
+        /// The room this trial is about, so the researcher can put it back on screen.
+        ///
+        /// Participants ask to see it again -- the questions come after the room is
+        /// hidden, and someone who was still thinking about the light when it vanished
+        /// has no way to check. Refusing costs an answer given from a half-memory; the
+        /// alternative is a researcher-triggered re-show, logged, that changes nothing
+        /// about the trial except how long it took.
+        /// </summary>
+        public RoomConfig CurrentStimulus { get; private set; }
+
+        /// <summary>
+        /// Put the current room back up for a few seconds. Researcher-initiated only.
+        ///
+        /// Logged as its own event so a trial with extra looks is identifiable in the
+        /// analysis rather than hidden inside a longer duration.
+        /// </summary>
+        public void ReplayCurrentRoom(float seconds)
+        {
+            if (!IsRunning || loader == null || CurrentStimulus == null) return;
+            StartCoroutine(ReplayRoutine(Mathf.Clamp(seconds, 1f, 60f)));
+        }
+
+        IEnumerator ReplayRoutine(float seconds)
+        {
+            if (events != null) events.WriteValues("room_replayed", null,
+                seconds.ToString("0.#", CultureInfo.InvariantCulture), "by=researcher");
+            loader.Load(CurrentStimulus);
+            yield return new WaitForSeconds(seconds);
+            loader.HideRooms();
+        }
+
         /// <summary>Trials finished, and how many there are. For the researcher panel.</summary>
         /// <remarks>
         /// The panel used to read its progress off TrialRunner and print "of 8". Under
@@ -627,6 +659,7 @@ namespace EmotionRooms
                     "shown_as=" + trial.target_emotion_shown);
             }
 
+            CurrentStimulus = trial.stimulus;
             loader.Load(trial.stimulus);
             if (events != null) events.WriteRoom("review_room_shown", trial.stimulus, trial.condition);
             yield return new WaitForSeconds(reviewExposureSeconds);

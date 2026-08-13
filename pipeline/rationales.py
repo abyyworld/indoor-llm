@@ -85,7 +85,7 @@ def describe(room: dict) -> str:
 #: the same words the correction buttons use, so a rationale never names a property
 #: in vocabulary the participant is not offered back.
 HUE_WORDS = {0: "red", 30: "orange", 60: "yellow", 90: "yellow-green", 120: "green",
-             180: "blue-green", 240: "blue", 270: "blue-violet", 300: "purple",
+             180: "blue-green", 240: "blue", 270: "purple", 300: "magenta",
              330: "pink"}
 LIGHT_WORDS = {150: "dim", 300: "medium", 500: "bright", 750: "very bright"}
 #: Material without any smoothness claim in it: roughness is a separate variable and

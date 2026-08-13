@@ -55,6 +55,11 @@ namespace EmotionRooms
             switch (field)
             {
                 case "hue":
+                    // Names checked against what the renderer actually produces at the
+                    // study's saturations, not against the angle's textbook name. 270 is
+                    // #ad82d8, which nobody calls blue-violet, and 300 is #d882d8, which
+                    // is magenta rather than purple. Two hues were competing for "purple"
+                    // and the nearer one was not getting it.
                     switch (value)
                     {
                         case "0": return "red";
@@ -64,8 +69,8 @@ namespace EmotionRooms
                         case "120": return "green";
                         case "180": return "blue-green";
                         case "240": return "blue";
-                        case "270": return "blue-violet";
-                        case "300": return "purple";
+                        case "270": return "purple";
+                        case "300": return "magenta";
                         case "330": return "pink";
                     }
                     break;

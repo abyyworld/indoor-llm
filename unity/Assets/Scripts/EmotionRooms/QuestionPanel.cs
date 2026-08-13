@@ -129,6 +129,20 @@ namespace EmotionRooms
             }
 
             gameObject.SetActive(true);
+
+            // A panel with nothing pressable is a hang, and it is silent.
+            //
+            // The block waits on an answer that cannot be given, the participant sees a
+            // room and a question and no way to respond, and the researcher outside sees
+            // a session that has simply stopped. Filtering by group and by allowed values
+            // can land on an empty set, so say so loudly rather than wait forever.
+            int pressable = 0;
+            foreach (var option in options)
+                if (option.target != null && option.target.gameObject.activeSelf) pressable++;
+            if (pressable == 0)
+                Debug.LogError("QuestionPanel " + name + ": no options are pressable for \"" +
+                               prompt + "\" (group=" + (group ?? "none") + "). The session " +
+                               "will wait here forever. This is a wiring or filter bug.");
         }
 
         public void Hide()
@@ -183,7 +197,7 @@ namespace EmotionRooms
 
             if (confidenceStrip != null && hit.IsChildOf(confidenceStrip))
             {
-                int index = confidenceStrip.GetSiblingIndexOf(hit);
+                int index = ConfidenceIndexOf(hit);
                 if (index >= 0 && confidenceSteps > 1)
                 {
                     Confidence = Mathf.Clamp01(index / (float)(confidenceSteps - 1));
@@ -211,6 +225,38 @@ namespace EmotionRooms
                 return CommitIfComplete();
             }
             return false;
+        }
+
+        [Tooltip("The confidence cells in order, filled by scene setup. Their ORDER is " +
+                 "the scale, which is why they are a list and not children of a strip.")]
+        public List<Transform> confidenceCells = new List<Transform>();
+
+        /// <summary>
+        /// Which confidence step was hit, or -1 for a press on the strip but not a cell.
+        ///
+        /// This used to be the hit's sibling index under the strip, and the strip's first
+        /// child is the "How sure are you?" caption. So the five cells were siblings one
+        /// through five, and index/(steps-1) produced 0.25, 0.5, 0.75, 1.0 and 1.25
+        /// clamped to 1.0: the scale could never return zero and its top two steps were
+        /// the same number. Every confidence value collected so far is on that scale.
+        ///
+        /// Sibling index was also fragile in a way that could hang a session. A cell
+        /// carries a label child, and anything that put a collider on a descendant would
+        /// give a hit whose sibling index is -1 -- inside the strip by IsChildOf, not a
+        /// cell by index -- so the press registered as nothing, confidenceChosen stayed
+        /// false, and the panel waited for a confidence it had already been given. There
+        /// is no way out of that from inside the headset.
+        ///
+        /// A registered list and a walk up the parents removes both.
+        /// </summary>
+        int ConfidenceIndexOf(Transform hit)
+        {
+            for (var node = hit; node != null && node != confidenceStrip; node = node.parent)
+            {
+                int found = confidenceCells.IndexOf(node);
+                if (found >= 0) return found;
+            }
+            return -1;
         }
 
         bool StripRequired()
