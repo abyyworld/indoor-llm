@@ -1095,7 +1095,7 @@ namespace EmotionRooms.EditorTools
             {
                 EditorUtility.DisplayDialog("Questionnaires missing",
                     "StreamingAssets/questionnaires.json is not there, so the build would " +
-                    "ship with no forms.\n\nRun: python3 -m pipeline.cli emit-questionnaires",
+                    "ship with no forms.\n\nRun: " + PythonTool.Cli + " emit-questionnaires",
                     "OK");
                 return;
             }
@@ -1106,7 +1106,7 @@ namespace EmotionRooms.EditorTools
                 EditorUtility.DisplayDialog("Participant packs missing",
                     "StreamingAssets/participants is empty, so the build would have no " +
                     "rooms to show and no way to make any.\n\n" +
-                    "Run: python3 -m pipeline.cli build-participants", "OK");
+                    "Run: " + PythonTool.Cli + " build-participants", "OK");
                 return;
             }
 

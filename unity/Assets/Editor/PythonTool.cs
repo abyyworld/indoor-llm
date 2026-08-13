@@ -41,6 +41,25 @@ namespace EmotionRooms.EditorTools
         /// <summary>The name that worked last time, tried first from then on.</summary>
         static string found;
 
+        /// <summary>
+        /// How to spell a pipeline command on THIS machine, for text a person will read.
+        ///
+        /// Every dialog in the project used to say "python3 -m pipeline.cli ...". On
+        /// Windows python3 usually does not exist, so the one instruction offered to
+        /// the researcher who runs the sessions was an instruction that fails.
+        /// </summary>
+        public static string Cli
+        {
+            get
+            {
+                string exe = found;
+                if (string.IsNullOrEmpty(exe))
+                    exe = Application.platform == RuntimePlatform.WindowsEditor
+                        ? "python" : "python3";
+                return exe + (exe == "py" ? " -3" : "") + " -m pipeline.cli";
+            }
+        }
+
         /// <summary>What to tell someone when no interpreter can be started.</summary>
         public static string InstallHint(IEnumerable<string> tried)
         {

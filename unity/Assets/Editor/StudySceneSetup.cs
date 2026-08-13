@@ -845,7 +845,7 @@ namespace EmotionRooms.EditorTools
             else if (!File.Exists(Path.Combine(Application.streamingAssetsPath,
                                                "questionnaires.json")))
                 problems.Add("no StreamingAssets/questionnaires.json (build it with: " +
-                             "python3 -m pipeline.cli emit-questionnaires). The session " +
+                             PythonTool.Cli + " emit-questionnaires). The session " +
                              "will run, but with no forms at all.");
 
             if (bootstrap != null && bootstrap.detectionPanel == null)
@@ -859,7 +859,7 @@ namespace EmotionRooms.EditorTools
             string session = Path.Combine(Application.persistentDataPath, "session.json");
             if (!File.Exists(session))
                 problems.Add("no session.json at " + Application.persistentDataPath +
-                             " (build one with: python3 -m pipeline.cli export-unity)");
+                             " (build one with: " + PythonTool.Cli + " export-unity)");
 
             if (problems.Count == 0)
                 Debug.Log("Scene check passed. Session file found, everything wired.");
