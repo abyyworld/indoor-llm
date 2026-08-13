@@ -330,6 +330,9 @@ namespace EmotionRooms
         /// armchair is offset rather than centred so the sofa keeps the symmetric
         /// position the brief specifies.
         /// </summary>
+        /// <summary>Whether the rug takes the room's colour and material like the floor.</summary>
+        public const bool RugFollowsDesign = true;
+
         static void AddFurniture(GameObject root, float depth)
         {
             var furniture = new GameObject("Fixed Furnishing");
@@ -373,9 +376,32 @@ namespace EmotionRooms
             if (!TryModel(furniture, "teacup", "Teacup", teacupAt, new Vector3(0.1f, 0.09f, 0.1f), 0f))
                 BuildTeacup(furniture, teacupAt);
 
+            // The rug is a floor covering, so it follows the design like the floor does.
+            //
+            // Every other piece here is furnishing and stays neutral, which is what
+            // keeps the manipulation off the sofa. The rug is the one piece that is not
+            // furniture in that sense: it is 2.4 by 1.6 metres of floor, directly in
+            // front of a seated participant and squarely in the middle of where they
+            // look. Left neutral it is a grey patch covering an eighth of the floor area
+            // the manipulation is carried on -- it does not protect the manipulation, it
+            // dilutes it, in the part of the view that matters most.
+            //
+            // Set RugFollowsDesign false to put it back to neutral. It changes the
+            // stimulus either way, so it is a decision rather than a detail.
             if (!TryModel(furniture, "rug", "Rug", rugAt, new Vector3(2.4f, 0.02f, 1.6f), 0f))
                 AddBox(furniture, "Rug", rugAt + new Vector3(0f, 0.01f, 0f),
                     new Vector3(2.4f, 0.02f, 1.6f), 0f, 0.60f);
+
+            if (RugFollowsDesign)
+            {
+                // Whichever of the two made it -- real model or placeholder box -- it is
+                // named Rug and it is the only thing under here that is.
+                var rug = furniture.transform.Find("Rug");
+                if (rug != null)
+                    foreach (var piece in rug.GetComponentsInChildren<Renderer>(true))
+                        if (piece.GetComponent<TintableSurface>() == null)
+                            piece.gameObject.AddComponent<TintableSurface>();
+            }
 
             if (!TryModel(furniture, "bookshelf", "Bookshelf", shelfAt, new Vector3(0.9f, 1.8f, 0.35f), BookshelfYaw))
                 BuildBookshelf(furniture, shelfAt, BookshelfYaw);

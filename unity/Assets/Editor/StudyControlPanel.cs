@@ -413,6 +413,22 @@ namespace EmotionRooms.EditorTools
         void DrawApkSession()
         {
             bool app = headsetApp != null;
+
+            // Present is not the same as answering, and the runbook must key off
+            // present.
+            //
+            // Horizon OS pauses the app whenever the headset is off a head. That is
+            // precisely when the researcher is looking at this panel: reading the next
+            // step, opening the questionnaires, about to press start. The status poll
+            // gets nothing, headsetApp goes null, and the panel used to fall all the way
+            // back to step 0 and offer to install an app that was already installed and
+            // already running. The start button simply was not there.
+            //
+            // adb knows the process exists whether or not the game thread is pumping, so
+            // that is what decides which step we are on. Pressing start while the app is
+            // paused is fine: the request lands in the queue and runs the moment the
+            // headset goes on, which is the order a session happens in anyway.
+            bool present = app || cachedAppAlive;
             bool running = app && headsetApp.running;
             // Against what the app actually reports, not a number from an older
             // design. Hardcoded 8 meant a completed 32-trial session never registered
@@ -421,7 +437,7 @@ namespace EmotionRooms.EditorTools
                             headsetApp.of > 0 && headsetApp.trial >= headsetApp.of;
             bool haveId = !string.IsNullOrEmpty(participant);
 
-            int live = !app ? 0 : running ? 2 : finished ? 3 : 1;
+            int live = !present ? 0 : running ? 2 : finished ? 3 : 1;
 
             Step(0, live, "Study app on the headset",
                 app ? "Running and reachable at " + cachedHeadsetIp + "."
@@ -455,6 +471,12 @@ namespace EmotionRooms.EditorTools
                 "One page, on this laptop, headset off. Then fit the headset and start.");
             if (live == 1)
             {
+                if (!app)
+                    EditorGUILayout.HelpBox(
+                        "The headset is off, so the app is paused and cannot answer yet. " +
+                        "That is normal. Press start, then fit the headset: the session " +
+                        "begins as they put it on.", MessageType.Info);
+
                 using (new EditorGUI.DisabledScope(!haveId))
                 {
                     if (GUILayout.Button("Open the first questionnaires", GUILayout.Height(26f)))
