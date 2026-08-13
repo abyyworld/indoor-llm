@@ -166,32 +166,81 @@ namespace EmotionRooms
         /// be when it woke. Without it a participant's height is whatever the runtime
         /// last calibrated, and the standing position stops meaning anything.
         /// </summary>
-        void UseFloorOrigin()
+        bool UseFloorOrigin()
         {
             var subsystems = new List<XRInputSubsystem>();
             SubsystemManager.GetSubsystems(subsystems);
+
+            // Nothing to ask yet. The input subsystem comes up a frame or two after the
+            // display does, so the first time this runs the list is usually empty --
+            // which is not a refusal and must not be recorded as one.
+            if (subsystems.Count == 0) return false;
+
+            bool floor = false;
             foreach (var subsystem in subsystems)
             {
-                if (subsystem.GetTrackingOriginMode() == TrackingOriginModeFlags.Floor) continue;
-                if (!subsystem.TrySetTrackingOriginMode(TrackingOriginModeFlags.Floor))
-                    Debug.LogWarning("[XRRig] The runtime refused floor-referenced " +
-                                     "tracking; heights will be measured from the " +
-                                     "headset's own origin instead.");
+                if (subsystem.GetTrackingOriginMode() == TrackingOriginModeFlags.Floor ||
+                    subsystem.TrySetTrackingOriginMode(TrackingOriginModeFlags.Floor))
+                    floor = true;
             }
+            return floor;
         }
 
-        bool askedForFloor;
+        /// <summary>
+        /// Put the viewpoint at a seated eye height when the runtime will not give us a
+        /// floor-referenced pose.
+        ///
+        /// Device-referenced tracking reports height from wherever the headset was when
+        /// it woke, which is near zero. The anchor sits on the floor, so the camera
+        /// lands on the floor too and the participant is looking at the underside of
+        /// it: "spawned under the ground". Lifting the anchor by a seated eye height is
+        /// not as good as a real floor reference, since it assumes a height rather than
+        /// measuring one, but it is the difference between a usable session and one
+        /// nobody can run.
+        /// </summary>
+        void FallBackToAssumedEyeHeight()
+        {
+            if (Origin == null || liftedForMissingFloor) return;
+            liftedForMissingFloor = true;
+            Origin.position += new Vector3(0f, SeatedEyeHeight, 0f);
+            Debug.LogWarning("[XRRig] The runtime never gave floor-referenced tracking, " +
+                             "so the viewpoint is lifted by an assumed seated eye height " +
+                             "of " + SeatedEyeHeight + " m. Set the Quest's boundary and " +
+                             "restart if the height looks wrong.");
+        }
+
+        /// <summary>A seated adult's eyes, used only when the runtime gives us nothing.</summary>
+        const float SeatedEyeHeight = 1.2f;
+
+        /// <summary>How long to keep asking before assuming the answer is no.</summary>
+        const float FloorOriginPatience = 5f;
+
+        bool floorConfirmed;
+        bool liftedForMissingFloor;
+        float askingSince = -1f;
 
         void Update()
         {
             HeadsetPresent = IsHeadsetRunning();
 
-            if (HeadsetPresent && !askedForFloor)
+            // Keep asking until it takes.
+            //
+            // This used to fire once, on the first frame the headset appeared, and set
+            // its "asked" flag before the call. The input subsystem is usually not up
+            // that early, so the request went to an empty list, silently did nothing,
+            // and was never made again. The session then ran device-referenced: pose
+            // height near zero, camera on the floor rather than above it, and the
+            // participant looking up at the underside of the room they were supposed to
+            // be sitting in.
+            if (HeadsetPresent && !floorConfirmed)
             {
-                askedForFloor = true;
-                UseFloorOrigin();
-            }
+                if (askingSince < 0f) askingSince = Time.realtimeSinceStartup;
+                floorConfirmed = UseFloorOrigin();
 
+                if (!floorConfirmed &&
+                    Time.realtimeSinceStartup - askingSince > FloorOriginPatience)
+                    FallBackToAssumedEyeHeight();
+            }
         }
 
         /// <summary>
