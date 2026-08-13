@@ -2237,3 +2237,42 @@ class TestRoughnessVariable(unittest.TestCase):
         without = {k: v for k, v in self.BASE.items() if k != "roughness"}
         violations = validate_room_config(without)
         self.assertEqual([v.field for v in violations], ["roughness"])
+
+
+class UnityScriptLayoutTests(unittest.TestCase):
+    """Every MonoBehaviour must sit in a file named after it.
+
+    Not a style preference. Unity builds one MonoScript per .cs file and matches it
+    to the class by file name; a MonoBehaviour whose name differs has no MonoScript,
+    so AddComponent works in memory and then writes nothing when the scene is saved.
+    Other components keep their serialized references to it, and the player reads a
+    string field off the end of the file and dies in CachedReader::OutOfBoundsError
+    on the preload thread, before a single line of our code runs.
+
+    That is what QuestionnaireRunner-in-Questionnaire.cs did, and it cost days on two
+    headsets. The mistake is invisible in the editor and silent in the build log, so
+    it is worth a test rather than a habit.
+    """
+
+    def test_monobehaviour_file_names_match(self):
+        import re
+
+        scripts = os.path.join(ROOT, "unity", "Assets", "Scripts")
+        pattern = re.compile(r"\bclass\s+([A-Za-z_]\w*)\s*:\s*MonoBehaviour\b")
+
+        wrong = []
+        for folder, _, names in os.walk(scripts):
+            for name in names:
+                if not name.endswith(".cs"):
+                    continue
+                path = os.path.join(folder, name)
+                with open(path, encoding="utf-8") as handle:
+                    found = pattern.findall(handle.read())
+                stem = name[:-3]
+                if found and stem not in found:
+                    wrong.append("%s declares %s" % (name, ", ".join(found)))
+
+        self.assertEqual(
+            wrong, [],
+            "a MonoBehaviour is in a file with a different name, which Unity cannot "
+            "serialize into a scene:\n  " + "\n  ".join(wrong))

@@ -662,9 +662,4 @@ namespace EmotionRooms
         }
     }
 
-    /// <summary>
-    /// Marks a surface whose colour and roughness the config drives. Walls, floors and
-    /// ceilings carry this; furniture deliberately does not.
-    /// </summary>
-    public class TintableSurface : MonoBehaviour { }
 }
