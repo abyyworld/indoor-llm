@@ -646,8 +646,22 @@ namespace EmotionRooms
             while (!detectionAnswered) yield return null;
             if (detectionPanel != null) detectionPanel.Hide();
             if (telemetry != null) telemetry.SetDetection(pendingDetected, pendingDetectionConfidence);
+            // The scored verdict, kept somewhere the rest of the trial cannot reach.
+            //
+            // pendingDetected is the shared inbox for every yes/no this panel collects,
+            // and the "is anything else wrong?" follow-up further down writes to it too.
+            // Answering "no, nothing else" therefore overwrote the participant's actual
+            // detection with false, and that overwritten value was what got recorded and
+            // what gated the correction. Every trial where someone spotted a fault and
+            // then said nothing further was wrong -- the normal case -- was stored as a
+            // miss, with no correction applied and no second rating taken.
+            //
+            // Left alone this produces a d-prime built from zero hits and an entirely
+            // absent correction arm, in a file that looks complete.
+            bool detectedRoom = pendingDetected;
+
             if (events != null)
-                events.WriteValues("detection_answered", pendingDetected ? "noticed_swap" : "looks_consistent",
+                events.WriteValues("detection_answered", detectedRoom ? "noticed_swap" : "looks_consistent",
                     pendingDetectionConfidence.ToString("0.##"), null);
 
             // The reasoning question comes AFTER the detection judgement, deliberately.
@@ -684,7 +698,7 @@ namespace EmotionRooms
             appliedValue = "";
             correctionSource = "";
 
-            if (pendingDetected)
+            if (detectedRoom)
             {
                 attributionAnswered = false;
                 if (attributionPanel != null)
@@ -727,7 +741,7 @@ namespace EmotionRooms
             // event log and the extras column, never applied to the room -- the yoked
             // control below is designed around a single applied correction.
             string primaryCorrection = pendingCorrectedValue;
-            if (pendingDetected && !string.IsNullOrEmpty(pendingAttributedField))
+            if (detectedRoom && !string.IsNullOrEmpty(pendingAttributedField))
             {
                 var named = new List<string> { pendingAttributedField };
                 var extras = new StringBuilder();
@@ -799,7 +813,7 @@ namespace EmotionRooms
             int valenceAfter = -1, arousalAfter = -1;
             bool applied = false;
 
-            if (applyAndReRate && grid != null && pendingDetected &&
+            if (applyAndReRate && grid != null && detectedRoom &&
                 !string.IsNullOrEmpty(pendingAttributedField) &&
                 !string.IsNullOrEmpty(pendingCorrectedValue))
             {
@@ -875,7 +889,7 @@ namespace EmotionRooms
                 trialId = trial.trial_id,
                 condition = trial.condition,
                 targetEmotionShown = trial.target_emotion_shown,
-                detected = pendingDetected,
+                detected = detectedRoom,
                 detectionConfidence = pendingDetectionConfidence,
                 attributedField = pendingAttributedField,
                 extraAttributions = pendingExtras,
