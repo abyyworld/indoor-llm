@@ -247,6 +247,51 @@ namespace EmotionRooms
         }
 
         bool bundledOnExit;
+        float lastSaveAt = -999f;
+
+        /// <summary>
+        /// Save at every interruption, not only at a clean end.
+        ///
+        /// The combined file used to be written on OnApplicationQuit, on withdrawal, or
+        /// on finishing. Horizon OS does not reliably call OnApplicationQuit -- it kills
+        /// the process -- so on a headset that path fires when it feels like it, and the
+        /// only reliable writer was a session someone sat all the way through. A session
+        /// that ended any other way left no combined file at all.
+        ///
+        /// Pause is the honest signal. It fires every time the headset leaves someone's
+        /// head, which covers a break, a strap adjustment, a participant stopping, the
+        /// battery going, and the OS reclaiming the app. Anything that ends a session
+        /// ends it through here first.
+        ///
+        /// Throttled, because pause fires often and a bundle re-reads every response
+        /// file. Ten seconds is far below the cost of losing a session and far above the
+        /// rate anything changes.
+        /// </summary>
+        void SaveEverything(string why)
+        {
+            if (Time.realtimeSinceStartup - lastSaveAt < 10f) return;
+            lastSaveAt = Time.realtimeSinceStartup;
+
+            // Buffered writers first. The per-trial responses are already on disk -- they
+            // are appended and closed per row -- but the event log and telemetry hold up
+            // to a few rows, and those rows are what explain a session that stopped.
+            foreach (var log in FindObjectsByType<EventLog>(FindObjectsSortMode.None))
+                log.Flush();
+            foreach (var stream in FindObjectsByType<StudyTelemetry>(FindObjectsSortMode.None))
+                stream.Flush();
+
+            BundleNow(why);
+        }
+
+        void OnApplicationPause(bool paused)
+        {
+            if (paused) SaveEverything("headset set down or app paused");
+        }
+
+        void OnApplicationFocus(bool focused)
+        {
+            if (!focused) SaveEverything("app lost focus");
+        }
 
         void OnDestroy()
         {
