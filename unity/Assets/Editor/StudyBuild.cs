@@ -19,6 +19,39 @@ namespace EmotionRooms.EditorTools
 {
     public static class StudyBuild
     {
+        /// <summary>
+        /// Where a build goes: asked in the editor, defaulted when there is nobody to ask.
+        ///
+        /// A folder panel cannot open in batch mode. Unity does not block on it, it
+        /// cancels it and returns "", so <c>-executeMethod ... BuildMac</c> used to log
+        /// "Cancelling FileDialog" and exit zero having built nothing. An automated
+        /// build that reports success and produces no player is worse than one that
+        /// fails, so batch mode now writes to build/&lt;label&gt; beside the project, or
+        /// to whatever follows -buildOut on the command line.
+        /// </summary>
+        static string OutputFolder(string label)
+        {
+            var args = Environment.GetCommandLineArgs();
+            for (int i = 0; i < args.Length - 1; i++)
+                if (args[i] == "-buildOut") return Ensure(args[i + 1]);
+
+            if (!Application.isBatchMode)
+                return EditorUtility.SaveFolderPanel(
+                    "Where should the " + label + " build go?", "", "");
+
+            string project = Path.GetDirectoryName(Application.dataPath);
+            string chosen = Path.Combine(Path.GetDirectoryName(project), "build", label);
+            Debug.Log("Study build: batch mode, so writing to " + chosen +
+                      " (pass -buildOut <path> to choose).");
+            return Ensure(chosen);
+        }
+
+        static string Ensure(string path)
+        {
+            Directory.CreateDirectory(path);
+            return path;
+        }
+
         [MenuItem("Emotion Rooms/Advanced/Build for Windows (for Mengkai)", priority = 121)]
         public static void BuildWindows()
         {
@@ -1077,8 +1110,7 @@ namespace EmotionRooms.EditorTools
                 return;
             }
 
-            string folder = EditorUtility.SaveFolderPanel(
-                "Where should the " + label + " build go?", "", "");
+            string folder = OutputFolder(label);
             if (string.IsNullOrEmpty(folder)) return;
 
             string scene = EditorSceneManagerScenePath();
@@ -1089,6 +1121,20 @@ namespace EmotionRooms.EditorTools
                     "Save it, then build again.", "OK");
                 return;
             }
+
+            // Regenerate the scene, exactly as InstallAndRun does.
+            //
+            // This line is why the same commit produced a working app here and a load
+            // crash on the other researcher's machine. InstallAndRun rebuilt the scene
+            // before every build; this path did not, so the menu builds -- including
+            // "Build for Windows (for Mengkai)" and the standalone APK -- shipped
+            // whatever was last saved to disk. A stale scene deserialises into
+            // CachedReader::OutOfBoundsError on the preload thread, which is the crash
+            // that cost days, and it reproduces from a clean clone in one build.
+            //
+            // Nobody should have to know which button regenerates the scene. Every
+            // build path now does.
+            StudySceneSetup.SetUp(true);
 
             // Belt and braces on top of the save in scene setup: a build takes what is on
             // disk, and an unsaved edit made between rebuilding and building would be left
@@ -1166,8 +1212,10 @@ namespace EmotionRooms.EditorTools
 "   a repeat writes two people into one file and neither can be separated later.\n" +
 "4. Headset OFF. Open the four 'before' forms from the panel; they open in your\n" +
 "   browser. Let the participant fill them in themselves.\n" +
-"5. Fit the headset. Press Begin. About 27 minutes: two practice rooms, eight\n" +
-"   real ones, then a review block. You do nothing during this.\n" +
+"5. Fit the headset. Press Begin. Two warm-up rooms, then 32 rooms to rate and\n" +
+"   check. You do nothing during this. Expect 35 to 45 minutes: a participant\n" +
+"   who says a room looks wrong is asked to repair it and rate it again, so\n" +
+"   the length depends on them and a long session is not a fault.\n" +
 "6. Headset off. Open the 'after' forms. The debrief is the last one and\n" +
 "   explains the study -- do not skip it.\n" +
 "7. Press 'Save and finish'. Note on paper anything the panel still lists as\n" +
@@ -1214,7 +1262,25 @@ namespace EmotionRooms.EditorTools
         static string EditorSceneManagerScenePath()
         {
             var scene = UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene();
-            return string.IsNullOrEmpty(scene.path) ? null : scene.path;
+            if (!string.IsNullOrEmpty(scene.path)) return scene.path;
+
+            // Batch mode starts with an empty untitled scene, so the study scene has to
+            // be opened before there is anything to build. In the editor an empty path
+            // means the person really has an unsaved scene open and should be told, so
+            // only the headless case falls back to the one scene in the project.
+            if (!Application.isBatchMode) return null;
+
+            var found = AssetDatabase.FindAssets("t:Scene");
+            foreach (var guid in found)
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                if (!path.StartsWith("Assets/")) continue;
+                Debug.Log("Study build: batch mode, so opening " + path + " to build it.");
+                UnityEditor.SceneManagement.EditorSceneManager.OpenScene(
+                    path, UnityEditor.SceneManagement.OpenSceneMode.Single);
+                return path;
+            }
+            return null;
         }
     }
 }

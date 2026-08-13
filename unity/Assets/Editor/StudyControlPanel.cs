@@ -470,7 +470,7 @@ namespace EmotionRooms.EditorTools
                     ? (headsetApp.reviewing
                         ? "Review block. Nothing to do."
                         : "Trial " + headsetApp.trial + " of " + headsetApp.of + ". Nothing to do.")
-                    : "About 27 minutes once started.");
+                    : "About 40 minutes once started.");
             if (live == 2)
                 EditorGUILayout.LabelField(
                     "If they want to stop, they take the headset off. Everything recorded " +
@@ -570,7 +570,7 @@ namespace EmotionRooms.EditorTools
 
             Step(3, live, "The rooms are running",
                 running ? "Trial " + server.trial + " of " + server.of + ". Nothing to do."
-                        : "About 27 minutes once started.");
+                        : "About 40 minutes once started.");
 
             Step(4, live, "Last questionnaires", "Headset off. The debrief is in here.");
             if (live == 4)
