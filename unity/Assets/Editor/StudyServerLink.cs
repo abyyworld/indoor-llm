@@ -36,6 +36,9 @@ namespace EmotionRooms.EditorTools
         public bool reviewing;
         public int trial;
         public int of;
+
+        /// <summary>The words the participant is reading right now, or empty.</summary>
+        public string onscreen;
     }
 
     public static class StudyServerLink

@@ -297,7 +297,21 @@ namespace EmotionRooms
                     done = review.CompletedTrials;
                     total = review.TotalTrials > 0 ? review.TotalTrials : total;
                 }
-                return "{\"participant\":\"" + Escape(bootstrap != null ? bootstrap.participantId : "") +
+                // Mirror whatever the participant is reading right now.
+                //
+                // The researcher cannot see into the headset, so an instruction that was
+                // missed can only be repeated from memory, and a paraphrase is not
+                // neutral when the wording is the manipulation. A question panel wins
+                // over the message board because a question is what someone is most
+                // likely to ask about.
+                string onScreen = "";
+                var live = bootstrap != null ? bootstrap.CurrentPanel() : null;
+                if (live != null) onScreen = live.prompt;
+                else if (bootstrap != null && bootstrap.board != null)
+                    onScreen = bootstrap.board.Current;
+
+                return "{\"onscreen\":\"" + Escape(onScreen ?? "") +
+                       "\",\"participant\":\"" + Escape(bootstrap != null ? bootstrap.participantId : "") +
                        "\",\"practice\":" + (bootstrap != null && bootstrap.practiceOnly ? "true" : "false") +
                        ",\"phases\":" + (bootstrap != null ? bootstrap.sessionMode : 0) +
                        ",\"running\":" + ((running || reviewing) ? "true" : "false") +

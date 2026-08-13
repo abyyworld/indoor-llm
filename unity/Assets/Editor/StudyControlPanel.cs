@@ -470,9 +470,32 @@ namespace EmotionRooms.EditorTools
                     ? "Trial " + headsetApp.trial + " of " + headsetApp.of + ". Nothing to do."
                     : "About 40 minutes once started.");
             if (live == 2)
+            {
+                // What they are reading, so it can be repeated word for word.
+                //
+                // The researcher cannot see into the headset. A participant who says
+                // "sorry, what did that say?" could only be answered from memory, and a
+                // paraphrased instruction is not the instruction: the wording of the
+                // detection question and the briefing is part of the manipulation.
+                if (!string.IsNullOrEmpty(headsetApp.onscreen))
+                {
+                    EditorGUILayout.LabelField("They are reading:", EditorStyles.miniBoldLabel);
+                    EditorGUILayout.SelectableLabel(headsetApp.onscreen,
+                        EditorStyles.wordWrappedLabel,
+                        GUILayout.Height(Mathf.Min(120f,
+                            EditorStyles.wordWrappedLabel.CalcHeight(
+                                new GUIContent(headsetApp.onscreen),
+                                EditorGUIUtility.currentViewWidth - 40f) + 6f)));
+                    EditorGUILayout.LabelField(
+                        "Read this back if they missed it. Do not paraphrase.",
+                        EditorStyles.wordWrappedMiniLabel);
+                    EditorGUILayout.Space(4f);
+                }
+
                 EditorGUILayout.LabelField(
                     "If they want to stop, they take the headset off. Everything recorded " +
                     "so far is kept.", EditorStyles.wordWrappedMiniLabel);
+            }
 
             Step(3, live, "Last questionnaires",
                 "Headset off, back on this laptop. The debrief is in here.");

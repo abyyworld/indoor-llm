@@ -40,16 +40,26 @@ namespace EmotionRooms
             Hide();
         }
 
+        /// <summary>
+        /// What is on the board right now, empty when nothing is. Read by the researcher
+        /// panel so the person running the session can see the words the participant is
+        /// reading, and repeat them exactly if they were missed. Paraphrasing an
+        /// instruction is not neutral when the wording is part of the manipulation.
+        /// </summary>
+        public string Current { get; private set; }
+
         public void Show(string message)
         {
             WorldLabel.SetText(text, message);
             PlaceInFront();
             board.gameObject.SetActive(true);
+            Current = message ?? "";
         }
 
         public void Hide()
         {
             if (board != null) board.gameObject.SetActive(false);
+            Current = "";
         }
 
         void Update()
