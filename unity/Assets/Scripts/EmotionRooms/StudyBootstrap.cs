@@ -749,6 +749,7 @@ namespace EmotionRooms
                 hit = info.transform.name;
             var row = hand + " from " + ray.origin.ToString("F3") +
                       " dir " + ray.direction.ToString("F3");
+            if (xrRig != null) xrRig.NoteInput();
             events.WriteValues("trigger_press", hand, hit, row);
         }
 
@@ -779,6 +780,8 @@ namespace EmotionRooms
         /// while the pointer worked perfectly. Re-evaluated every frame, the message
         /// appears when a controller really is missing and clears the moment one reports.
         /// </summary>
+        string interruptedBoardText;
+
         void PollController()
         {
             if (xrRig == null || board == null || !xrRig.HeadsetPresent) return;
@@ -786,6 +789,18 @@ namespace EmotionRooms
             bool tracked = xrRig.ControllerTracked();
             if (!tracked && !warnedNoController)
             {
+                // Put back whatever was there afterwards.
+                //
+                // This warning borrows the one board the study also uses for the
+                // briefing, the familiarisation labels and the system's stated
+                // reasoning. It used to clear itself with a plain Hide(), so a
+                // controller that dropped out for a moment during the briefing took the
+                // briefing with it and nothing brought it back: the participant was left
+                // in a room with no instructions and no way to ask for them.
+                //
+                // A controller dropping out is also the most likely moment for exactly
+                // that, because it happens while somebody is sitting still reading.
+                interruptedBoardText = board.Current;
                 warnedNoController = true;
                 board.Show("No controller detected.\n\nPick one up and squeeze the " +
                            "trigger. A blue beam will appear.");
@@ -793,7 +808,11 @@ namespace EmotionRooms
             else if (tracked && warnedNoController)
             {
                 warnedNoController = false;
-                board.Hide();
+                if (!string.IsNullOrEmpty(interruptedBoardText))
+                    board.Show(interruptedBoardText);
+                else
+                    board.Hide();
+                interruptedBoardText = null;
             }
         }
 

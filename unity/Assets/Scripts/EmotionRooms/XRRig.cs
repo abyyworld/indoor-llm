@@ -299,11 +299,34 @@ namespace EmotionRooms
             return InputDevices.GetDeviceAtXRNode(node).isValid;
         }
 
-        /// <summary>Whether either hand's controller is reporting a pose.</summary>
+        /// <summary>When a trigger last fired, whatever the device list claims.</summary>
+        public float LastInputAt { get; private set; }
+
+        /// <summary>Call on every trigger press. Evidence beats the device list.</summary>
+        public void NoteInput() { LastInputAt = Time.time; }
+
+        /// <summary>
+        /// Whether a controller is usable. Not the same as isValid saying so.
+        ///
+        /// InputDevices.GetDeviceAtXRNode goes stale across the pause and resume cycle
+        /// that Horizon OS puts an app through every time the headset moves on someone's
+        /// head, and it can report invalid for a controller that is sending triggers.
+        /// That happened: an event log full of trigger_press rows, each with a real ray
+        /// direction, while the screen said no controller was detected -- and the warning
+        /// board sat in front of the affect grid, so every one of those presses hit the
+        /// warning instead of the instrument. The participant pressed, nothing advanced,
+        /// and the app blamed the controller they were holding.
+        ///
+        /// A trigger press within the last few seconds is proof, so it counts.
+        /// </summary>
         public bool ControllerTracked()
         {
+            if (Time.time - LastInputAt < RecentInputSeconds) return true;
             return Tracked(XRNode.RightHand) || Tracked(XRNode.LeftHand);
         }
+
+        /// <summary>How long a press counts as proof a controller is there.</summary>
+        const float RecentInputSeconds = 10f;
 
         /// <summary>Put both pointers back on the fixed angle, whatever the inspector says.</summary>
         public void ApplyPointerPitch()

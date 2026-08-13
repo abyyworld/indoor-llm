@@ -391,8 +391,28 @@ namespace EmotionRooms
             explanationAnswered = true;
         }
 
-        /// <summary>True while the reasoning-match question is the one on screen.</summary>
-        public bool AwaitingExplanationMatch { get { return IsRunning && !explanationAnswered; } }
+        /// <summary>Set only while the reasoning-match question is actually on screen.</summary>
+        bool askingExplanationMatch;
+
+        /// <summary>
+        /// True while the reasoning-match question is the one on screen.
+        ///
+        /// This used to be "IsRunning and the explanation has not been answered yet",
+        /// which is a different thing and wrong on exactly the trials where no reasoning
+        /// is shown. explanationAnswered starts false and is only ever set by answering
+        /// the reasoning question, so on a control trial it stayed false for the whole
+        /// trial -- and the detection answer was routed to CommitExplanationMatch
+        /// instead of CommitDetection.
+        ///
+        /// detectionAnswered then never became true, RunTrial spun on it forever, and
+        /// the panel had already hidden itself, so no further press could reach anything.
+        /// A participant sees the room freeze after they answer and presses into a void:
+        /// forty-eight trigger presses in the log after the last panel_committed.
+        ///
+        /// The two questions share one panel, so the router has to know which of them is
+        /// up. Only the question being on screen can say that.
+        /// </summary>
+        public bool AwaitingExplanationMatch { get { return IsRunning && askingExplanationMatch; } }
 
         public void CommitDetection(bool noticedSwap)
         {
@@ -624,6 +644,46 @@ namespace EmotionRooms
             if (events != null) events.Write("tour_finished", null);
         }
 
+        /// <summary>
+        /// Wait for an answer, and say so loudly if one can no longer arrive.
+        ///
+        /// Both hangs this block has produced looked the same from inside the headset:
+        /// the participant answers, the panel disappears, and nothing else happens. In
+        /// both cases the answer had been delivered somewhere the waiting loop was not
+        /// looking, so the flag it waited on could never be set and the panel that could
+        /// have set it was already hidden.
+        ///
+        /// A stuck block cannot be rescued from in here -- the answer is genuinely lost
+        /// -- but it can stop being invisible. The panel mirrors the message to the
+        /// researcher, and the log names the question, so a frozen session is a minute
+        /// of diagnosis instead of an evening.
+        /// </summary>
+        IEnumerator WaitForAnswer(Func<bool> answered, QuestionPanel panel, string what)
+        {
+            float began = Time.time;
+            bool complained = false;
+
+            while (!answered())
+            {
+                bool orphaned = panel != null && !panel.IsAwaitingAnswer;
+                if (!complained && orphaned && Time.time - began > 2f)
+                {
+                    complained = true;
+                    Debug.LogError("OversightReview: the " + what + " panel has closed but " +
+                                   "the block is still waiting for its answer. The answer " +
+                                   "went somewhere else and this trial cannot continue. " +
+                                   "This is a routing bug, not a participant problem.");
+                    if (events != null) events.WriteValues("answer_lost", what, null, null);
+                    if (board != null)
+                        board.Show("Something has gone wrong with this question.\n\n" +
+                                   "Please take the headset off and tell the researcher.");
+                }
+                yield return null;
+            }
+
+            if (complained && board != null) board.Hide();
+        }
+
         IEnumerator RunTrial(OversightTrialData trial, int index)
         {
             HideAll();
@@ -744,7 +804,7 @@ namespace EmotionRooms
                                     "Was this room altered?");
             if (telemetry != null) { telemetry.SetReviewSegment(true, false, false); telemetry.Mark("detection_shown"); }
             if (events != null) events.Write("detection_shown", null);
-            while (!detectionAnswered) yield return null;
+            yield return WaitForAnswer(() => detectionAnswered, detectionPanel, "detection");
             if (detectionPanel != null) detectionPanel.Hide();
             if (telemetry != null) telemetry.SetDetection(pendingDetected, pendingDetectionConfidence);
             // The scored verdict, kept somewhere the rest of the trial cannot reach.
@@ -777,6 +837,7 @@ namespace EmotionRooms
             if (trial.explanation_shown && !string.IsNullOrEmpty(trial.rationale_shown))
             {
                 explanationAnswered = false;
+                askingExplanationMatch = true;
                 if (detectionPanel != null)
                 {
                     // Plain yes/no. The scored confidence is the one attached to the
@@ -789,6 +850,7 @@ namespace EmotionRooms
                 }
                 if (events != null) events.Write("explanation_match_shown", null);
                 while (!explanationAnswered) yield return null;
+                askingExplanationMatch = false;
                 if (detectionPanel != null)
                 {
                     detectionPanel.Hide();
