@@ -212,8 +212,14 @@ namespace EmotionRooms
         /// <summary>A seated adult's eyes, used only when the runtime gives us nothing.</summary>
         const float SeatedEyeHeight = 1.2f;
 
-        /// <summary>How long to keep asking before assuming the answer is no.</summary>
-        const float FloorOriginPatience = 5f;
+        /// <summary>
+        /// How long to keep asking before assuming the answer is no.
+        ///
+        /// Fifteen rather than five. The subsystem can take its time on a cold start,
+        /// and guessing early is worse than waiting: a wrong guess has to be undone
+        /// while the participant is already inside the room.
+        /// </summary>
+        const float FloorOriginPatience = 15f;
 
         bool floorConfirmed;
         bool liftedForMissingFloor;
@@ -236,6 +242,24 @@ namespace EmotionRooms
             {
                 if (askingSince < 0f) askingSince = Time.realtimeSinceStartup;
                 floorConfirmed = UseFloorOrigin();
+
+                // Take the guess back the moment a measurement arrives.
+                //
+                // The fallback assumes a seated eye height and lifts the rig by it. If
+                // floor-referenced tracking then turns up -- and it can, several seconds
+                // late, because the input subsystem starts after the display -- the pose
+                // starts carrying the participant's real height too and the two add:
+                // 1.2 m of rig plus 1.2 m of person puts their eyes at the ceiling of a
+                // 2.4 m room. Standing under the ceiling is not obviously "too high" from
+                // the inside; it reads as the room being wrong, or as walking being
+                // broken, which is how it was reported.
+                if (floorConfirmed && liftedForMissingFloor)
+                {
+                    Origin.position -= new Vector3(0f, SeatedEyeHeight, 0f);
+                    liftedForMissingFloor = false;
+                    Debug.Log("[XRRig] Floor-referenced tracking arrived late; the assumed " +
+                              "eye height has been taken back off.");
+                }
 
                 if (!floorConfirmed &&
                     Time.realtimeSinceStartup - askingSince > FloorOriginPatience)
