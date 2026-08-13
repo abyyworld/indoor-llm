@@ -741,6 +741,20 @@ namespace EmotionRooms.EditorTools
         }
 
         /// <summary>
+        /// Whether the app's process is alive, which is not the same as answering.
+        ///
+        /// Horizon OS pauses the player the moment the headset leaves someone's head, so
+        /// an app sitting on a table is running and unreachable at once. Without this the
+        /// panel had to guess, and guessed "not running" -- which reads as a broken
+        /// install to the person about to run a session, and sent them round the build
+        /// loop again for nothing.
+        /// </summary>
+        public static bool IsProcessAlive()
+        {
+            return !string.IsNullOrEmpty(Run("shell pidof " + Package).Trim());
+        }
+
+        /// <summary>
         /// Start the app unless it is already running. Quiet by design: the panel calls
         /// this on its probe cadence, and a launch that is already satisfied should not
         /// say anything.

@@ -86,6 +86,7 @@ namespace EmotionRooms.EditorTools
         string cachedHeadsetIp;
         bool showBrowserRoute;
         HeadsetState headsetApp;   // what the app on the headset reports, or null
+        bool cachedAppAlive;       // its process exists, even if it is paused
 
         void Probe(bool force = false)
         {
@@ -107,6 +108,10 @@ namespace EmotionRooms.EditorTools
                     state => { headsetApp = state; Repaint(); });
             else
                 headsetApp = null;
+
+            // Alive is not the same as answering. Horizon OS pauses the player when the
+            // headset comes off, so a perfectly healthy app on a table does not reply.
+            cachedAppAlive = cachedDevices.Length > 0 && StudyBuild.IsProcessAlive();
 
             ReviveIfDead();
         }
@@ -267,8 +272,8 @@ namespace EmotionRooms.EditorTools
             EditorGUILayout.LabelField(practiceOnly
                 ? "Two warm-up rooms then stop. Nothing scored, no review block, no " +
                   "participant id used up. This is how to try the kit."
-                : "Warm-up rooms, 8 scored rooms, then the review block. About 45 minutes " +
-                  "including the questionnaires.",
+                : "Two warm-up rooms, then 32 trials. About 45 minutes including the " +
+                  "questionnaires, and longer for someone who repairs a lot of rooms.",
                 EditorStyles.wordWrappedMiniLabel);
         }
 
@@ -351,7 +356,7 @@ namespace EmotionRooms.EditorTools
 
             Row(session && block && practice,
                 session && block && practice
-                    ? "Rooms ready: 8 trials, 32 review trials, 6 rationale, 2 warm-up"
+                    ? "Rooms ready: 32 trials, 2 warm-up"
                     : "Rooms not built for this participant yet");
 
             using (new EditorGUI.DisabledScope(Application.isPlaying))
@@ -408,14 +413,21 @@ namespace EmotionRooms.EditorTools
         {
             bool app = headsetApp != null;
             bool running = app && headsetApp.running;
-            bool finished = app && !headsetApp.running && headsetApp.trial >= 8;
+            // Against what the app actually reports, not a number from an older
+            // design. Hardcoded 8 meant a completed 32-trial session never registered
+            // as finished, so the panel kept offering to start one that had just ended.
+            bool finished = app && !headsetApp.running &&
+                            headsetApp.of > 0 && headsetApp.trial >= headsetApp.of;
             bool haveId = !string.IsNullOrEmpty(participant);
 
             int live = !app ? 0 : running ? 2 : finished ? 3 : 1;
 
             Step(0, live, "Study app on the headset",
                 app ? "Running and reachable at " + cachedHeadsetIp + "."
-                    : "Installed but not running, or the headset is asleep.");
+                    : cachedAppAlive
+                        ? "Running, but not answering. The headset is off someone's " +
+                          "head, so the app is paused. Put it on and this goes green."
+                        : "Not running. Press Install, then put the headset on.");
             if (live == 0)
             {
                 // One button, because every one of the others was a step this button

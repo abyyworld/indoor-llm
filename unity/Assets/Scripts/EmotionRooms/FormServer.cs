@@ -248,35 +248,56 @@ namespace EmotionRooms
                 string phases;
                 values.TryGetValue("phases", out phases);
 
-                var applied = new ManualResetEvent(false);
-                lock (mainThread)
+                // Only hop to the main thread when there is actually something to set.
+                //
+                // This used to hop on every request, including the bare status poll the
+                // panel makes twice a second. Unity stops pumping the main thread when
+                // the headset comes off the participant's head -- Horizon OS tears the
+                // render surface down and the player pauses -- so every poll then blocked
+                // for the full five-second timeout and answered after the panel had given
+                // up. The panel concluded the app was not running, and said so, while the
+                // app was running perfectly well and merely on a table.
+                //
+                // The listener runs on its own thread and the fields below are plain
+                // reads, so a status poll is answered whether or not the game is pumping.
+                // Reading a value mid-write costs at worst a trial number one frame stale.
+                bool hasChanges = !string.IsNullOrEmpty(who) ||
+                                  !string.IsNullOrEmpty(practice) ||
+                                  !string.IsNullOrEmpty(phases) ||
+                                  values.ContainsKey("pilot");
+
+                if (hasChanges)
                 {
-                    mainThread.Enqueue(() =>
+                    var applied = new ManualResetEvent(false);
+                    lock (mainThread)
                     {
-                        try
+                        mainThread.Enqueue(() =>
                         {
-                            if (bootstrap != null)
+                            try
                             {
-                                if (!string.IsNullOrEmpty(who))
+                                if (bootstrap != null)
                                 {
-                                    bootstrap.participantId = who;
-                                    bootstrap.ApplyParticipantId();
+                                    if (!string.IsNullOrEmpty(who))
+                                    {
+                                        bootstrap.participantId = who;
+                                        bootstrap.ApplyParticipantId();
+                                    }
+                                    if (!string.IsNullOrEmpty(practice))
+                                        bootstrap.practiceOnly = practice == "1";
+                                    string pilot;
+                                    if (values.TryGetValue("pilot", out pilot))
+                                        bootstrap.pilotMode = pilot == "1";
+                                    int mode;
+                                    if (!string.IsNullOrEmpty(phases) &&
+                                        int.TryParse(phases, out mode))
+                                        bootstrap.sessionMode = mode;
                                 }
-                                if (!string.IsNullOrEmpty(practice))
-                                    bootstrap.practiceOnly = practice == "1";
-                                string pilot;
-                                if (values.TryGetValue("pilot", out pilot))
-                                    bootstrap.pilotMode = pilot == "1";
-                                int mode;
-                                if (!string.IsNullOrEmpty(phases) &&
-                                    int.TryParse(phases, out mode))
-                                    bootstrap.sessionMode = mode;
                             }
-                        }
-                        finally { applied.Set(); }
-                    });
+                            finally { applied.Set(); }
+                        });
+                    }
+                    applied.WaitOne(5000);
                 }
-                applied.WaitOne(5000);
 
                 // State rides back on the same request, so the panel can follow the
                 // session without a second endpoint: is it running, which trial, and
