@@ -27,9 +27,9 @@
         "brightness": 150.0,
         "texture": "textile",
         "roughness": "rough",
-        "rationale": "I chose a saturated blue for the walls and floor, lit at a low level, on coarse woven cloth. Together the colour, the light and the surface are what carry depressed in a room this size."
+        "rationale": "I chose a vivid blue for the walls and floor, lit at a dim level, on rough woven cloth. Together the colour, the light and the surface are what carry depressed in a room this size."
       },
-      "rationale_shown": "I chose a saturated blue for the walls and floor, lit at a low level, on coarse woven cloth. Together the colour, the light and the surface are what carry depressed in a room this size.",
+      "rationale_shown": "I chose a vivid blue for the walls and floor, lit at a dim level, on rough woven cloth. Together the colour, the light and the surface are what carry depressed in a room this size.",
       "ground_truth": {
         "swapped_field": null,
         "original_value": null,
@@ -55,9 +55,9 @@
         "brightness": 150.0,
         "texture": "concrete",
         "roughness": "rough",
-        "rationale": "I chose a restrained blue-green for the walls and floor, lit at a low level, on coarse bare concrete. Together the colour, the light and the surface are what carry tense in a room this size."
+        "rationale": "I chose a faint blue-green for the walls and floor, lit at a dim level, on rough bare concrete. Together the colour, the light and the surface are what carry tense in a room this size."
       },
-      "rationale_shown": "I chose a saturated blue for the walls and floor, lit at a low level, on coarse woven cloth. Together the colour, the light and the surface are what carry depressed in a room this size.",
+      "rationale_shown": "I chose a vivid blue for the walls and floor, lit at a dim level, on rough woven cloth. Together the colour, the light and the surface are what carry depressed in a room this size.",
       "ground_truth": {
         "swapped_field": null,
         "original_value": null,
@@ -84,9 +84,9 @@
         "brightness": 150.0,
         "texture": "textile",
         "roughness": "rough",
-        "rationale": "I chose a saturated blue for the walls and floor, lit at a low level, on coarse woven cloth. Together the colour, the light and the surface are what carry depressed in a room this size."
+        "rationale": "I chose a vivid blue for the walls and floor, lit at a dim level, on rough woven cloth. Together the colour, the light and the surface are what carry depressed in a room this size."
       },
-      "rationale_shown": "I chose a saturated blue for the walls and floor, lit at a low level, on coarse woven cloth. Together the colour, the light and the surface are what carry depressed in a room this size.",
+      "rationale_shown": "I chose a vivid blue for the walls and floor, lit at a dim level, on rough woven cloth. Together the colour, the light and the surface are what carry depressed in a room this size.",
       "ground_truth": {
         "swapped_field": "saturation",
         "original_value": 0.4,
@@ -113,9 +113,9 @@
         "brightness": 300.0,
         "texture": "plaster",
         "roughness": "smooth",
-        "rationale": "I chose a restrained yellow for the walls and floor, lit at a moderate level, on smooth painted plaster. Together the colour, the light and the surface are what carry calm in a room this size."
+        "rationale": "I chose a faint yellow for the walls and floor, lit at a medium level, on smooth painted plaster. Together the colour, the light and the surface are what carry calm in a room this size."
       },
-      "rationale_shown": "I chose a restrained yellow for the walls and floor, lit at a moderate level, on smooth painted plaster. Together the colour, the light and the surface are what carry calm in a room this size.",
+      "rationale_shown": "I chose a faint yellow for the walls and floor, lit at a medium level, on smooth painted plaster. Together the colour, the light and the surface are what carry calm in a room this size.",
       "ground_truth": {
         "swapped_field": null,
         "original_value": null,
@@ -141,9 +141,9 @@
         "brightness": 150.0,
         "texture": "textile",
         "roughness": "rough",
-        "rationale": "I chose a saturated blue for the walls and floor, lit at a low level, on coarse woven cloth. Together the colour, the light and the surface are what carry depressed in a room this size."
+        "rationale": "I chose a vivid blue for the walls and floor, lit at a dim level, on rough woven cloth. Together the colour, the light and the surface are what carry depressed in a room this size."
       },
-      "rationale_shown": "I chose a saturated blue for the walls and floor, lit at a low level, on coarse woven cloth. Together the colour, the light and the surface are what carry depressed in a room this size.",
+      "rationale_shown": "I chose a vivid blue for the walls and floor, lit at a dim level, on rough woven cloth. Together the colour, the light and the surface are what carry depressed in a room this size.",
       "ground_truth": {
         "swapped_field": "hue",
         "original_value": 240,
@@ -170,9 +170,9 @@
         "brightness": 750.0,
         "texture": "concrete",
         "roughness": "smooth",
-        "rationale": "I chose a saturated yellow for the walls and floor, lit at a bright level, on smooth bare concrete. Together the colour, the light and the surface are what carry excited in a room this size."
+        "rationale": "I chose a vivid yellow for the walls and floor, lit at a very bright level, on smooth bare concrete. Together the colour, the light and the surface are what carry excited in a room this size."
       },
-      "rationale_shown": "I chose a saturated yellow for the walls and floor, lit at a bright level, on smooth bare concrete. Together the colour, the light and the surface are what carry excited in a room this size.",
+      "rationale_shown": "I chose a vivid yellow for the walls and floor, lit at a very bright level, on smooth bare concrete. Together the colour, the light and the surface are what carry excited in a room this size.",
       "ground_truth": {
         "swapped_field": "hue",
         "original_value": 60,
@@ -199,9 +199,9 @@
         "brightness": 150.0,
         "texture": "textile",
         "roughness": "rough",
-        "rationale": "I chose a saturated blue for the walls and floor, lit at a low level, on coarse woven cloth. Together the colour, the light and the surface are what carry depressed in a room this size."
+        "rationale": "I chose a vivid blue for the walls and floor, lit at a dim level, on rough woven cloth. Together the colour, the light and the surface are what carry depressed in a room this size."
       },
-      "rationale_shown": "I chose a saturated blue for the walls and floor, lit at a low level, on coarse woven cloth. Together the colour, the light and the surface are what carry depressed in a room this size.",
+      "rationale_shown": "I chose a vivid blue for the walls and floor, lit at a dim level, on rough woven cloth. Together the colour, the light and the surface are what carry depressed in a room this size.",
       "ground_truth": {
         "swapped_field": null,
         "original_value": null,
@@ -227,9 +227,9 @@
         "brightness": 150.0,
         "texture": "textile",
         "roughness": "rough",
-        "rationale": "I chose a saturated blue for the walls and floor, lit at a low level, on coarse woven cloth. Together the colour, the light and the surface are what carry depressed in a room this size."
+        "rationale": "I chose a vivid blue for the walls and floor, lit at a dim level, on rough woven cloth. Together the colour, the light and the surface are what carry depressed in a room this size."
       },
-      "rationale_shown": "I chose a saturated blue for the walls and floor, lit at a low level, on coarse woven cloth. Together the colour, the light and the surface are what carry depressed in a room this size.",
+      "rationale_shown": "I chose a vivid blue for the walls and floor, lit at a dim level, on rough woven cloth. Together the colour, the light and the surface are what carry depressed in a room this size.",
       "ground_truth": {
         "swapped_field": null,
         "original_value": null,
@@ -255,9 +255,9 @@
         "brightness": 150.0,
         "texture": "concrete",
         "roughness": "rough",
-        "rationale": "I chose a restrained blue-green for the walls and floor, lit at a low level, on coarse bare concrete. Together the colour, the light and the surface are what carry tense in a room this size."
+        "rationale": "I chose a faint blue-green for the walls and floor, lit at a dim level, on rough bare concrete. Together the colour, the light and the surface are what carry tense in a room this size."
       },
-      "rationale_shown": "I chose a restrained blue-green for the walls and floor, lit at a low level, on coarse bare concrete. Together the colour, the light and the surface are what carry tense in a room this size.",
+      "rationale_shown": "I chose a faint blue-green for the walls and floor, lit at a dim level, on rough bare concrete. Together the colour, the light and the surface are what carry tense in a room this size.",
       "ground_truth": {
         "swapped_field": null,
         "original_value": null,
@@ -283,9 +283,9 @@
         "brightness": 750.0,
         "texture": "concrete",
         "roughness": "smooth",
-        "rationale": "I chose a saturated yellow for the walls and floor, lit at a bright level, on smooth bare concrete. Together the colour, the light and the surface are what carry excited in a room this size."
+        "rationale": "I chose a vivid yellow for the walls and floor, lit at a very bright level, on smooth bare concrete. Together the colour, the light and the surface are what carry excited in a room this size."
       },
-      "rationale_shown": "I chose a saturated yellow for the walls and floor, lit at a bright level, on smooth bare concrete. Together the colour, the light and the surface are what carry excited in a room this size.",
+      "rationale_shown": "I chose a vivid yellow for the walls and floor, lit at a very bright level, on smooth bare concrete. Together the colour, the light and the surface are what carry excited in a room this size.",
       "ground_truth": {
         "swapped_field": null,
         "original_value": null,
@@ -311,9 +311,9 @@
         "brightness": 300.0,
         "texture": "plaster",
         "roughness": "smooth",
-        "rationale": "I chose a restrained yellow for the walls and floor, lit at a moderate level, on smooth painted plaster. Together the colour, the light and the surface are what carry calm in a room this size."
+        "rationale": "I chose a faint yellow for the walls and floor, lit at a medium level, on smooth painted plaster. Together the colour, the light and the surface are what carry calm in a room this size."
       },
-      "rationale_shown": "I chose a restrained yellow for the walls and floor, lit at a moderate level, on smooth painted plaster. Together the colour, the light and the surface are what carry calm in a room this size.",
+      "rationale_shown": "I chose a faint yellow for the walls and floor, lit at a medium level, on smooth painted plaster. Together the colour, the light and the surface are what carry calm in a room this size.",
       "ground_truth": {
         "swapped_field": "saturation",
         "original_value": 0.2,
@@ -340,9 +340,9 @@
         "brightness": 750.0,
         "texture": "concrete",
         "roughness": "smooth",
-        "rationale": "I chose a saturated yellow for the walls and floor, lit at a bright level, on smooth bare concrete. Together the colour, the light and the surface are what carry excited in a room this size."
+        "rationale": "I chose a vivid yellow for the walls and floor, lit at a very bright level, on smooth bare concrete. Together the colour, the light and the surface are what carry excited in a room this size."
       },
-      "rationale_shown": "I chose a saturated yellow for the walls and floor, lit at a bright level, on smooth bare concrete. Together the colour, the light and the surface are what carry excited in a room this size.",
+      "rationale_shown": "I chose a vivid yellow for the walls and floor, lit at a very bright level, on smooth bare concrete. Together the colour, the light and the surface are what carry excited in a room this size.",
       "ground_truth": {
         "swapped_field": "hue",
         "original_value": 60,
@@ -369,9 +369,9 @@
         "brightness": 300.0,
         "texture": "concrete",
         "roughness": "smooth",
-        "rationale": "I chose a restrained yellow for the walls and floor, lit at a moderate level, on smooth painted plaster. Together the colour, the light and the surface are what carry calm in a room this size."
+        "rationale": "I chose a faint yellow for the walls and floor, lit at a medium level, on smooth painted plaster. Together the colour, the light and the surface are what carry calm in a room this size."
       },
-      "rationale_shown": "I chose a restrained yellow for the walls and floor, lit at a moderate level, on smooth painted plaster. Together the colour, the light and the surface are what carry calm in a room this size.",
+      "rationale_shown": "I chose a faint yellow for the walls and floor, lit at a medium level, on smooth painted plaster. Together the colour, the light and the surface are what carry calm in a room this size.",
       "ground_truth": {
         "swapped_field": "texture",
         "original_value": "plaster",
@@ -398,9 +398,9 @@
         "brightness": 300.0,
         "texture": "plaster",
         "roughness": "smooth",
-        "rationale": "I chose a restrained yellow for the walls and floor, lit at a moderate level, on smooth painted plaster. Together the colour, the light and the surface are what carry calm in a room this size."
+        "rationale": "I chose a faint yellow for the walls and floor, lit at a medium level, on smooth painted plaster. Together the colour, the light and the surface are what carry calm in a room this size."
       },
-      "rationale_shown": "I chose a restrained yellow for the walls and floor, lit at a moderate level, on smooth painted plaster. Together the colour, the light and the surface are what carry calm in a room this size.",
+      "rationale_shown": "I chose a faint yellow for the walls and floor, lit at a medium level, on smooth painted plaster. Together the colour, the light and the surface are what carry calm in a room this size.",
       "ground_truth": {
         "swapped_field": null,
         "original_value": null,
@@ -426,9 +426,9 @@
         "brightness": 150.0,
         "texture": "concrete",
         "roughness": "rough",
-        "rationale": "I chose a restrained blue-green for the walls and floor, lit at a low level, on coarse bare concrete. Together the colour, the light and the surface are what carry tense in a room this size."
+        "rationale": "I chose a faint blue-green for the walls and floor, lit at a dim level, on rough bare concrete. Together the colour, the light and the surface are what carry tense in a room this size."
       },
-      "rationale_shown": "I chose a restrained blue-green for the walls and floor, lit at a low level, on coarse bare concrete. Together the colour, the light and the surface are what carry tense in a room this size.",
+      "rationale_shown": "I chose a faint blue-green for the walls and floor, lit at a dim level, on rough bare concrete. Together the colour, the light and the surface are what carry tense in a room this size.",
       "ground_truth": {
         "swapped_field": "hue",
         "original_value": 180,
@@ -455,9 +455,9 @@
         "brightness": 300.0,
         "texture": "plaster",
         "roughness": "smooth",
-        "rationale": "I chose a restrained yellow for the walls and floor, lit at a moderate level, on smooth painted plaster. Together the colour, the light and the surface are what carry calm in a room this size."
+        "rationale": "I chose a faint yellow for the walls and floor, lit at a medium level, on smooth painted plaster. Together the colour, the light and the surface are what carry calm in a room this size."
       },
-      "rationale_shown": "I chose a restrained yellow for the walls and floor, lit at a moderate level, on smooth painted plaster. Together the colour, the light and the surface are what carry calm in a room this size.",
+      "rationale_shown": "I chose a faint yellow for the walls and floor, lit at a medium level, on smooth painted plaster. Together the colour, the light and the surface are what carry calm in a room this size.",
       "ground_truth": {
         "swapped_field": "hue",
         "original_value": 60,
@@ -484,9 +484,9 @@
         "brightness": 750.0,
         "texture": "concrete",
         "roughness": "smooth",
-        "rationale": "I chose a saturated yellow for the walls and floor, lit at a bright level, on smooth bare concrete. Together the colour, the light and the surface are what carry excited in a room this size."
+        "rationale": "I chose a vivid yellow for the walls and floor, lit at a very bright level, on smooth bare concrete. Together the colour, the light and the surface are what carry excited in a room this size."
       },
-      "rationale_shown": "I chose a saturated yellow for the walls and floor, lit at a bright level, on smooth bare concrete. Together the colour, the light and the surface are what carry excited in a room this size.",
+      "rationale_shown": "I chose a vivid yellow for the walls and floor, lit at a very bright level, on smooth bare concrete. Together the colour, the light and the surface are what carry excited in a room this size.",
       "ground_truth": {
         "swapped_field": null,
         "original_value": null,
@@ -512,9 +512,9 @@
         "brightness": 750.0,
         "texture": "concrete",
         "roughness": "smooth",
-        "rationale": "I chose a saturated yellow for the walls and floor, lit at a bright level, on smooth bare concrete. Together the colour, the light and the surface are what carry excited in a room this size."
+        "rationale": "I chose a vivid yellow for the walls and floor, lit at a very bright level, on smooth bare concrete. Together the colour, the light and the surface are what carry excited in a room this size."
       },
-      "rationale_shown": "I chose a saturated yellow for the walls and floor, lit at a bright level, on smooth bare concrete. Together the colour, the light and the surface are what carry excited in a room this size.",
+      "rationale_shown": "I chose a vivid yellow for the walls and floor, lit at a very bright level, on smooth bare concrete. Together the colour, the light and the surface are what carry excited in a room this size.",
       "ground_truth": {
         "swapped_field": null,
         "original_value": null,
@@ -540,9 +540,9 @@
         "brightness": 300.0,
         "texture": "plaster",
         "roughness": "smooth",
-        "rationale": "I chose a restrained yellow for the walls and floor, lit at a moderate level, on smooth painted plaster. Together the colour, the light and the surface are what carry calm in a room this size."
+        "rationale": "I chose a faint yellow for the walls and floor, lit at a medium level, on smooth painted plaster. Together the colour, the light and the surface are what carry calm in a room this size."
       },
-      "rationale_shown": "I chose a saturated yellow for the walls and floor, lit at a bright level, on smooth bare concrete. Together the colour, the light and the surface are what carry excited in a room this size.",
+      "rationale_shown": "I chose a vivid yellow for the walls and floor, lit at a very bright level, on smooth bare concrete. Together the colour, the light and the surface are what carry excited in a room this size.",
       "ground_truth": {
         "swapped_field": null,
         "original_value": null,
@@ -569,9 +569,9 @@
         "brightness": 150.0,
         "texture": "textile",
         "roughness": "rough",
-        "rationale": "I chose a saturated blue for the walls and floor, lit at a low level, on coarse woven cloth. Together the colour, the light and the surface are what carry depressed in a room this size."
+        "rationale": "I chose a vivid blue for the walls and floor, lit at a dim level, on rough woven cloth. Together the colour, the light and the surface are what carry depressed in a room this size."
       },
-      "rationale_shown": "I chose a restrained yellow for the walls and floor, lit at a moderate level, on smooth painted plaster. Together the colour, the light and the surface are what carry calm in a room this size.",
+      "rationale_shown": "I chose a faint yellow for the walls and floor, lit at a medium level, on smooth painted plaster. Together the colour, the light and the surface are what carry calm in a room this size.",
       "ground_truth": {
         "swapped_field": null,
         "original_value": null,
@@ -598,9 +598,9 @@
         "brightness": 150.0,
         "texture": "concrete",
         "roughness": "rough",
-        "rationale": "I chose a restrained blue-green for the walls and floor, lit at a low level, on coarse bare concrete. Together the colour, the light and the surface are what carry tense in a room this size."
+        "rationale": "I chose a faint blue-green for the walls and floor, lit at a dim level, on rough bare concrete. Together the colour, the light and the surface are what carry tense in a room this size."
       },
-      "rationale_shown": "I chose a restrained blue-green for the walls and floor, lit at a low level, on coarse bare concrete. Together the colour, the light and the surface are what carry tense in a room this size.",
+      "rationale_shown": "I chose a faint blue-green for the walls and floor, lit at a dim level, on rough bare concrete. Together the colour, the light and the surface are what carry tense in a room this size.",
       "ground_truth": {
         "swapped_field": "hue",
         "original_value": 180,
@@ -627,9 +627,9 @@
         "brightness": 150.0,
         "texture": "textile",
         "roughness": "rough",
-        "rationale": "I chose a saturated blue for the walls and floor, lit at a low level, on coarse woven cloth. Together the colour, the light and the surface are what carry depressed in a room this size."
+        "rationale": "I chose a vivid blue for the walls and floor, lit at a dim level, on rough woven cloth. Together the colour, the light and the surface are what carry depressed in a room this size."
       },
-      "rationale_shown": "I chose a saturated blue for the walls and floor, lit at a low level, on coarse woven cloth. Together the colour, the light and the surface are what carry depressed in a room this size.",
+      "rationale_shown": "I chose a vivid blue for the walls and floor, lit at a dim level, on rough woven cloth. Together the colour, the light and the surface are what carry depressed in a room this size.",
       "ground_truth": {
         "swapped_field": "saturation",
         "original_value": 0.4,
@@ -656,9 +656,9 @@
         "brightness": 750.0,
         "texture": "plaster",
         "roughness": "smooth",
-        "rationale": "I chose a saturated yellow for the walls and floor, lit at a bright level, on smooth bare concrete. Together the colour, the light and the surface are what carry excited in a room this size."
+        "rationale": "I chose a vivid yellow for the walls and floor, lit at a very bright level, on smooth bare concrete. Together the colour, the light and the surface are what carry excited in a room this size."
       },
-      "rationale_shown": "I chose a saturated yellow for the walls and floor, lit at a bright level, on smooth bare concrete. Together the colour, the light and the surface are what carry excited in a room this size.",
+      "rationale_shown": "I chose a vivid yellow for the walls and floor, lit at a very bright level, on smooth bare concrete. Together the colour, the light and the surface are what carry excited in a room this size.",
       "ground_truth": {
         "swapped_field": "texture",
         "original_value": "concrete",
@@ -685,9 +685,9 @@
         "brightness": 750.0,
         "texture": "concrete",
         "roughness": "smooth",
-        "rationale": "I chose a saturated yellow for the walls and floor, lit at a bright level, on smooth bare concrete. Together the colour, the light and the surface are what carry excited in a room this size."
+        "rationale": "I chose a vivid yellow for the walls and floor, lit at a very bright level, on smooth bare concrete. Together the colour, the light and the surface are what carry excited in a room this size."
       },
-      "rationale_shown": "I chose a restrained blue-green for the walls and floor, lit at a low level, on coarse bare concrete. Together the colour, the light and the surface are what carry tense in a room this size.",
+      "rationale_shown": "I chose a faint blue-green for the walls and floor, lit at a dim level, on rough bare concrete. Together the colour, the light and the surface are what carry tense in a room this size.",
       "ground_truth": {
         "swapped_field": null,
         "original_value": null,
@@ -714,9 +714,9 @@
         "brightness": 750.0,
         "texture": "concrete",
         "roughness": "smooth",
-        "rationale": "I chose a saturated yellow for the walls and floor, lit at a bright level, on smooth bare concrete. Together the colour, the light and the surface are what carry excited in a room this size."
+        "rationale": "I chose a vivid yellow for the walls and floor, lit at a very bright level, on smooth bare concrete. Together the colour, the light and the surface are what carry excited in a room this size."
       },
-      "rationale_shown": "I chose a saturated yellow for the walls and floor, lit at a bright level, on smooth bare concrete. Together the colour, the light and the surface are what carry excited in a room this size.",
+      "rationale_shown": "I chose a vivid yellow for the walls and floor, lit at a very bright level, on smooth bare concrete. Together the colour, the light and the surface are what carry excited in a room this size.",
       "ground_truth": {
         "swapped_field": null,
         "original_value": null,
@@ -742,9 +742,9 @@
         "brightness": 750.0,
         "texture": "concrete",
         "roughness": "smooth",
-        "rationale": "I chose a saturated yellow for the walls and floor, lit at a bright level, on smooth bare concrete. Together the colour, the light and the surface are what carry excited in a room this size."
+        "rationale": "I chose a vivid yellow for the walls and floor, lit at a very bright level, on smooth bare concrete. Together the colour, the light and the surface are what carry excited in a room this size."
       },
-      "rationale_shown": "I chose a restrained blue-green for the walls and floor, lit at a low level, on coarse bare concrete. Together the colour, the light and the surface are what carry tense in a room this size.",
+      "rationale_shown": "I chose a faint blue-green for the walls and floor, lit at a dim level, on rough bare concrete. Together the colour, the light and the surface are what carry tense in a room this size.",
       "ground_truth": {
         "swapped_field": null,
         "original_value": null,
@@ -771,9 +771,9 @@
         "brightness": 150.0,
         "texture": "textile",
         "roughness": "rough",
-        "rationale": "I chose a saturated blue for the walls and floor, lit at a low level, on coarse woven cloth. Together the colour, the light and the surface are what carry depressed in a room this size."
+        "rationale": "I chose a vivid blue for the walls and floor, lit at a dim level, on rough woven cloth. Together the colour, the light and the surface are what carry depressed in a room this size."
       },
-      "rationale_shown": "I chose a restrained yellow for the walls and floor, lit at a moderate level, on smooth painted plaster. Together the colour, the light and the surface are what carry calm in a room this size.",
+      "rationale_shown": "I chose a faint yellow for the walls and floor, lit at a medium level, on smooth painted plaster. Together the colour, the light and the surface are what carry calm in a room this size.",
       "ground_truth": {
         "swapped_field": null,
         "original_value": null,
@@ -800,9 +800,9 @@
         "brightness": 150.0,
         "texture": "concrete",
         "roughness": "rough",
-        "rationale": "I chose a restrained blue-green for the walls and floor, lit at a low level, on coarse bare concrete. Together the colour, the light and the surface are what carry tense in a room this size."
+        "rationale": "I chose a faint blue-green for the walls and floor, lit at a dim level, on rough bare concrete. Together the colour, the light and the surface are what carry tense in a room this size."
       },
-      "rationale_shown": "I chose a restrained blue-green for the walls and floor, lit at a low level, on coarse bare concrete. Together the colour, the light and the surface are what carry tense in a room this size.",
+      "rationale_shown": "I chose a faint blue-green for the walls and floor, lit at a dim level, on rough bare concrete. Together the colour, the light and the surface are what carry tense in a room this size.",
       "ground_truth": {
         "swapped_field": "saturation",
         "original_value": 0.2,
@@ -829,9 +829,9 @@
         "brightness": 300.0,
         "texture": "plaster",
         "roughness": "smooth",
-        "rationale": "I chose a restrained yellow for the walls and floor, lit at a moderate level, on smooth painted plaster. Together the colour, the light and the surface are what carry calm in a room this size."
+        "rationale": "I chose a faint yellow for the walls and floor, lit at a medium level, on smooth painted plaster. Together the colour, the light and the surface are what carry calm in a room this size."
       },
-      "rationale_shown": "I chose a saturated blue for the walls and floor, lit at a low level, on coarse woven cloth. Together the colour, the light and the surface are what carry depressed in a room this size.",
+      "rationale_shown": "I chose a vivid blue for the walls and floor, lit at a dim level, on rough woven cloth. Together the colour, the light and the surface are what carry depressed in a room this size.",
       "ground_truth": {
         "swapped_field": null,
         "original_value": null,
@@ -858,9 +858,9 @@
         "brightness": 150.0,
         "texture": "concrete",
         "roughness": "rough",
-        "rationale": "I chose a restrained blue-green for the walls and floor, lit at a low level, on coarse bare concrete. Together the colour, the light and the surface are what carry tense in a room this size."
+        "rationale": "I chose a faint blue-green for the walls and floor, lit at a dim level, on rough bare concrete. Together the colour, the light and the surface are what carry tense in a room this size."
       },
-      "rationale_shown": "I chose a restrained yellow for the walls and floor, lit at a moderate level, on smooth painted plaster. Together the colour, the light and the surface are what carry calm in a room this size.",
+      "rationale_shown": "I chose a faint yellow for the walls and floor, lit at a medium level, on smooth painted plaster. Together the colour, the light and the surface are what carry calm in a room this size.",
       "ground_truth": {
         "swapped_field": null,
         "original_value": null,
@@ -887,9 +887,9 @@
         "brightness": 150.0,
         "texture": "concrete",
         "roughness": "rough",
-        "rationale": "I chose a restrained blue-green for the walls and floor, lit at a low level, on coarse bare concrete. Together the colour, the light and the surface are what carry tense in a room this size."
+        "rationale": "I chose a faint blue-green for the walls and floor, lit at a dim level, on rough bare concrete. Together the colour, the light and the surface are what carry tense in a room this size."
       },
-      "rationale_shown": "I chose a restrained blue-green for the walls and floor, lit at a low level, on coarse bare concrete. Together the colour, the light and the surface are what carry tense in a room this size.",
+      "rationale_shown": "I chose a faint blue-green for the walls and floor, lit at a dim level, on rough bare concrete. Together the colour, the light and the surface are what carry tense in a room this size.",
       "ground_truth": {
         "swapped_field": null,
         "original_value": null,
@@ -915,9 +915,9 @@
         "brightness": 150.0,
         "texture": "concrete",
         "roughness": "rough",
-        "rationale": "I chose a restrained blue-green for the walls and floor, lit at a low level, on coarse bare concrete. Together the colour, the light and the surface are what carry tense in a room this size."
+        "rationale": "I chose a faint blue-green for the walls and floor, lit at a dim level, on rough bare concrete. Together the colour, the light and the surface are what carry tense in a room this size."
       },
-      "rationale_shown": "I chose a restrained blue-green for the walls and floor, lit at a low level, on coarse bare concrete. Together the colour, the light and the surface are what carry tense in a room this size.",
+      "rationale_shown": "I chose a faint blue-green for the walls and floor, lit at a dim level, on rough bare concrete. Together the colour, the light and the surface are what carry tense in a room this size.",
       "ground_truth": {
         "swapped_field": null,
         "original_value": null,

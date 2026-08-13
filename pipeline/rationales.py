@@ -87,11 +87,15 @@ def describe(room: dict) -> str:
 HUE_WORDS = {0: "red", 30: "orange", 60: "yellow", 90: "yellow-green", 120: "green",
              180: "blue-green", 240: "blue", 270: "blue-violet", 300: "purple",
              330: "pink"}
-LIGHT_WORDS = {150: "low", 300: "moderate", 500: "generous", 750: "bright"}
+LIGHT_WORDS = {150: "dim", 300: "medium", 500: "bright", 750: "very bright"}
 #: Material without any smoothness claim in it: roughness is a separate variable and
 #: saying "a smooth painted finish left rough" is both nonsense and a giveaway.
 MATERIAL_WORDS = {"plaster": "painted plaster", "concrete": "bare concrete",
                   "textile": "woven cloth"}
+#: Saturation, in the two words the buttons use. "restrained" and "saturated" were
+#: the previous pair and both are wrong for this audience: one is a register nobody
+#: speaks in, the other is the technical term for the very thing being described.
+SATURATION_WORDS = {False: "faint", True: "vivid"}
 
 
 def compose(room: dict) -> str:
@@ -110,11 +114,11 @@ def compose(room: dict) -> str:
     choices by template, which is true and is not a weakness.
     """
     hue = HUE_WORDS.get(int(room.get("hue", 0)), "muted")
-    sat = "restrained" if float(room.get("saturation", 0.2)) <= 0.3 else "saturated"
-    lux = LIGHT_WORDS.get(int(float(room.get("brightness", 300))), "moderate")
+    sat = SATURATION_WORDS[float(room.get("saturation", 0.2)) > 0.3]
+    lux = LIGHT_WORDS.get(int(float(room.get("brightness", 300))), "medium")
     material = MATERIAL_WORDS.get(room.get("texture"), "a plain surface")
     rough = room.get("roughness")
-    surface = (("coarse " if rough == "rough" else "smooth ") + material) if rough else material
+    surface = (rough + " " + material) if rough else material
     emotion = room.get("target_emotion", "the target feeling")
 
     return (

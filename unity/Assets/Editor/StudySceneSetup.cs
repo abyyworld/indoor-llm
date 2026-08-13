@@ -477,12 +477,22 @@ namespace EmotionRooms.EditorTools
         /// </summary>
         static string FaceFor(string value)
         {
+            // These five sit side by side and the participant picks one, so the only
+            // thing that matters is that they cannot be mistaken for each other.
+            // "the colour" next to "colour strength" fails that: someone who finds a
+            // room washed out has no way to know which is being asked about, and
+            // attribution accuracy is a dependent variable, so the confusion lands in
+            // the results as noise rather than as a usability complaint. Phrasing each
+            // as a different question separates them. Same for "wall material" against
+            // "roughness", where a woven cloth wall is honestly both.
             switch (value)
             {
-                case "hue": return "the colour";
-                case "saturation": return "colour strength";
-                case "texture": return "wall material";
-                case "material": return "wall material";
+                case "hue": return "the wall colour";
+                case "saturation": return "how strong the colour is";
+                case "brightness": return "how bright the room is";
+                case "texture": return "what the wall is made of";
+                case "material": return "what the wall is made of";
+                case "roughness": return "how rough the surface is";
                 case "nothing_wrong": return "nothing was changed";
                 default: return value;
             }
@@ -548,21 +558,29 @@ namespace EmotionRooms.EditorTools
                     }
                     break;
                 case "saturation":
-                    if (value == "0.2") return "weak colour";
-                    if (value == "0.4") return "strong colour";
+                    // Not "weak"/"strong": strong is heard as dark at least as often as
+                    // as vivid, and the two variables it must not be confused with are
+                    // brightness and hue.
+                    if (value == "0.2") return "faint";
+                    if (value == "0.4") return "vivid";
                     break;
                 case "brightness":
                     if (value == "150") return "dim";
-                    if (value == "300") return "medium bright";
+                    if (value == "300") return "medium";
                     if (value == "500") return "bright";
                     if (value == "750") return "very bright";
                     break;
                 case "texture":
-                    if (value == "plaster") return "painted wall";
-                    if (value == "concrete") return "stone-like wall";
-                    // "textile" is a frozen pool value and cannot go; the face can.
-                    // Cloth is about the most basic word for what the weave looks like.
-                    if (value == "textile") return "cloth wall";
+                    // "plaster", "concrete" and "textile" are frozen pool values and
+                    // cannot go; the faces can. These match pipeline/rationales.py word
+                    // for word, which is the point: the system's stated reasoning names
+                    // the surface, and a participant deciding whether that reasoning
+                    // fits must not have to translate "stone-like wall" into "bare
+                    // concrete" first. A vocabulary mismatch would land as noise on the
+                    // one measure the explanation manipulation exists to produce.
+                    if (value == "plaster") return "painted plaster";
+                    if (value == "concrete") return "bare concrete";
+                    if (value == "textile") return "woven cloth";
                     break;
             }
             return value;   // rough/smooth are already words

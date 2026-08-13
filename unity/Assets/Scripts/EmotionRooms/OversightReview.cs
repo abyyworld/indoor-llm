@@ -434,11 +434,15 @@ namespace EmotionRooms
         {
             switch (field)
             {
-                case "hue": return "the colour";
+                // Reads into "What should ___ be instead?", so these stay noun phrases
+                // rather than the questions the attribution buttons carry. They name the
+                // same five things in the same order of words, so the step from picking
+                // a variable to correcting it does not change vocabulary underfoot.
+                case "hue": return "the wall colour";
                 case "saturation": return "the colour strength";
-                case "brightness": return "the brightness";
-                case "texture": return "the wall material";
-                case "roughness": return "the roughness";
+                case "brightness": return "the room brightness";
+                case "texture": return "what the wall is made of";
+                case "roughness": return "the surface roughness";
                 case null: return "it";
                 default: return "the " + field;
             }
