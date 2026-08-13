@@ -467,9 +467,7 @@ namespace EmotionRooms.EditorTools
 
             Step(2, live, "The rooms are running",
                 running
-                    ? (headsetApp.reviewing
-                        ? "Review block. Nothing to do."
-                        : "Trial " + headsetApp.trial + " of " + headsetApp.of + ". Nothing to do.")
+                    ? "Trial " + headsetApp.trial + " of " + headsetApp.of + ". Nothing to do."
                     : "About 40 minutes once started.");
             if (live == 2)
                 EditorGUILayout.LabelField(

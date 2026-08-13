@@ -270,6 +270,17 @@ namespace EmotionRooms
 
         public bool IsRunning { get; private set; }
 
+        /// <summary>Trials finished, and how many there are. For the researcher panel.</summary>
+        /// <remarks>
+        /// The panel used to read its progress off TrialRunner and print "of 8". Under
+        /// the unified design TrialRunner only runs the two warm-up rooms, so for the
+        /// thirty-five minutes that carry the whole session the display sat frozen and
+        /// a researcher had no way to tell a running session from a hung one. The
+        /// review block is the session now, so it reports its own progress.
+        /// </remarks>
+        public int CompletedTrials { get { return completed.Count; } }
+        public int TotalTrials { get; private set; }
+
         // Set by the UI before Commit* is called.
         [NonSerialized] public bool pendingDetected;
         [NonSerialized] public float pendingDetectionConfidence = 0.5f;
@@ -495,6 +506,7 @@ namespace EmotionRooms
             yield return new WaitForSeconds(briefingSeconds);
             if (board != null) board.Hide();
             completed.Clear();
+            TotalTrials = block.trials.Count;
 
             for (int i = 0; i < block.trials.Count; i++)
             {

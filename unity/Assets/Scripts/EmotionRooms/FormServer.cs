@@ -283,13 +283,27 @@ namespace EmotionRooms
                 // whether the review block is still going.
                 bool running = trialRunner != null && trialRunner.IsRunning;
                 bool reviewing = review != null && review.IsRunning;
+
+                // Whichever block is actually on, report that one's progress. During the
+                // review block -- which is the session, all thirty-two trials of it --
+                // TrialRunner has finished and its count would sit frozen at 2 of 8, so
+                // the panel would look identical whether the session was advancing or
+                // hung. A researcher watching from outside the headset has nothing else
+                // to go on.
                 int done = trialRunner != null ? trialRunner.CompletedTrials : 0;
+                int total = 8;
+                if (review != null && (reviewing || review.CompletedTrials > 0))
+                {
+                    done = review.CompletedTrials;
+                    total = review.TotalTrials > 0 ? review.TotalTrials : total;
+                }
                 return "{\"participant\":\"" + Escape(bootstrap != null ? bootstrap.participantId : "") +
                        "\",\"practice\":" + (bootstrap != null && bootstrap.practiceOnly ? "true" : "false") +
                        ",\"phases\":" + (bootstrap != null ? bootstrap.sessionMode : 0) +
                        ",\"running\":" + ((running || reviewing) ? "true" : "false") +
                        ",\"reviewing\":" + (reviewing ? "true" : "false") +
-                       ",\"trial\":" + done.ToString(CultureInfo.InvariantCulture) + ",\"of\":8}";
+                       ",\"trial\":" + done.ToString(CultureInfo.InvariantCulture) +
+                       ",\"of\":" + total.ToString(CultureInfo.InvariantCulture) + "}";
             }
 
             // Verification instrument, not a participant control. Answers whatever is
