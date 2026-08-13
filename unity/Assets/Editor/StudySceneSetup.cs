@@ -477,22 +477,12 @@ namespace EmotionRooms.EditorTools
         /// </summary>
         static string FaceFor(string value)
         {
-            // These five sit side by side and the participant picks one, so the only
-            // thing that matters is that they cannot be mistaken for each other.
-            // "the colour" next to "colour strength" fails that: someone who finds a
-            // room washed out has no way to know which is being asked about, and
-            // attribution accuracy is a dependent variable, so the confusion lands in
-            // the results as noise rather than as a usability complaint. Phrasing each
-            // as a different question separates them. Same for "wall material" against
-            // "roughness", where a woven cloth wall is honestly both.
             switch (value)
             {
-                case "hue": return "the wall colour";
-                case "saturation": return "how strong the colour is";
-                case "brightness": return "how bright the room is";
-                case "texture": return "what the wall is made of";
-                case "material": return "what the wall is made of";
-                case "roughness": return "how rough the surface is";
+                case "hue": return "the colour";
+                case "saturation": return "colour strength";
+                case "texture": return "wall material";
+                case "material": return "wall material";
                 case "nothing_wrong": return "nothing was changed";
                 default: return value;
             }
