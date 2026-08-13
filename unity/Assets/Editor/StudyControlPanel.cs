@@ -280,9 +280,85 @@ namespace EmotionRooms.EditorTools
 
         // -------------------------------------------------------------------- setup
 
+        /// <summary>
+        /// Pull the latest version, discarding the generated scene first.
+        ///
+        /// The scene file is rewritten by scene setup before every build, so anyone who
+        /// has ever built has local changes to it and git refuses to pull:
+        ///
+        ///   error: Your local changes to the following files would be overwritten by
+        ///   merge: unity/Assets/indoor room.unity
+        ///
+        /// Discarding it is always safe -- the next build regenerates it from the code
+        /// being built, which is the whole point of regenerating it -- but "run this git
+        /// incantation before every pull, forever" is not an instruction to give the
+        /// person running the sessions. She works from this panel, so it belongs here.
+        ///
+        /// Deliberately narrow: it discards that one generated file and nothing else. A
+        /// button that threw away every local change would eventually throw away
+        /// somebody's work.
+        /// </summary>
+        void UpdateFromGit()
+        {
+            string repo = Path.GetDirectoryName(Application.dataPath);
+            string log = "";
+
+            if (!Git(repo, "checkout -- \"unity/Assets/indoor room.unity\"", out log))
+                Debug.Log("Study: nothing to discard in the generated scene. " + log);
+
+            if (Git(repo, "pull --ff-only", out log))
+            {
+                Debug.Log("Study: updated.\n" + log +
+                          "\n\nPress \"Install on the headset\" to build what you just pulled.");
+                lastOutput = "Updated.\n" + log;
+            }
+            else
+            {
+                Debug.LogError("Study: could not pull.\n" + log);
+                lastOutput = "Could not pull.\n" + log;
+            }
+            AssetDatabase.Refresh();
+        }
+
+        static bool Git(string repo, string arguments, out string output)
+        {
+            output = "";
+            try
+            {
+                var info = new ProcessStartInfo("git", arguments)
+                {
+                    WorkingDirectory = Path.GetDirectoryName(repo) ?? repo,
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true,
+                };
+                using (var process = Process.Start(info))
+                {
+                    output = (process.StandardOutput.ReadToEnd() +
+                              process.StandardError.ReadToEnd()).Trim();
+                    process.WaitForExit();
+                    return process.ExitCode == 0;
+                }
+            }
+            catch (Exception e)
+            {
+                output = "git could not be run: " + e.Message +
+                         "\n\nInstall Git, or pull from the command line.";
+                return false;
+            }
+        }
+
         void DrawSetup(StudyBootstrap bootstrap)
         {
             Section("Setup", "Once per machine, and again after any code change.");
+
+            if (GUILayout.Button(new GUIContent("Get the latest version",
+                    "Pulls the newest code. Discards the generated scene file first, " +
+                    "which is what makes a plain git pull fail after you have built. " +
+                    "Nothing else you have is touched.")))
+                Later(UpdateFromGit);
+            EditorGUILayout.Space(4f);
 
             var stamp = UnityEngine.Object.FindFirstObjectByType<StudySceneStamp>();
             bool sceneBuilt = bootstrap != null;
