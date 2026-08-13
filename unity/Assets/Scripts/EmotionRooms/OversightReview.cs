@@ -443,16 +443,7 @@ namespace EmotionRooms
 
         static string PlainField(string field)
         {
-            switch (field)
-            {
-                case "hue": return "the colour";
-                case "saturation": return "the colour strength";
-                case "brightness": return "the brightness";
-                case "texture": return "the wall material";
-                case "roughness": return "the roughness";
-                case null: return "it";
-                default: return "the " + field;
-            }
+            return PlainWords.FieldInSentence(field);
         }
 
         string pendingExtras = "";
@@ -493,6 +484,8 @@ namespace EmotionRooms
             // exactly that reading. Stating the base rate is standard for a detection
             // task and is what separates disagreement with the design, which is not
             // measured here, from detection of tampering, which is.
+            yield return RunTour(block);
+
             if (board != null)
                 board.Show("Checking the system's work\n\n" +
                            "Each room was designed by a system to convey the feeling " +
@@ -522,6 +515,81 @@ namespace EmotionRooms
 
             var handler = BlockFinished;
             if (handler != null) handler();
+        }
+
+        [Tooltip("Show what each quality looks like before asking anyone to audit one. " +
+                 "About a minute.")]
+        public bool familiarisationTour = true;
+
+        [Tooltip("Seconds per familiarisation room.")]
+        public float tourSeconds = 5f;
+
+        /// <summary>
+        /// Walk the extremes of each manipulated quality, naming them, before the block.
+        ///
+        /// Akbar's objection, and it is right: the block asks which setting is wrong for
+        /// a stated feeling, and a participant who has never seen what "woven cloth" or
+        /// "faint" looks like in this room is being asked to audit against a standard
+        /// nobody showed them. Attribution accuracy would floor near chance for a reason
+        /// that has nothing to do with oversight.
+        ///
+        /// It shows what the qualities LOOK like and deliberately never says what they
+        /// are meant to MEAN. Teaching the mapping -- blue is depressed, dim is calm --
+        /// would wreck both halves of the study at once: the affect ratings would become
+        /// demand characteristics, and detection would become recall of a lesson rather
+        /// than a judgement about a room. Vocabulary, not answers.
+        ///
+        /// Built from the first trial's stimulus, so every room shown is in-pool and
+        /// passes the same validator as a real one.
+        /// </summary>
+        IEnumerator RunTour(OversightBlockData data)
+        {
+            if (!familiarisationTour || loader == null ||
+                data == null || data.trials == null || data.trials.Count == 0)
+                yield break;
+
+            var baseRoom = data.trials[0].stimulus;
+            if (baseRoom == null) yield break;
+
+            if (board != null)
+                board.Show("First, a look at what can vary.\n\n" +
+                           "These rooms are not part of the task and nothing is being " +
+                           "recorded.\nThey show the settings the system chooses from, " +
+                           "so the words\nused later mean something.");
+            if (events != null) events.Write("tour_started", null);
+            yield return new WaitForSeconds(briefingSeconds * 0.6f);
+            if (board != null) board.Hide();
+
+            foreach (string field in PoolConstants.Attributable)
+            {
+                var values = PoolConstants.ValuesFor(field);
+                if (values == null || values.Length == 0) continue;
+
+                // The two ends only. Showing every hue would take longer than the block.
+                var ends = values.Length <= 2
+                    ? values
+                    : new[] { values[0], values[values.Length - 1] };
+
+                foreach (string value in ends)
+                {
+                    var room = baseRoom.With(field, value);
+                    if (room == null) continue;
+                    var problems = room.Validate();
+                    if (problems.Count > 0) continue;
+
+                    loader.Load(room);
+                    if (board != null)
+                        board.Show(PlainWords.Field(field) + ":  " +
+                                   PlainWords.Value(field, value));
+                    if (events != null)
+                        events.WriteValues("tour_room", field, value, null);
+                    yield return new WaitForSeconds(tourSeconds);
+                }
+            }
+
+            loader.HideRooms();
+            if (board != null) board.Hide();
+            if (events != null) events.Write("tour_finished", null);
         }
 
         IEnumerator RunTrial(OversightTrialData trial, int index)
@@ -677,10 +745,23 @@ namespace EmotionRooms
             {
                 explanationAnswered = false;
                 if (detectionPanel != null)
+                {
+                    // Plain yes/no. The scored confidence is the one attached to the
+                    // detection judgement above; asking again here made the participant
+                    // rate certainty three times a trial, and a scale used ninety times
+                    // stops discriminating long before the block ends.
+                    if (detectionPanel.confidenceStrip != null)
+                        detectionPanel.confidenceStrip.gameObject.SetActive(false);
                     detectionPanel.Show("Did the system's reasoning match this room?");
+                }
                 if (events != null) events.Write("explanation_match_shown", null);
                 while (!explanationAnswered) yield return null;
-                if (detectionPanel != null) detectionPanel.Hide();
+                if (detectionPanel != null)
+                {
+                    detectionPanel.Hide();
+                    if (detectionPanel.confidenceStrip != null)
+                        detectionPanel.confidenceStrip.gameObject.SetActive(true);
+                }
                 if (events != null)
                     events.WriteValues("explanation_match_answered",
                         pendingExplanationMatched ? "matched" : "did_not_match",

@@ -2276,3 +2276,58 @@ class UnityScriptLayoutTests(unittest.TestCase):
             wrong, [],
             "a MonoBehaviour is in a file with a different name, which Unity cannot "
             "serialize into a scene:\n  " + "\n  ".join(wrong))
+
+
+class PlainVocabularyTests(unittest.TestCase):
+    """The words the system uses and the words the buttons offer must be the same words.
+
+    pipeline/rationales.py writes what the system says about a room. PlainWords.cs paints
+    what the participant can pick. They have to be one vocabulary: a participant asked
+    whether the stated reasoning matches the room should not have to work out that "bare
+    concrete" and "stone-like wall" are the same thing. That judgement is the measure the
+    explanation manipulation exists to produce, so any translation step lands on it as
+    noise.
+
+    They drifted once already. C# cannot import Python, so this reads the table.
+    """
+
+    def _plain_words(self):
+        path = os.path.join(ROOT, "unity", "Assets", "Scripts", "EmotionRooms",
+                            "PlainWords.cs")
+        with open(path, encoding="utf-8") as handle:
+            return handle.read()
+
+    def test_hue_words_match(self):
+        import re
+        from pipeline import rationales
+
+        source = self._plain_words()
+        for degrees, word in rationales.HUE_WORDS.items():
+            self.assertRegex(
+                source, r'case "%d":\s*return "%s";' % (degrees, re.escape(word)),
+                "hue %d is '%s' in rationales.py but not in PlainWords.cs" % (degrees, word))
+
+    def test_light_and_material_words_match(self):
+        import re
+        from pipeline import rationales
+
+        source = self._plain_words()
+        for lux, word in rationales.LIGHT_WORDS.items():
+            self.assertRegex(
+                source, r'value == "%d"\)\s*return "%s";' % (lux, re.escape(word)),
+                "%d lux is '%s' in rationales.py but not in PlainWords.cs" % (lux, word))
+
+        for material, word in rationales.MATERIAL_WORDS.items():
+            self.assertRegex(
+                source, r'value == "%s"\)\s*return "%s";' % (material, re.escape(word)),
+                "%s is '%s' in rationales.py but not in PlainWords.cs" % (material, word))
+
+    def test_saturation_words_match(self):
+        import re
+        from pipeline import rationales
+
+        source = self._plain_words()
+        for word in rationales.SATURATION_WORDS.values():
+            self.assertRegex(
+                source, r'return "%s";' % re.escape(word),
+                "saturation word '%s' is in rationales.py but not in PlainWords.cs" % word)

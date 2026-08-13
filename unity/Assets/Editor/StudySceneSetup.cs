@@ -108,10 +108,23 @@ namespace EmotionRooms.EditorTools
 
             // The three review panels. Without these OversightReview waits forever on
             // detectionAnswered and the session hangs after the eighth room.
+            // Confidence on the detection question only.
+            //
+            // It was on all three, so a participant rated their certainty about ninety
+            // times in a session. Confidence earns its place on detection: a graded
+            // response there gives a confidence-ROC, which estimates sensitivity without
+            // assuming the two distributions have equal variance, and it is the standard
+            // measure in this literature. On attribution and on the reasoning-match
+            // question it buys a secondary metacognition analysis nobody has planned,
+            // and the cost is paid in the currency the session has least of.
+            //
+            // Ninety graded judgements also degrade the one that matters. Confidence
+            // scales flatten under repetition, so the detection ratings -- the scored
+            // ones -- were being collected from someone already tired of the scale.
             var detection = BuildPanel(root, camera, "Detection Panel",
                 new[] { "yes", "no" }, true);
             var attribution = BuildPanel(root, camera, "Attribution Panel",
-                AttributionLabels(), true);
+                AttributionLabels(), false);
             var correction = BuildCorrectionPanel(root, camera);
 
             detection.events = events;
@@ -477,15 +490,7 @@ namespace EmotionRooms.EditorTools
         /// </summary>
         static string FaceFor(string value)
         {
-            switch (value)
-            {
-                case "hue": return "the colour";
-                case "saturation": return "colour strength";
-                case "texture": return "wall material";
-                case "material": return "wall material";
-                case "nothing_wrong": return "nothing was changed";
-                default: return value;
-            }
+            return PlainWords.Field(value);
         }
 
         static string[] AttributionLabels()
@@ -530,50 +535,10 @@ namespace EmotionRooms.EditorTools
         /// builders' material names both assume vocabulary the sample will not share.</summary>
         static string ValueFace(string field, string value)
         {
-            switch (field)
-            {
-                case "hue":
-                    switch (value)
-                    {
-                        case "0": return "red";
-                        case "30": return "orange";
-                        case "60": return "yellow";
-                        case "90": return "yellow-green";
-                        case "120": return "green";
-                        case "180": return "blue-green";
-                        case "240": return "blue";
-                        case "270": return "blue-violet";
-                        case "300": return "purple";
-                        case "330": return "pink";
-                    }
-                    break;
-                case "saturation":
-                    // Not "weak"/"strong": strong is heard as dark at least as often as
-                    // as vivid, and the two variables it must not be confused with are
-                    // brightness and hue.
-                    if (value == "0.2") return "faint";
-                    if (value == "0.4") return "vivid";
-                    break;
-                case "brightness":
-                    if (value == "150") return "dim";
-                    if (value == "300") return "medium";
-                    if (value == "500") return "bright";
-                    if (value == "750") return "very bright";
-                    break;
-                case "texture":
-                    // "plaster", "concrete" and "textile" are frozen pool values and
-                    // cannot go; the faces can. These match pipeline/rationales.py word
-                    // for word, which is the point: the system's stated reasoning names
-                    // the surface, and a participant deciding whether that reasoning
-                    // fits must not have to translate "stone-like wall" into "bare
-                    // concrete" first. A vocabulary mismatch would land as noise on the
-                    // one measure the explanation manipulation exists to produce.
-                    if (value == "plaster") return "painted plaster";
-                    if (value == "concrete") return "bare concrete";
-                    if (value == "textile") return "woven cloth";
-                    break;
-            }
-            return value;   // rough/smooth are already words
+            // One table, shared with the runtime and mirrored in pipeline/rationales.py,
+            // so what the system says about a room and what the buttons offer back can
+            // never be different words for the same thing.
+            return PlainWords.Value(field, value);
         }
 
         static QuestionPanel BuildPanel(GameObject root, Camera camera, string name,
