@@ -908,7 +908,23 @@ namespace EmotionRooms
             else if (tracked && warnedNoController)
             {
                 warnedNoController = false;
-                if (!string.IsNullOrEmpty(interruptedBoardText))
+
+                // Only put back a message that still belongs on screen.
+                //
+                // Restoring blindly is what Mengkai saw: the controller dropped out
+                // while the idle screen was up, she pressed start, and when the
+                // controller came back this helpfully restored "Start the session from
+                // the laptop" over a session that had already reached the affect grid.
+                //
+                // Once a runner is going it owns the board -- briefing, tour labels,
+                // the system's reasoning -- and anything this captured beforehand is
+                // from a state the session has left.
+                bool aRunnerOwnsTheBoard =
+                    (trialRunner != null && trialRunner.IsRunning) ||
+                    (oversightReview != null && oversightReview.IsRunning) ||
+                    (rationaleReview != null && rationaleReview.IsRunning);
+
+                if (!aRunnerOwnsTheBoard && !string.IsNullOrEmpty(interruptedBoardText))
                     board.Show(interruptedBoardText);
                 else
                     board.Hide();

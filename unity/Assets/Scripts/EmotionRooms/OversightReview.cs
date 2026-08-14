@@ -487,7 +487,7 @@ namespace EmotionRooms
         public float briefingSeconds = 15f;
 
         [Tooltip("How long the system's reasoning stays up, on the trials that show it.")]
-        public float explanationSeconds = 8f;
+        public float explanationSeconds = 11f;
 
         [Tooltip("Where the briefing is drawn. Wired by scene setup.")]
         public MessageBoard board;
