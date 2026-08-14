@@ -277,16 +277,35 @@ def build_oversight_block(
     pool_sampler=None,
     composition: list | None = None,
 ) -> dict:
-    """One participant's Phase B block: half faithful, half corrupted, shuffled.
+    """One participant's block: 32 trials, 12 with an altered room, shuffled.
 
-    32 trials by default, not 12. Detection sensitivity is estimated per participant from
-    the faithful/corrupted contrast, and three faithful trials give a false-alarm rate
-    that can only be 0, .33, .67 or 1 -- a d-prime computed from that is not an estimate.
-    Sixteen of each is the smallest split that supports the analysis.
+    32 trials rather than 12. Detection sensitivity is estimated per participant, and
+    three faithful trials give a false-alarm rate that can only be 0, .33, .67 or 1 --
+    a d-prime computed from that is not an estimate.
 
-    Corrupted trials are further split between swapped and random, and each corrupted
-    trial is pre-assigned to have the participant's own correction applied or a different
-    one, balanced, so the yoked comparison is by design rather than by whatever happened.
+    The split is 12 faithful, 12 swapped, 8 rationale_mismatched. For the room question
+    that is 12 altered against 20 unaltered, because a rationale_mismatched room is
+    genuine and only its stated reasoning is wrong. So the false-alarm rate comes off 20
+    trials and the hit rate off 12, and 12 of 32 is the "about a third" the briefing
+    quotes, which is what makes criterion interpretable.
+
+    Not an even split, and that is deliberate rather than an oversight. Settled 14 Aug
+    2026 after Mengkai raised it. The primary contrast is faithful-explained against
+    rationale_mismatched: two genuine rooms differing only in whether the stated
+    reasoning describes them. Flagging those at different rates means the participant is
+    auditing the account rather than the artifact, which is the claim the paper is for,
+    and it needs both cells populated -- currently 8 against 8.
+
+    An even base rate costs exactly that. Sixteen altered trials in a 32-trial block
+    leaves 16 unaltered to cover faithful-explained, faithful-unexplained and
+    rationale_mismatched together, which drops the primary contrast to about 4 against 8.
+    A cleaner criterion measure is not worth a headline contrast that cannot be
+    estimated, and criterion is interpretable at any base rate the participant was told.
+    They are told.
+
+    Each corrupted trial is pre-assigned to have the participant's own correction applied
+    or a different one, balanced, so the yoked comparison is by design rather than by
+    whatever happened.
     """
     if len(configs) < 2:
         raise OversightError("need at least two configs so there is a donor to draw from")
