@@ -247,7 +247,12 @@ namespace EmotionRooms
             // stopped, and the screen went empty with nothing to say why. The data up to
             // that point is already on disk either way, so quitting should save and leave
             // the session alone.
-            BundleNow("app closing");
+            //
+            // Through SaveEverything rather than straight to the bundle: quitting used
+            // to combine the files without first writing the trial in progress or
+            // flushing the buffered logs, so the combined file was built from slightly
+            // less than what was known.
+            SaveEverything("app closing");
         }
 
         bool bundledOnExit;
@@ -273,14 +278,18 @@ namespace EmotionRooms
         /// </summary>
         void SaveEverything(string why)
         {
-            if (Time.realtimeSinceStartup - lastSaveAt < 10f) return;
-            lastSaveAt = Time.realtimeSinceStartup;
-
-            // Buffered writers first. The per-trial responses are already on disk -- they
-            // are appended and closed per row -- but the event log and telemetry hold up
-            // to a few rows, and those rows are what explain a session that stopped.
-            // The trial in progress first, so it is in the file before the file is
-            // combined. A session that ends here ends mid-trial by definition.
+            // Never throttled. These three are cheap and they are the data.
+            //
+            // The throttle used to sit above this, which made it possible to lose the
+            // very thing this method exists to save. Two interruptions inside ten
+            // seconds -- a strap adjustment, then the headset coming off for good -- and
+            // the second call returned immediately, leaving the trial in progress
+            // unwritten and the last rows of the event log sitting in a buffer.
+            //
+            // The trial in progress goes first, so it is in the responses file before
+            // anything reads that file. A session ending here ends mid-trial by
+            // definition. The event log and telemetry hold a few rows each, and those
+            // rows are what explain a session that stopped.
             if (oversightReview != null) oversightReview.FlushInProgress(why);
 
             foreach (var log in FindObjectsByType<EventLog>(FindObjectsSortMode.None))
@@ -288,6 +297,12 @@ namespace EmotionRooms
             foreach (var stream in FindObjectsByType<StudyTelemetry>(FindObjectsSortMode.None))
                 stream.Flush();
 
+            // Throttled. This re-reads every response file and rewrites the combined
+            // one, and running it twice in a second produces the same file. If it is
+            // skipped, every row it would have gathered is already on disk in the files
+            // it gathers from, and bundle-participant rebuilds it offline.
+            if (Time.realtimeSinceStartup - lastSaveAt < 10f) return;
+            lastSaveAt = Time.realtimeSinceStartup;
             BundleNow(why);
         }
 
