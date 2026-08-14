@@ -124,6 +124,18 @@ namespace EmotionRooms
         public int arousalAfter = -1;
         public bool correctionApplied;
 
+        /// <summary>
+        /// False when the trial was cut short: the session ended, the headset came off
+        /// and did not come back, or the block was skipped part way through a trial.
+        ///
+        /// A partial trial used to be written nowhere. Everything it had collected --
+        /// the first affect rating, the detection verdict, sometimes a whole repair --
+        /// existed only as event rows, and the responses file simply had no line for it.
+        /// A session abandoned at trial 19 looked like a session that reached 18.
+        /// Analysis should drop these; it cannot drop what it never sees.
+        /// </summary>
+        public bool complete = true;
+
         public string ToCsvRow()
         {
             var fields = new[]
@@ -150,6 +162,7 @@ namespace EmotionRooms
                 explanationMatched ? "1" : "0",
                 explanationMatchConfidence.ToString("0.###", CultureInfo.InvariantCulture),
                 rationaleWasWrong ? "1" : "0",
+                complete ? "1" : "0",
             };
             var row = new StringBuilder();
             for (int i = 0; i < fields.Length; i++)
@@ -169,7 +182,8 @@ namespace EmotionRooms
                    "duration_ms,swapped_field,started_utc," +
                    "valence_before,arousal_before,valence_after,arousal_after," +
                    "correction_applied,extra_attributions,explanation_shown," +
-                   "explanation_matched,explanation_match_confidence,rationale_was_wrong";
+                   "explanation_matched,explanation_match_confidence,rationale_was_wrong," +
+                   "complete";
         }
     }
 
@@ -254,6 +268,7 @@ namespace EmotionRooms
         public void SkipBlock()
         {
             if (!IsRunning) return;
+            FlushInProgress("block skipped");
             StopAllCoroutines();
             IsRunning = false;
             if (detectionPanel != null) detectionPanel.Hide();
@@ -524,8 +539,7 @@ namespace EmotionRooms
                 return;
             }
 
-            if (!File.Exists(ResponsePath))
-                File.WriteAllText(ResponsePath, OversightRecord.CsvHeader() + "\n", Encoding.UTF8);
+            CsvFile.EnsureHeader(ResponsePath, OversightRecord.CsvHeader());
 
             StartCoroutine(RunBlock());
         }
@@ -736,6 +750,31 @@ namespace EmotionRooms
             }
 
             CurrentStimulus = trial.stimulus;
+
+            // A skeleton for this trial, kept where an interruption can reach it.
+            //
+            // Everything a trial collects used to exist only in local variables until
+            // the moment the record was built at the end. Abandon the block part way --
+            // headset off for good, battery, skip button -- and that trial wrote no row
+            // at all. The first affect rating, the detection verdict, sometimes an
+            // entire diagnosis and repair, all gone from the responses file and
+            // recoverable only by reading the event log by hand.
+            inFlight = new OversightRecord
+            {
+                participant = participantId,
+                trialIndex = index,
+                trialId = trial.trial_id,
+                condition = trial.condition,
+                targetEmotionShown = trial.target_emotion_shown,
+                explanationShown = trial.explanation_shown,
+                rationaleWasWrong = trial.ground_truth != null &&
+                                    trial.ground_truth.rationale_is_wrong,
+                swappedField = trial.ground_truth != null
+                    ? trial.ground_truth.swapped_field : null,
+                startedUtc = startedUtc,
+                complete = false,
+            };
+
             loader.Load(trial.stimulus);
             if (events != null) events.WriteRoom("review_room_shown", trial.stimulus, trial.condition);
             yield return new WaitForSeconds(reviewExposureSeconds);
@@ -836,6 +875,13 @@ namespace EmotionRooms
             // Left alone this produces a d-prime built from zero hits and an entirely
             // absent correction arm, in a file that looks complete.
             bool detectedRoom = pendingDetected;
+            if (inFlight != null)
+            {
+                inFlight.detected = detectedRoom;
+                inFlight.detectionConfidence = pendingDetectionConfidence;
+                inFlight.valenceBefore = valenceBefore;
+                inFlight.arousalBefore = arousalBefore;
+            }
 
             if (events != null)
                 events.WriteValues("detection_answered", detectedRoom ? "noticed_swap" : "looks_consistent",
@@ -1103,6 +1149,7 @@ namespace EmotionRooms
                 correctionApplied = applied,
             };
 
+            inFlight = null;
             completed.Add(record);
             AppendRecord(record);
             if (events != null) events.Write("review_trial_end", null);
@@ -1127,6 +1174,30 @@ namespace EmotionRooms
 
             Debug.LogWarning("OversightReview: no " + name + " for '" + participantId + "'.");
             return blockAsset != null ? blockAsset.text : null;
+        }
+
+        OversightRecord inFlight;
+
+        /// <summary>
+        /// Write the trial in progress, marked incomplete. Safe to call repeatedly.
+        ///
+        /// Called from every path that can end a block early. What it writes is a
+        /// partial row -- the ratings and answers given so far, complete=0 -- which
+        /// analysis should drop. It cannot drop what was never written, which is why
+        /// this exists rather than trusting the trial to finish.
+        /// </summary>
+        public void FlushInProgress(string why)
+        {
+            if (inFlight == null) return;
+            var partial = inFlight;
+            inFlight = null;
+
+            partial.complete = false;
+            AppendRecord(partial);
+            if (events != null)
+                events.WriteValues("review_trial_partial", partial.trialId, why, null);
+            Debug.Log("OversightReview: wrote a partial row for " + partial.trialId +
+                      " (" + why + ").");
         }
 
         void AppendRecord(OversightRecord record)

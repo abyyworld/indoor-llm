@@ -279,6 +279,10 @@ namespace EmotionRooms
             // Buffered writers first. The per-trial responses are already on disk -- they
             // are appended and closed per row -- but the event log and telemetry hold up
             // to a few rows, and those rows are what explain a session that stopped.
+            // The trial in progress first, so it is in the file before the file is
+            // combined. A session that ends here ends mid-trial by definition.
+            if (oversightReview != null) oversightReview.FlushInProgress(why);
+
             foreach (var log in FindObjectsByType<EventLog>(FindObjectsSortMode.None))
                 log.Flush();
             foreach (var stream in FindObjectsByType<StudyTelemetry>(FindObjectsSortMode.None))

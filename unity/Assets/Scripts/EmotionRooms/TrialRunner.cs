@@ -38,6 +38,17 @@ namespace EmotionRooms
         public long exposureMs;
         public string startedUtc;
 
+        /// <summary>
+        /// A warm-up room rather than a scored one.
+        ///
+        /// Practice rows used to be built and then dropped on the floor: rated for
+        /// real, by a real participant, and written nowhere. A rating that was
+        /// collected should exist. Marked instead of discarded, so analysis can filter
+        /// it in one predicate and a pilot can still see that the kit recorded
+        /// anything at all.
+        /// </summary>
+        public bool practice;
+
         public string ToCsvRow()
         {
             return string.Join(",", new[]
@@ -52,13 +63,14 @@ namespace EmotionRooms
                 responseMs.ToString(CultureInfo.InvariantCulture),
                 exposureMs.ToString(CultureInfo.InvariantCulture),
                 Escape(startedUtc),
+                practice ? "1" : "0",
             });
         }
 
         public static string CsvHeader()
         {
             return "participant,trial_index,trial_id,target_emotion,shape," +
-                   "valence,arousal,response_ms,exposure_ms,started_utc";
+                   "valence,arousal,response_ms,exposure_ms,started_utc,practice";
         }
 
         static string Escape(string value)
@@ -469,15 +481,18 @@ namespace EmotionRooms
                 responseMs = latest.durationMs,
                 exposureMs = exposureMs,
                 startedUtc = startedUtc,
+                practice = isPractice,
             };
 
-            // Practice rooms are rated for real but never counted. Keeping them out of
-            // `completed` is what stops them reaching responses.csv and the trial count.
-            if (!isPractice)
-            {
-                completed.Add(record);
-                AppendRecord(record);
-            }
+            // Written either way, counted only if scored.
+            //
+            // Practice rows used to be dropped entirely, so a warm-up produced a
+            // session with no file at all and a pilot could not tell a working kit
+            // from a broken one. `completed` still holds only scored trials, which is
+            // what the trial count and the block chaining read, but the row itself is
+            // recorded with practice=1 and can be filtered in one predicate.
+            AppendRecord(record);
+            if (!isPractice) completed.Add(record);
 
             var handler = TrialCompleted;
             if (handler != null) handler(record);
@@ -517,8 +532,10 @@ namespace EmotionRooms
 
         void WriteHeaderIfNeeded()
         {
-            if (File.Exists(ResponsePath)) return;
-            File.WriteAllText(ResponsePath, TrialRecord.CsvHeader() + "\n", Encoding.UTF8);
+            // No early return on "the file exists". That was the bug this replaces: an
+            // existing file was assumed to have the right columns, and after a schema
+            // change it did not.
+            CsvFile.EnsureHeader(ResponsePath, TrialRecord.CsvHeader());
         }
 
         void AppendRecord(TrialRecord record)
