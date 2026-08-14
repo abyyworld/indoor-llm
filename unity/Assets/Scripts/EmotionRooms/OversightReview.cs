@@ -457,6 +457,13 @@ namespace EmotionRooms
         {
             if (!IsRunning) return;
 
+            // Before the coroutine is stopped, because stopping it is what makes the
+            // trial in progress unreachable. Withdrawal is the case that matters most:
+            // somebody who stops half way through a trial has still given a rating and
+            // a verdict, and that is exactly the participant whose partial data the
+            // ethics record may need to account for.
+            FlushInProgress(reason);
+
             StopAllCoroutines();
             IsRunning = false;
 

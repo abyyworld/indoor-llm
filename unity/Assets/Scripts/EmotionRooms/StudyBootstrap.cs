@@ -516,7 +516,11 @@ namespace EmotionRooms
 
             if (questionnaires != null) questionnaires.ShowSummary();
             WriteConsentRow("withdrawn", CompletedSoFar());
-            BundleNow("participant withdrew");
+
+            // The same path as every other ending. Withdrawal used to combine the files
+            // without flushing the buffered logs first, so the last thing a withdrawing
+            // participant did could be missing from the record of why they withdrew.
+            SaveEverything("participant withdrew");
             Debug.LogWarning("StudyBootstrap: participant withdrew. Take the headset off, " +
                              "debrief, and note the reason on the paper record.");
         }
