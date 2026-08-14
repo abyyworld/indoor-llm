@@ -327,18 +327,29 @@ def build_oversight_block(
             if count > 0:
                 composition.append((condition, explained, count))
 
-    faithful_count = int(round(trials_total * FAITHFUL_SHARE))
-    corrupted_count = trials_total - faithful_count
+    # Describe the block that was actually built, not the one an older constant
+    # implies.
+    #
+    # These two lines used to be computed from FAITHFUL_SHARE = 0.5, on a path that
+    # predates rationale_mismatched existing. Every block file therefore advertised
+    # conditions ['faithful', 'swapped'] and counts {faithful: 16, swapped: 16}
+    # while containing 12, 12 and 8 -- and did not mention rationale_mismatched at
+    # all. Mengkai read the file, believed it, and reported the composition as
+    # broken. She was right that something was, and it was this.
+    #
+    # Metadata that disagrees with the data is worse than no metadata: an analysis
+    # that takes its denominators from here would compute a false-alarm rate over
+    # the wrong number of trials and never know.
+    counts: dict[str, int] = {}
+    for condition, _explained, count in composition:
+        counts[condition] = counts.get(condition, 0) + count
+    conditions = list(counts)
 
-    corrupt_kinds = [SWAPPED, RANDOM] if pool_sampler else [SWAPPED]
-    per_kind = corrupted_count // len(corrupt_kinds)
-    counts = {FAITHFUL: faithful_count}
-    for i, kind in enumerate(corrupt_kinds):
-        # Any remainder goes to the first kind rather than being dropped.
-        counts[kind] = per_kind + (corrupted_count - per_kind * len(corrupt_kinds)
-                                   if i == 0 else 0)
-
-    conditions = [FAITHFUL] + corrupt_kinds
+    # The room-detection base rate, which is what the briefing quotes and what
+    # criterion is interpreted against. rationale_mismatched rooms are GENUINE --
+    # only the reasoning is wrong -- so they are noise trials here, not signal.
+    altered = sum(n for c, n in counts.items() if c in (SWAPPED, RANDOM))
+    unaltered = trials_total - altered
 
     # EXPLANATION is crossed with fidelity, balanced within each condition so the
     # 2x2 is even: half of the faithful trials carry the system's stated reasoning
@@ -413,7 +424,9 @@ def build_oversight_block(
         "conditions": conditions,
         "counts": counts,
         "trials_total": len(trials),
-        "faithful_share": FAITHFUL_SHARE,
+        "faithful_share": (unaltered / trials_total) if trials_total else 0.0,
+        "altered_rooms": altered,
+        "unaltered_rooms": unaltered,
         "trials": trials,
     }
 

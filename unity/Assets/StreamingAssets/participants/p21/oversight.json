@@ -5,14 +5,18 @@
   "sham_rule": "same-pool value, excluding the participant's choice and the original (correct) value",
   "conditions": [
     "faithful",
-    "swapped"
+    "swapped",
+    "rationale_mismatched"
   ],
   "counts": {
-    "faithful": 16,
-    "swapped": 16
+    "faithful": 12,
+    "swapped": 12,
+    "rationale_mismatched": 8
   },
   "trials_total": 32,
-  "faithful_share": 0.5,
+  "faithful_share": 0.625,
+  "altered_rooms": 12,
+  "unaltered_rooms": 20,
   "trials": [
     {
       "condition": "rationale_mismatched",

@@ -2331,3 +2331,53 @@ class PlainVocabularyTests(unittest.TestCase):
             self.assertRegex(
                 source, r'return "%s";' % re.escape(word),
                 "saturation word '%s' is in rationales.py but not in PlainWords.cs" % word)
+
+
+class BlockMetadataTests(unittest.TestCase):
+    """A block file must describe itself accurately.
+
+    Every pack advertised conditions ['faithful', 'swapped'] and counts
+    {faithful: 16, swapped: 16} while containing 12, 12 and 8, and never mentioned
+    rationale_mismatched. The numbers came from a constant that predates that
+    condition existing. Mengkai read the file, believed it, and reported the
+    composition as broken -- correctly, just not for the reason she had.
+
+    Metadata that disagrees with its own data is worse than none: an analysis that
+    takes its denominators from here gets a false-alarm rate over the wrong number
+    of trials and no indication anything is wrong.
+    """
+
+    def _block(self):
+        from pipeline.oversight import build_oversight_block
+
+        # The real eight. A fixture with identical rooms cannot be swapped at all,
+        # which the builder correctly refuses to do.
+        with open(os.path.join(ROOT, "configs", "study_8cell.json"),
+                  encoding="utf-8") as handle:
+            rooms = json.load(handle)["rooms"]
+
+        return build_oversight_block(rooms, participant="pTest", seed=7,
+                                     trials_total=32, pool_sampler=None)
+
+    def test_counts_match_the_trials(self):
+        import collections
+
+        block = self._block()
+        actual = collections.Counter(t["condition"] for t in block["trials"])
+        self.assertEqual(
+            dict(block["counts"]), dict(actual),
+            "the block advertises counts it does not contain")
+        self.assertEqual(
+            sorted(block["conditions"]), sorted(actual),
+            "the block advertises conditions it does not contain")
+
+    def test_base_rate_counts_mismatched_rooms_as_unaltered(self):
+        block = self._block()
+
+        # A rationale_mismatched room is genuine; only the reasoning is wrong. It is
+        # a noise trial for the room-detection question, and counting it as signal
+        # would misstate the base rate the briefing quotes to the participant.
+        altered = sum(1 for t in block["trials"]
+                      if t["condition"] in ("swapped", "random"))
+        self.assertEqual(block["altered_rooms"], altered)
+        self.assertEqual(block["unaltered_rooms"], len(block["trials"]) - altered)
