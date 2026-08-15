@@ -309,8 +309,10 @@ namespace EmotionRooms.EditorTools
                 EditorStyles.wordWrappedMiniLabel);
 
             EditorGUILayout.LabelField(practiceOnly
-                ? "Two warm-up rooms then stop. Nothing scored, no review block, no " +
-                  "participant id used up. This is how to try the kit."
+                ? "The whole session, exactly as a participant gets it, but nothing is " +
+                  "scored and no participant id is used up. Rows are marked practice=1. " +
+                  "Same 45 minutes: a rehearsal shorter than the session does not " +
+                  "rehearse the session."
                 : "Two warm-up rooms, then 32 trials. About 45 minutes including the " +
                   "questionnaires, and longer for someone who repairs a lot of rooms.",
                 EditorStyles.wordWrappedMiniLabel);

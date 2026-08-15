@@ -135,9 +135,11 @@ namespace EmotionRooms
                  "whichever emotion the counterbalancing put first.")]
         public bool practiceRooms = true;
 
-        [Tooltip("How many real trials a practice run includes, after the warm-up rooms. " +
-                 "Enough to meet every question once without spending a participant id.")]
-        public int practiceTrialCount = 2;
+        [Tooltip("Trials a practice run includes after the warm-up rooms. 0 runs the " +
+                 "whole block, which is the default: a rehearsal that is shorter than " +
+                 "the session is not a rehearsal of the session.\n\n" +
+                 "Set a small number to sanity-check the kit in a few minutes instead.")]
+        public int practiceTrialCount;
 
         [Tooltip("Which halves this participant does.\n\n" +
                  "0 = both (Phase A then Phase B), 1 = Phase A only, 2 = Phase B only.\n\n" +
@@ -422,9 +424,18 @@ namespace EmotionRooms
             // the grid for the first time on a scored trial. practiceOnly stops there.
             if (trialRunner != null && practiceRooms)
             {
-                // Practice goes on into the block too, just a short way in. A
-                // rehearsal that stops before the questions rehearses nothing that
-                // matters, and it is the questions a pilot needs to check.
+                // Practice is the session, not a sample of it.
+                //
+                // It began as two warm-up rooms and a stop, which rehearsed the affect
+                // grid and nothing else: not the reasoning, not the was-it-altered
+                // question, not repairing a room. Then it was two real trials, which was
+                // better and still not the thing -- the parts that go wrong late go
+                // wrong late, and a four minute rehearsal cannot find them.
+                //
+                // So practice now runs the whole block. It differs from a real session
+                // in exactly one way: it does not consume a participant id, and its rows
+                // are marked practice=1. Set practiceTrialCount above zero when what you
+                // want is a quick check of the kit rather than a rehearsal.
                 runBlockAfterPractice = true;
                 if (oversightReview != null)
                     oversightReview.trialLimit = practiceOnly ? practiceTrialCount : 0;
