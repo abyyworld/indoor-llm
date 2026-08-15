@@ -37,7 +37,7 @@ namespace EmotionRooms
                  "headset's vertical FOV if you want the framing to match exactly.")]
         public float fieldOfView = 60f;
 
-        [Tooltip("Folder under Application.persistentDataPath.")]
+        [Tooltip("Folder under StudyPaths.Data.")]
         public string outputFolder = "stills";
 
         [Tooltip("Frames to wait after loading before capturing, so lighting and any " +
@@ -46,7 +46,7 @@ namespace EmotionRooms
 
         public string OutputPath
         {
-            get { return Path.Combine(Application.persistentDataPath, outputFolder); }
+            get { return Path.Combine(StudyPaths.Data, outputFolder); }
         }
 
         /// <summary>Render every room in a batch, one PNG per room, named by id.</summary>

@@ -117,7 +117,7 @@ namespace EmotionRooms
         {
             try
             {
-                string probe = System.IO.Path.Combine(Application.persistentDataPath, ".probe");
+                string probe = System.IO.Path.Combine(StudyPaths.Data, ".probe");
                 System.IO.File.WriteAllText(probe, "ok");
                 System.IO.File.Delete(probe);
                 return true;
@@ -260,8 +260,8 @@ namespace EmotionRooms
             GUILayout.Space(6f);
 
             if (GUILayout.Button("Where is the data?", GUILayout.Height(22f)))
-                Debug.Log("Data folder: " + Application.persistentDataPath);
-            GUILayout.Label(Application.persistentDataPath, Fine());
+                Debug.Log("Data folder: " + StudyPaths.Data);
+            GUILayout.Label(StudyPaths.Data, Fine());
         }
 
         // ------------------------------------------------------------------- chrome

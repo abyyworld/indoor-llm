@@ -380,7 +380,7 @@ namespace EmotionRooms
 
         string ResponsePath
         {
-            get { return Path.Combine(Application.persistentDataPath, responsesFileName); }
+            get { return Path.Combine(StudyPaths.Data, responsesFileName); }
         }
 
         void Awake()

@@ -384,7 +384,7 @@ namespace EmotionRooms
             // way to get here empty is a build with no packs at all.
             if (!ShippedAssets.HasParticipant(participantId) &&
                 !System.IO.File.Exists(System.IO.Path.Combine(
-                    Application.persistentDataPath, "session.json")))
+                    StudyPaths.Data, "session.json")))
             {
                 string message = "This build has no rooms in it.\n\n" +
                                  "Rebuild and reinstall from the laptop.";
@@ -542,7 +542,7 @@ namespace EmotionRooms
 
         void WriteConsentRow(string eventName, string detail)
         {
-            string path = Path.Combine(Application.persistentDataPath, consentLogFileName);
+            string path = Path.Combine(StudyPaths.Data, consentLogFileName);
             try
             {
                 if (!File.Exists(path))

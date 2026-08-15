@@ -15,7 +15,7 @@
 //   responses.csv                               one row per trial, the answer only
 //   oversight_responses.csv                     one row per review trial
 //
-// Writes to Application.persistentDataPath/logs/.
+// Writes to StudyPaths.Data/logs/.
 
 using System.Collections.Generic;
 using System.Globalization;
@@ -145,7 +145,7 @@ namespace EmotionRooms
         {
             if (writer != null) return;
 
-            string dir = System.IO.Path.Combine(Application.persistentDataPath, folder);
+            string dir = System.IO.Path.Combine(StudyPaths.Data, folder);
             Directory.CreateDirectory(dir);
             string stamp = System.DateTime.UtcNow.ToString("yyyyMMdd_HHmmss", CultureInfo.InvariantCulture);
             Path = System.IO.Path.Combine(dir, "telemetry_" + participantId + "_" + stamp + ".csv");

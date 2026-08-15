@@ -150,7 +150,7 @@ namespace EmotionRooms
         public string practiceFileName = "practice.json";
 
         [Header("Output")]
-        [Tooltip("CSV written to Application.persistentDataPath. Appended per trial.")]
+        [Tooltip("CSV written to StudyPaths.Data. Appended per trial.")]
         public string responsesFileName = "responses.csv";
 
         public event Action<TrialRecord> TrialCompleted;
@@ -191,7 +191,7 @@ namespace EmotionRooms
 
         string ResponsePath
         {
-            get { return Path.Combine(Application.persistentDataPath, responsesFileName); }
+            get { return Path.Combine(StudyPaths.Data, responsesFileName); }
         }
 
         void Awake()
@@ -524,7 +524,7 @@ namespace EmotionRooms
             if (json != null) return json;
 
             Debug.LogWarning("TrialRunner: no " + name + " for '" + participantId +
-                             "'. Looked in " + Application.persistentDataPath +
+                             "'. Looked in " + StudyPaths.Data +
                              " and in the shipped packs (" +
                              string.Join(", ", new List<string>(ShippedAssets.Participants).ToArray()) + ").");
             return sessionAsset != null ? sessionAsset.text : null;

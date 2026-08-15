@@ -957,6 +957,28 @@ namespace EmotionRooms.EditorTools
         /// updated. One button brings the whole folder back -- responses, telemetry,
         /// events, questionnaires and the combined bundles.
         /// </summary>
+        /// <summary>
+        /// Copy the headset's data folder into the repo without any dialogs.
+        ///
+        /// For the panel to call on its own when a session ends. An Android app cannot
+        /// write to a folder on the researcher's laptop, so the only way data reaches
+        /// the project is a pull, and the only reliable way a pull happens after every
+        /// participant is if nobody has to remember it. Silent about failure on purpose:
+        /// this runs on a timer and a headset that is asleep between participants is
+        /// normal, not an error worth a dialog.
+        /// </summary>
+        public static bool PullDataQuietly(out string destination)
+        {
+            destination = Path.Combine(
+                Directory.GetParent(Application.dataPath).Parent.FullName,
+                "runs", "headset-data");
+
+            if (ConnectedDevices().Length == 0) return false;
+            Directory.CreateDirectory(destination);
+            return Adb("pull /sdcard/Android/data/" + Package + "/files \"" +
+                       destination + "\"", null);
+        }
+
         [MenuItem("Emotion Rooms/Advanced/Pull the data from the headset", priority = 116)]
         public static void PullData()
         {

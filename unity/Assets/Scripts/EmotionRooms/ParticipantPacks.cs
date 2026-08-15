@@ -91,7 +91,7 @@ namespace EmotionRooms
             // The loose file in the data folder wins. Someone who has just regenerated
             // one participant expects to be running that, and silently preferring the
             // shipped copy would hand them a session they thought they had replaced.
-            string loose = Path.Combine(Application.persistentDataPath, fileName);
+            string loose = Path.Combine(StudyPaths.Data, fileName);
             if (File.Exists(loose)) return File.ReadAllText(loose);
 
             if (string.IsNullOrEmpty(participant)) return null;

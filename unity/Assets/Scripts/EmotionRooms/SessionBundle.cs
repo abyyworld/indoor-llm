@@ -26,7 +26,7 @@ namespace EmotionRooms
         /// </summary>
         public static string Write(string participant)
         {
-            string dir = Application.persistentDataPath;
+            string dir = StudyPaths.Data;
             string outDir = Path.Combine(dir, "bundles");
             Directory.CreateDirectory(outDir);
 

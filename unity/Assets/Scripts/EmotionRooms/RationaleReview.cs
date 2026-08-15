@@ -98,7 +98,7 @@ namespace EmotionRooms
             get
             {
                 return !string.IsNullOrEmpty(blockFileName) &&
-                       File.Exists(Path.Combine(Application.persistentDataPath, blockFileName));
+                       File.Exists(Path.Combine(StudyPaths.Data, blockFileName));
             }
         }
 
@@ -109,7 +109,7 @@ namespace EmotionRooms
 
         string ResponsePath
         {
-            get { return Path.Combine(Application.persistentDataPath, responsesFileName); }
+            get { return Path.Combine(StudyPaths.Data, responsesFileName); }
         }
 
         /// <summary>Called from the input driver when the panel resolves.</summary>

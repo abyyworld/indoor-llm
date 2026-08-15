@@ -114,7 +114,45 @@ namespace EmotionRooms.EditorTools
             // headset comes off, so a perfectly healthy app on a table does not reply.
             cachedAppAlive = cachedDevices.Length > 0 && StudyBuild.IsProcessAlive();
 
+            AutoPullWhenIdle();
+
             ReviveIfDead();
+        }
+
+        double pulledAt;
+        bool wasRunning;
+
+        /// <summary>
+        /// Copy the headset's data into the repo as soon as a session stops running.
+        ///
+        /// An Android app cannot write to a folder on this laptop, so the only route
+        /// into the project is a pull, and the only pull that reliably happens after
+        /// every participant is one nobody has to remember. The app's folder is private
+        /// to it, so a reinstall to fix something takes the data with it -- and a
+        /// reinstall to fix something is exactly the moment nobody is thinking about
+        /// data.
+        ///
+        /// Fires on the edge from running to not running, so it lands once per session
+        /// rather than every probe, plus a two minute floor in case a session ends and
+        /// restarts. Quiet when the headset is asleep between participants, which is
+        /// normal rather than an error.
+        /// </summary>
+        void AutoPullWhenIdle()
+        {
+            bool running = headsetApp != null && headsetApp.running;
+            bool justStopped = wasRunning && !running;
+            wasRunning = running;
+
+            if (!justStopped) return;
+            if (EditorApplication.timeSinceStartup - pulledAt < 120.0) return;
+            pulledAt = EditorApplication.timeSinceStartup;
+
+            Later(() =>
+            {
+                string where;
+                if (StudyBuild.PullDataQuietly(out where))
+                    Debug.Log("Study: session ended, data copied into " + where + ".");
+            });
         }
 
         double revivedAt;

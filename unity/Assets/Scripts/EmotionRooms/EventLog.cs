@@ -20,7 +20,7 @@
 //   * Append and flush as it goes. A session that crashes keeps everything up to the
 //     crash, which is usually the interesting part.
 //
-// Writes to Application.persistentDataPath/logs/<participant>_<timestamp>_events.csv
+// Writes to StudyPaths.Data/logs/<participant>_<timestamp>_events.csv
 
 using System;
 using System.Collections.Generic;
@@ -109,7 +109,7 @@ namespace EmotionRooms
         {
             if (writer != null) return;
 
-            string dir = System.IO.Path.Combine(Application.persistentDataPath, folder);
+            string dir = System.IO.Path.Combine(StudyPaths.Data, folder);
             Directory.CreateDirectory(dir);
 
             string stamp = DateTime.UtcNow.ToString("yyyyMMdd_HHmmss", CultureInfo.InvariantCulture);
