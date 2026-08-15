@@ -1295,8 +1295,14 @@ class TestInstruments(unittest.TestCase):
         from pipeline.instruments import AWARENESS
 
         ids = [i["id"] for i in AWARENESS["items"]]
-        self.assertLess(ids.index("guessed_purpose"), ids.index("noticed_colour"))
-        self.assertLess(ids.index("noticed_varying"), ids.index("noticed_colour"))
+        self.assertLess(ids.index("guessed_purpose"), ids.index("noticed_shape"))
+        self.assertLess(ids.index("noticed_varying"), ids.index("noticed_shape"))
+
+        # The colour, brightness and material checks are gone on purpose: the block
+        # asks about each of them thirty-two times against ground truth. Naming a
+        # manipulated variable here would only teach it to someone who had not noticed.
+        for prompted in ("noticed_colour", "noticed_brightness", "noticed_material"):
+            self.assertNotIn(prompted, ids)
 
     def test_attention_check_names_a_real_item(self):
         from pipeline.instruments import ATTENTION_CHECK, FORMS
@@ -1444,7 +1450,6 @@ class TestParticipantBundle(unittest.TestCase):
                         ["participant", "form", "item", "answer", "state"],
                         [["p01", "nasa_tlx", "mental_demand", 60, "Completed"],
                          ["p01", "nasa_tlx", "effort", 40, "Completed"],
-                         ["p01", "awareness", "noticed_colour", "Yes", "Completed"],
                          ["p01", "awareness", "noticed_shape", "Yes", "Completed"],
                          ["p01", "preference", "shape_preference",
                           "The curved rooms", "Completed"],
@@ -1453,7 +1458,8 @@ class TestParticipantBundle(unittest.TestCase):
 
         scores = report["scores"]
         self.assertAlmostEqual(scores["nasa_tlx"]["raw_tlx"], 50.0)
-        self.assertEqual(scores["awareness"]["noticed_count"], 2)
+        # Shape is the only prompted check left; the others are measured in the block.
+        self.assertEqual(scores["awareness"]["noticed_count"], 1)
         self.assertTrue(scores["preference"]["prefers_curved"])
         self.assertEqual(scores["baseline_mood"]["baseline_valence"], 7.0)
 
