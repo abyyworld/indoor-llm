@@ -956,36 +956,6 @@
           "text": "What, if anything, did you notice changing between the rooms?"
         },
         {
-          "id": "noticed_colour",
-          "type": "choice",
-          "options": [
-            "Yes",
-            "No",
-            "Not sure"
-          ],
-          "text": "Did you notice the colour of the walls changing?"
-        },
-        {
-          "id": "noticed_brightness",
-          "type": "choice",
-          "options": [
-            "Yes",
-            "No",
-            "Not sure"
-          ],
-          "text": "Did you notice the brightness changing?"
-        },
-        {
-          "id": "noticed_material",
-          "type": "choice",
-          "options": [
-            "Yes",
-            "No",
-            "Not sure"
-          ],
-          "text": "Did you notice the wall material changing?"
-        },
-        {
           "id": "noticed_shape",
           "type": "choice",
           "options": [
@@ -1032,11 +1002,6 @@
           "text": "Why?"
         },
         {
-          "id": "would_live_in",
-          "type": "paragraph",
-          "text": "Which room would you most want to spend time in, and what made it that one?"
-        },
-        {
           "id": "attention_check",
           "type": "choice",
           "options": [
@@ -1062,6 +1027,30 @@
       "instruction": "In your own words. There are no right answers here.",
       "items": [
         {
+          "id": "reasoning_convincing",
+          "type": "scale",
+          "min": 1,
+          "max": 7,
+          "text": "On the rooms where the system explained its reasoning, how convincing was that reasoning?",
+          "min_label": "Not at all",
+          "max_label": "Very convincing"
+        },
+        {
+          "id": "reasoning_influence",
+          "type": "scale",
+          "min": 1,
+          "max": 7,
+          "text": "How much did the reasoning affect your judgement of whether the room had been altered?",
+          "min_label": "Not at all",
+          "max_label": "A great deal"
+        },
+        {
+          "id": "reasoning_noticed",
+          "type": "paragraph",
+          "text": "Did you notice anything about when the system did and did not explain itself?",
+          "help": "Guessing is fine."
+        },
+        {
           "id": "how_decided",
           "type": "paragraph",
           "text": "When you were asked whether something looked wrong in a room, how did you decide?",
@@ -1076,15 +1065,6 @@
           "id": "correction_goal",
           "type": "paragraph",
           "text": "When you changed something about a room, what were you trying to achieve?"
-        },
-        {
-          "id": "self_rated_detection",
-          "type": "scale",
-          "min": 1,
-          "max": 5,
-          "text": "How confident are you that you spotted the rooms with something wrong?",
-          "min_label": "Not at all",
-          "max_label": "Very confident"
         },
         {
           "id": "anything_else",

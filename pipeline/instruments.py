@@ -454,13 +454,15 @@ AWARENESS = {
          "help": "Your honest guess, even if you are not sure."},
         {"id": "noticed_varying", "type": "paragraph",
          "text": "What, if anything, did you notice changing between the rooms?"},
-        # Only after the two open questions, because the checklist gives the answer away.
-        {"id": "noticed_colour", "type": "choice", "options": ["Yes", "No", "Not sure"],
-         "text": "Did you notice the colour of the walls changing?"},
-        {"id": "noticed_brightness", "type": "choice", "options": ["Yes", "No", "Not sure"],
-         "text": "Did you notice the brightness changing?"},
-        {"id": "noticed_material", "type": "choice", "options": ["Yes", "No", "Not sure"],
-         "text": "Did you notice the wall material changing?"},
+        # Shape only. Colour, brightness and material used to be asked here too and
+        # are gone: the block measures noticing far better than a post-hoc yes/no
+        # does. It asks about a specific variable thirty-two times, against ground
+        # truth, with a confidence rating attached. A tick box at the end adds nothing
+        # to that and costs three items and some risk of leading.
+        #
+        # Shape is different because nothing in the block ever asks about it. It is
+        # researcher-set, never manipulated, never attributable, so this is the only
+        # place it is checked at all.
         {"id": "noticed_shape", "type": "choice", "options": ["Yes", "No", "Not sure"],
          "text": "Did you notice that some rooms were curved and some were square?"},
         {"id": "tried_to_please", "type": "scale", "min": 1, "max": 7,
@@ -624,7 +626,9 @@ def score_awareness(answers: dict[str, str]) -> dict[str, Any]:
     noticed and the people who did not -- and if they do not, that is the strongest
     single answer to a demand-characteristics objection.
     """
-    checks = ("noticed_colour", "noticed_brightness", "noticed_material", "noticed_shape")
+    # Only shape is asked here now; the rest comes off the attribution data, which is
+    # a stronger measure of the same thing.
+    checks = ("noticed_shape",)
     noticed = {c: answers.get(c, "") for c in checks}
     out: dict[str, Any] = dict(noticed)
     out["noticed_count"] = sum(1 for c in checks if noticed[c] == "Yes")
