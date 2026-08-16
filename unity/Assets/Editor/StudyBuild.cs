@@ -973,10 +973,57 @@ namespace EmotionRooms.EditorTools
                 Directory.GetParent(Application.dataPath).Parent.FullName,
                 "runs", "headset-data");
 
-            if (ConnectedDevices().Length == 0) return false;
             Directory.CreateDirectory(destination);
+            CollectRescuedForms(Path.Combine(destination, "files"));
+
+            if (ConnectedDevices().Length == 0) return false;
             return Adb("pull /sdcard/Android/data/" + Package + "/files \"" +
                        destination + "\"", null);
+        }
+
+        /// <summary>
+        /// Move any browser-rescued questionnaire files in with the rest of the data.
+        ///
+        /// When the app cannot be reached, the form page writes the answers as a CSV to
+        /// wherever the browser puts downloads. That keeps them, but it leaves them in a
+        /// different folder from every other file for that participant, which is how a
+        /// file gets forgotten. This sweeps them into runs/headset-data/files next to
+        /// questionnaire_responses.csv, so one folder holds the session.
+        ///
+        /// Moved rather than copied, so a file cannot be collected twice and quietly
+        /// double a participant's answers.
+        /// </summary>
+        public static int CollectRescuedForms(string destinationFiles)
+        {
+            string downloads = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
+            if (!Directory.Exists(downloads) || !Directory.Exists(destinationFiles)) return 0;
+
+            int moved = 0;
+            try
+            {
+                foreach (string found in Directory.GetFiles(downloads, "questionnaire_rescue_*.csv"))
+                {
+                    string target = Path.Combine(destinationFiles, Path.GetFileName(found));
+                    if (File.Exists(target))
+                        target = Path.Combine(destinationFiles,
+                            Path.GetFileNameWithoutExtension(found) + "_" +
+                            DateTime.UtcNow.ToString("HHmmss") + ".csv");
+                    File.Move(found, target);
+                    moved++;
+                    Debug.Log("Study: collected a rescued questionnaire into " + target +
+                              ". It was written by the browser because the app could not " +
+                              "be reached, so check whether the same answers also arrived " +
+                              "in questionnaire_responses.csv before counting both.");
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning("Study: could not sweep Downloads for rescued forms: " +
+                                 e.Message + ". Move any questionnaire_rescue_*.csv into " +
+                                 destinationFiles + " by hand.");
+            }
+            return moved;
         }
 
         [MenuItem("Emotion Rooms/Advanced/Pull the data from the headset", priority = 116)]
