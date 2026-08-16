@@ -198,6 +198,34 @@ namespace EmotionRooms
                 fields.TryGetValue("__form", out formId);
                 fields.TryGetValue("__group", out group);
 
+                // To disk first, on this thread, before anything is handed to Unity.
+                //
+                // These forms are answered with the headset off, which is exactly when
+                // the player is paused and the main thread is not draining its queue.
+                // Everything below waits five seconds for that queue and then returns a
+                // page regardless, so a submission made while the headset was off was
+                // acknowledged and never written. That is how Mengkai's first real
+                // session lost every post-session instrument.
+                if (questionnaires != null)
+                {
+                    if (!string.IsNullOrEmpty(group))
+                    {
+                        foreach (var form in questionnaires.Due(group))
+                        {
+                            var sub = new Dictionary<string, string>();
+                            string prefix = form.id + "::";
+                            foreach (var pair in fields)
+                                if (pair.Key.StartsWith(prefix))
+                                    sub[pair.Key.Substring(prefix.Length)] = pair.Value;
+                            questionnaires.WriteSubmissionDirect(form.id, sub);
+                        }
+                    }
+                    else if (!string.IsNullOrEmpty(formId))
+                    {
+                        questionnaires.WriteSubmissionDirect(formId, fields);
+                    }
+                }
+
                 // State changes and file writes happen on the main thread, so the panel
                 // can never read a half-updated questionnaire.
                 var done = new ManualResetEvent(false);

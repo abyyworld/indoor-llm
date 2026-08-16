@@ -170,6 +170,74 @@ namespace EmotionRooms
             get { return Path.Combine(StudyPaths.Data, responsesFileName); }
         }
 
+        /// <summary>
+        /// Write a web submission straight to disk, from whatever thread is calling.
+        ///
+        /// The submit handler used to hand the whole job to Unity's main thread and wait
+        /// five seconds for it. The after-questionnaires are answered with the headset
+        /// OFF, which is exactly when Horizon OS has the player paused and the main
+        /// thread is not pumping, so the queued write never ran, the wait timed out, and
+        /// the participant got a page back anyway. Mengkai's first real session lost
+        /// every post-session form that way: SSQ-after, TLX, trust, presence, awareness,
+        /// preference, strategy and debrief, all gone, with the before-forms sitting
+        /// there intact because those are answered before the headset goes on.
+        ///
+        /// So the file write no longer waits for a game. It takes a lock rather than a
+        /// thread, appends the rows, and the in-memory state is still updated on the
+        /// main thread afterwards for the panel and the summary. A duplicate row is
+        /// possible if a form is submitted twice; a lost form is not, and of those two
+        /// only one is recoverable.
+        /// </summary>
+        public void WriteSubmissionDirect(string formId, Dictionary<string, string> fields)
+        {
+            var form = Find(formId);
+            if (form == null) return;
+
+            int answered = 0;
+            foreach (var item in form.items)
+            {
+                string value;
+                if (fields.TryGetValue(item.id, out value) && !string.IsNullOrEmpty(value))
+                    answered++;
+            }
+
+            lock (writeLock)
+            {
+                try
+                {
+                    CsvFile.EnsureHeader(ResponsePath,
+                        "participant,form,item,answer,reversed,subscale,state," +
+                        "answered_items,total_items,seconds,utc");
+
+                    var text = new StringBuilder();
+                    string utc = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture);
+                    string state = (answered == form.items.Length
+                        ? FormState.Completed : FormState.PartlyAnswered).ToString();
+
+                    foreach (var item in form.items)
+                    {
+                        string value;
+                        if (!fields.TryGetValue(item.id, out value)) value = "";
+                        text.Append(string.Join(",", new[]
+                        {
+                            participantId, form.id, item.id, Csv(value),
+                            item.reversed ? "1" : "0", item.subscale ?? "", state,
+                            answered.ToString(CultureInfo.InvariantCulture),
+                            form.items.Length.ToString(CultureInfo.InvariantCulture),
+                            "0.0", utc,
+                        })).Append('\n');
+                    }
+                    File.AppendAllText(ResponsePath, text.ToString(), Encoding.UTF8);
+                }
+                catch (Exception e)
+                {
+                    Debug.LogError("Questionnaire: could not write " + formId + ": " + e.Message);
+                }
+            }
+        }
+
+        readonly object writeLock = new object();
+
         void Write(QuestionForm form, int answered, float seconds)
         {
             try
