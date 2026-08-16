@@ -78,12 +78,53 @@ namespace EmotionRooms
         /// </summary>
         public string Current { get; private set; }
 
+        [Tooltip("Characters per line. Long single lines run off the plate and off the " +
+                 "readable part of a headset's view.")]
+        public int charactersPerLine = 30;
+
+        [Tooltip("Follow the head. Turned off while a question is on screen, so the " +
+                 "reasoning stays where it was put instead of chasing the eyes.")]
+        public bool follow = true;
+
+        [Tooltip("Metres above eye line. Lifted while a question panel is up so the two " +
+                 "do not sit on top of each other.")]
+        public float verticalOffset;
+
         public void Show(string message)
         {
-            WorldLabel.SetText(text, message);
+            // Wrapped, and the plate resized to fit what wrapping produced.
+            //
+            // Messages used to be set raw. A rationale is two long sentences, so it went
+            // out as one enormous horizontal line: wider than the plate behind it, wider
+            // than the comfortable field of view, and unreadable without turning the
+            // head to track along it. Shorter lines and more of them is the right shape
+            // for text at 1.6 m.
+            string wrapped = WorldLabel.Wrap(message ?? "", charactersPerLine);
+            WorldLabel.SetText(text, wrapped);
+            FitPlate(wrapped);
             PlaceInFront();
             board.gameObject.SetActive(true);
             Current = message ?? "";
+        }
+
+        /// <summary>Size the backing to the wrapped text, so it always covers it.</summary>
+        void FitPlate(string wrapped)
+        {
+            if (plate == null) return;
+
+            int lines = 1, widest = 0, run = 0;
+            foreach (char c in wrapped)
+            {
+                if (c == '\n') { lines++; if (run > widest) widest = run; run = 0; }
+                else run++;
+            }
+            if (run > widest) widest = run;
+
+            // 0.03 m glyph height, roughly half that per character of width, plus a
+            // margin so the outline is not clipped at the edges.
+            float width = Mathf.Max(0.45f, widest * 0.0165f + 0.12f);
+            float height = Mathf.Max(0.18f, lines * 0.042f + 0.10f);
+            plate.transform.localScale = new Vector3(width, height, 1f);
         }
 
         public void Hide()
@@ -99,6 +140,7 @@ namespace EmotionRooms
             // stick then turned around saw an empty grey stage and read it as broken,
             // because the one sentence explaining the state was behind them somewhere.
             if (board == null || !board.gameObject.activeSelf) return;
+            if (!follow) return;
 
             var camera = Camera.main;
             if (camera == null) return;
@@ -108,7 +150,8 @@ namespace EmotionRooms
             if (forward.sqrMagnitude < 0.0001f) return;
             forward.Normalize();
 
-            var wanted = camera.transform.position + forward * distance;
+            var wanted = camera.transform.position + forward * distance
+                         + Vector3.up * verticalOffset;
             // Eased, not snapped: text glued rigidly to the head is unreadable and
             // nauseating; text that drifts after it reads as a sign hanging in space.
             board.position = Vector3.Lerp(board.position, wanted, Time.deltaTime * 3f);
@@ -129,7 +172,8 @@ namespace EmotionRooms
             if (forward.sqrMagnitude < 0.0001f) forward = Vector3.forward;
             forward.Normalize();
 
-            board.position = camera.transform.position + forward * distance;
+            board.position = camera.transform.position + forward * distance
+                           + Vector3.up * verticalOffset;
             board.rotation = Quaternion.LookRotation(forward);
         }
     }

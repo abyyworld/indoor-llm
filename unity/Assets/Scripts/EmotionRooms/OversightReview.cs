@@ -920,7 +920,25 @@ namespace EmotionRooms
             {
                 if (board != null) board.Show(shown);
                 yield return new WaitForSeconds(explanationSeconds);
-                if (board != null) board.Hide();
+
+                // It stays up while they answer.
+                //
+                // It used to vanish before the question appeared, so "did the reasoning
+                // match this room?" was really "do you remember the reasoning, and did
+                // it match?". Two sentences held for eleven seconds and then taken away
+                // is a memory test, and a memory test is not what either question is
+                // for: the point is whether somebody checks an account against the thing
+                // it describes when both are in front of them.
+                //
+                // Pinned rather than following the head, and lifted clear of the panel.
+                // A board that chases the eyes cannot be read while looking at something
+                // else, which is exactly what answering requires.
+                if (board != null)
+                {
+                    board.follow = false;
+                    board.verticalOffset = 0.42f;
+                    board.Show(shown);
+                }
             }
 
             if (events != null)
@@ -1025,6 +1043,14 @@ namespace EmotionRooms
                             ? "truth=mismatched" : "truth=matched");
             }
 
+
+            // Both questions about the reasoning are behind us, so it can go.
+            if (board != null)
+            {
+                board.Hide();
+                board.follow = true;
+                board.verticalOffset = 0f;
+            }
 
             // Attribution and correction are only asked when they said something is
             // wrong. Forcing an attribution out of someone who noticed nothing would
