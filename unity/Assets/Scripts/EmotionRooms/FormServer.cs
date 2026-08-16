@@ -572,6 +572,77 @@ namespace EmotionRooms
 
         // -------------------------------------------------------------------- pages
 
+        /// <summary>
+        /// Holds the answers in the browser and submits them when the app can hear.
+        ///
+        /// The form page is served BY the app, so if the app is closed the POST has
+        /// nowhere to land: the browser shows a connection error and the answers are
+        /// gone. That is not hypothetical. The post-session forms are filled with the
+        /// headset off, which is exactly when somebody might close the app, and the
+        /// first real session lost eight instruments to a related fault.
+        ///
+        /// So the page stops depending on the app being alive at the moment Submit is
+        /// pressed. Every keystroke is mirrored into localStorage, which survives the
+        /// app closing, the browser closing and the laptop sleeping. Submit posts by
+        /// fetch; if that fails the answers stay put and it retries every few seconds
+        /// until the app answers, saying plainly that it has not saved yet.
+        ///
+        /// The banner matters as much as the retry. The old page said "Thanks" whether
+        /// or not anything had been written, which is how a lost form looked identical
+        /// to a saved one. Nothing here claims success until the server has confirmed.
+        /// </summary>
+        const string Keeper = @"
+<div id=keepbar style=""position:fixed;left:0;right:0;top:0;padding:.55rem 1rem;
+  font:600 14px/1.4 -apple-system,system-ui,sans-serif;text-align:center;display:none""></div>
+<script>
+(function(){
+  var f=document.querySelector('form'); if(!f) return;
+  var key='emotionrooms:'+location.pathname+location.search;
+  var bar=document.getElementById('keepbar');
+  function show(t,bg){bar.textContent=t;bar.style.background=bg;bar.style.color='#fff';
+                      bar.style.display='block';}
+  function values(){var d=new FormData(f),o={};d.forEach(function(v,k){o[k]=v});return o}
+  function save(){try{localStorage.setItem(key,JSON.stringify(values()))}catch(e){}}
+  function restore(){
+    var raw=null; try{raw=localStorage.getItem(key)}catch(e){}
+    if(!raw) return; var o; try{o=JSON.parse(raw)}catch(e){return}
+    Object.keys(o).forEach(function(k){
+      f.querySelectorAll('[name=\''+CSS.escape(k)+'\']').forEach(function(el){
+        if(el.type==='radio'||el.type==='checkbox') el.checked=(el.value===o[k]);
+        else el.value=o[k];
+      });
+    });
+    show('Restored answers you had already typed. Not submitted yet.','#b4690e');
+  }
+  f.addEventListener('input',save); f.addEventListener('change',save);
+  restore();
+
+  var pending=false;
+  function send(){
+    var body=new URLSearchParams(values()).toString();
+    return fetch(f.getAttribute('action'),{method:'POST',
+      headers:{'Content-Type':'application/x-www-form-urlencoded'},body:body})
+      .then(function(r){ if(!r.ok) throw new Error(r.status);
+        try{localStorage.removeItem(key)}catch(e){}
+        pending=false;
+        document.body.innerHTML='<h1>Saved.</h1><p>Answers are on the headset. '+
+          'You can close this tab.</p>';
+      });
+  }
+  function retry(){ if(!pending) return; send().catch(function(){ setTimeout(retry,4000) }) }
+  f.addEventListener('submit',function(e){
+    e.preventDefault(); save(); pending=true;
+    show('Saving...','#555');
+    send().catch(function(){
+      show('NOT SAVED YET. The app is not answering. Your answers are kept in this '+
+           'tab and will send themselves as soon as it is back. Leave this tab open.','#a12a2a');
+      setTimeout(retry,4000);
+    });
+  });
+  window.addEventListener('online',retry);
+})();
+</script>";
+
         const string Style = @"
 <style>
   :root { color-scheme: light dark; }
@@ -651,7 +722,7 @@ namespace EmotionRooms
             page.Append("<div class=bar><button type=submit")
                 .Append(running ? " disabled" : "")
                 .Append(">").Append(running ? "Running…" : "START THE ROOMS")
-                .Append("</button></div></form>");
+                .Append("</button></div></form>").Append(Keeper);
 
             page.Append("<h2>3. Questionnaires — after</h2>");
             page.Append("<p><a href='/group?when=after'><b>Open them all on one page</b></a></p>");
@@ -737,6 +808,7 @@ namespace EmotionRooms
             }
 
             page.Append("<div class=bar><button type=submit>Submit</button></div></form>");
+            page.Append(Keeper);
             return page.ToString();
         }
 
@@ -766,6 +838,7 @@ namespace EmotionRooms
             // that will not submit until it is full produces compliance, not answers.
             page.Append("<div class=bar><button type=submit>Submit</button></div>");
             page.Append("</form>");
+            page.Append(Keeper);
             return page.ToString();
         }
 
