@@ -636,9 +636,45 @@ namespace EmotionRooms
     send().catch(function(){
       show('NOT SAVED YET. The app is not answering. Your answers are kept in this '+
            'tab and will send themselves as soon as it is back. Leave this tab open.','#a12a2a');
+      offerDownload();
       setTimeout(retry,4000);
     });
   });
+  // A file on this laptop, for when the app never comes back.
+  //
+  // Everything above still depends on the headset being reachable eventually: the
+  // answers are safe in the browser but they are not a file anybody can open. If the
+  // app is gone for good -- flat battery, wiped, reinstalled -- this is the only way
+  // the responses exist outside a browser profile. Same CSV shape the app writes, so
+  // it drops straight into the analysis next to the rest.
+  function offerDownload(){
+    if(document.getElementById('dlbtn')) return;
+    var b=document.createElement('button');
+    b.id='dlbtn'; b.type='button';
+    b.textContent='Save answers to this laptop instead';
+    b.style.cssText='display:block;margin:1rem auto;padding:.6rem 1.4rem;font:inherit;'+
+      'border:0;border-radius:.5rem;background:#a12a2a;color:#fff;cursor:pointer';
+    b.onclick=function(){
+      var o=values(), rows=['participant,form,item,answer,state,utc'];
+      var utc=new Date().toISOString();
+      Object.keys(o).forEach(function(k){
+        var form=k.indexOf('::')>0?k.split('::')[0]:(o['__form']||'unknown');
+        var item=k.indexOf('::')>0?k.split('::')[1]:k;
+        if(k.indexOf('__')===0) return;
+        var v=String(o[k]).replace(/""/g,'""""');
+        rows.push([o['__participant']||'unknown',form,item,'""'+v+'""','Completed',utc].join(','));
+      });
+      var blob=new Blob([rows.join('\n')+'\n'],{type:'text/csv'});
+      var a=document.createElement('a');
+      a.href=URL.createObjectURL(blob);
+      a.download='questionnaire_rescue_'+(o['__participant']||'unknown')+'.csv';
+      a.click();
+      show('Downloaded. Keep that file: it is the only copy outside this tab. '+
+           'It will still send itself if the app comes back.','#b4690e');
+    };
+    f.appendChild(b);
+  }
+
   window.addEventListener('online',retry);
 })();
 </script>";
@@ -795,6 +831,9 @@ namespace EmotionRooms
 
             page.Append("<form method=post action=/submit>");
             page.Append("<input type=hidden name=__group value='").Append(Escape(when)).Append("'>");
+            page.Append("<input type=hidden name=__participant value='")
+                .Append(Escape(questionnaires != null ? questionnaires.participantId : ""))
+                .Append("'>");
 
             foreach (var form in forms)
             {
@@ -826,6 +865,9 @@ namespace EmotionRooms
 
             page.Append("<form method=post action=/submit>");
             page.Append("<input type=hidden name=__form value='").Append(Escape(form.id)).Append("'>");
+            page.Append("<input type=hidden name=__participant value='")
+                .Append(Escape(questionnaires != null ? questionnaires.participantId : ""))
+                .Append("'>");
 
             foreach (var item in form.items)
                 AppendItem(page, item.id, item);
