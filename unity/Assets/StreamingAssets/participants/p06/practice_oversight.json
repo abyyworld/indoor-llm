@@ -15,10 +15,10 @@
         "target_emotion": "excited",
         "source": "practice",
         "shape": "linear",
-        "hue": 300,
+        "hue": 180,
         "saturation": 0.2,
-        "brightness": 500,
-        "texture": "textile",
+        "brightness": 750,
+        "texture": "concrete",
         "roughness": "smooth",
         "rationale": "I chose a faint yellow for the walls and floor, lit at a medium level, on smooth painted plaster. Together the colour, the light and the surface are what carry calm in a room this size."
       },
@@ -43,11 +43,11 @@
         "target_emotion": "calm",
         "source": "practice",
         "shape": "linear",
-        "hue": 90,
+        "hue": 30,
         "saturation": 0.2,
-        "brightness": 500,
+        "brightness": 750,
         "texture": "concrete",
-        "roughness": "rough",
+        "roughness": "smooth",
         "rationale": "I chose a faint yellow for the walls and floor, lit at a medium level, on smooth painted plaster. Together the colour, the light and the surface are what carry calm in a room this size."
       },
       "ground_truth": {
@@ -73,15 +73,15 @@
         "shape": "linear",
         "hue": 0,
         "saturation": 0.2,
-        "brightness": 300,
+        "brightness": 750,
         "texture": "plaster",
         "roughness": "rough",
         "rationale": "I chose a faint yellow for the walls and floor, lit at a medium level, on smooth painted plaster. Together the colour, the light and the surface are what carry calm in a room this size."
       },
       "ground_truth": {
         "swapped_field": "brightness",
-        "original_value": "500",
-        "swapped_in_value": "300",
+        "original_value": "300",
+        "swapped_in_value": "750",
         "donor_emotion": null,
         "rationale_is_wrong": false
       }
@@ -99,7 +99,7 @@
         "target_emotion": "excited",
         "source": "practice",
         "shape": "linear",
-        "hue": 330,
+        "hue": 0,
         "saturation": 0.4,
         "brightness": 150,
         "texture": "plaster",

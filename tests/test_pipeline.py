@@ -71,17 +71,26 @@ class TestPools(unittest.TestCase):
         # Munsell-to-HSV mapping in Febbraio et al. (2025). Deliberately NOT an even
         # step: 150 and 210 are absent. A test that demanded uniform spacing would be
         # asserting the old pool, so it asserts the actual categories instead.
+        #
+        # Seven, not the original ten. Reduced 15 Aug 2026 after the first session:
+        # participants could not separate yellow-green from yellow, or magenta and pink
+        # from purple, so three of the ten were distinctions the design claimed and did
+        # not deliver. One kept per confusable group. None of the three appears in the
+        # eight study rooms, so no stimulus changed -- only what a corruption may use and
+        # what a participant may pick when correcting one.
         self.assertEqual(
-            list(pools.HUES), [0, 30, 60, 90, 120, 180, 240, 270, 300, 330]
+            list(pools.HUES), [0, 30, 60, 120, 180, 240, 270]
         )
         self.assertNotIn(150, pools.HUES)
         self.assertNotIn(210, pools.HUES)
         self.assertLess(max(pools.HUES), 360)  # no wraparound duplicate of 0
 
     def test_warm_and_cool_sets_partition_the_hue_pool(self):
-        # Song et al. (2025) valence split, per the same diagram.
-        warm = {60, 30, 0, 330, 300}
-        cool = {270, 240, 180, 120, 90}
+        # Song et al. (2025) valence split, per the same diagram. 330, 300 and 90 left
+        # the pool on 15 Aug 2026, so the two sets shed them; the split itself is
+        # unchanged and still covers every hue that remains.
+        warm = {60, 30, 0}
+        cool = {270, 240, 180, 120}
         self.assertEqual(warm | cool, set(pools.HUES))
         self.assertEqual(warm & cool, set())
 
@@ -1786,7 +1795,9 @@ class TestManipulationCheck(unittest.TestCase):
     def test_brightness_pool_is_lux_not_normalised(self):
         # Guards the unit. Normalised values would silently be read as about 1 lux.
         self.assertTrue(all(v >= 1 for v in pools.BRIGHTNESSES), pools.BRIGHTNESSES)
-        self.assertEqual(list(pools.BRIGHTNESSES), [150, 300, 500, 750])
+        # 500 lx went with the hues above: nobody could name it against 300 in a room
+        # they were standing in. 150, 300 and 750 are far enough apart to be answerable.
+        self.assertEqual(list(pools.BRIGHTNESSES), [150, 300, 750])
 
 
 class TestOversightBlockContract(unittest.TestCase):
@@ -1801,7 +1812,7 @@ class TestOversightBlockContract(unittest.TestCase):
         for e, h, s, b, t in [
             ("calm", 240, 0.2, 150, "plaster"),
             ("excited", 30, 0.4, 750, "plaster"),
-            ("tense", 240, 0.4, 500, "concrete"),
+            ("tense", 240, 0.4, 750, "concrete"),
             ("depressed", 240, 0.2, 150, "textile"),
         ]
     ]

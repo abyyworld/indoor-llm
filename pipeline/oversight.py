@@ -151,7 +151,24 @@ def pool_distance(config: dict, donor: dict, field: str) -> float:
     }
     values = table.get(field)
     if values is None:
-        return 1.0            # texture, roughness: categorical, fully visible
+        # Categorical, but not all categorical differences are equally visible, and
+        # Akbar flagged the two that are not.
+        #
+        # rough against smooth is one bump map against another on the same wall, and
+        # roughness has only two values, so EVERY roughness swap is that comparison.
+        # It cannot be made perceptible, so it is not swapped at all. plaster against
+        # bare concrete is nearly as close; textile is obviously different from both,
+        # so a material swap has to involve textile.
+        #
+        # The values themselves all stay, because the eight study rooms use every one
+        # of them: calm is plaster and smooth, tense is concrete and rough. This
+        # changes only which corruptions the oversight block is allowed to make, and
+        # her trials are never corrupted.
+        if field == "roughness":
+            return 0.0
+        if field in ("texture", "material"):
+            return 1.0 if "textile" in (str(a), str(b)) else 0.0
+        return 1.0
 
     span = max(values) - min(values)
     if span <= 0:
@@ -217,8 +234,14 @@ def make_trial(
         # manipulation perceptible; ties and non-numeric fields fall back to chance,
         # so this narrows the draw without ever emptying it.
         candidates = [(d, f) for d, fields in usable for f in fields]
-        best = max(pool_distance(config, d, f) for d, f in candidates)
-        if best > 0:
+        # Anything scored zero is not a perceptible change and must never be the swap:
+        # a rough-to-smooth wall, or plaster to bare concrete. Dropped outright rather
+        # than merely made unlikely, because one such trial is a guaranteed miss that
+        # counts against the participant's sensitivity.
+        visible = [(d, f) for d, f in candidates if pool_distance(config, d, f) > 0]
+        if visible:
+            candidates = visible
+            best = max(pool_distance(config, d, f) for d, f in candidates)
             candidates = [
                 (d, f) for d, f in candidates
                 if pool_distance(config, d, f) >= best * 0.5

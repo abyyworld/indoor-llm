@@ -265,14 +265,20 @@ def _practice_rooms() -> list[dict]:
     Both carry target_emotion and source of "practice", which are legal pool labels
     precisely so these pass the same validator as a real stimulus -- they are shown to
     a participant, so nothing about them should be exempt from that check.
+
+    Their hues are deliberately ones no study room uses. practice_linear used to be
+    hue 60, 0.2, 300 lx, plaster, smooth, which is byte-identical to the calm room, so
+    every participant met one of the eight stimuli during the warm-up and then rated
+    it later as if it were new. That first rating is the thesis measure and it only
+    happens once.
     """
     return [
         {
             "id": "practice_linear",
             "target_emotion": "practice",
             "source": "practice",
-            "hue": 60,
-            "saturation": 0.2,
+            "hue": 30,
+            "saturation": 0.4,
             "brightness": 300.0,
             "texture": "plaster",
             "roughness": "smooth",
@@ -283,9 +289,9 @@ def _practice_rooms() -> list[dict]:
             "id": "practice_curved",
             "target_emotion": "practice",
             "source": "practice",
-            "hue": 90,
+            "hue": 120,
             "saturation": 0.2,
-            "brightness": 500.0,
+            "brightness": 750.0,
             "texture": "textile",
             "roughness": "rough",
             "shape": "curved",

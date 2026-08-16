@@ -86,9 +86,13 @@ namespace EmotionRooms.EditorTools
             for (int y = 0; y < Size; y++)
                 for (int x = 0; x < Size; x++)
                 {
+                    // Flatter and lighter than it was. Plaster's whole job is to be the
+                    // one that reads as paint, and it was only 0.14 apart from concrete
+                    // in lightness with similar grain, which is why the two were being
+                    // confused. Nearly featureless now.
                     float n = Fbm(x * 0.035f, y * 0.035f, 3, 101);
-                    float speck = (float)rng.NextDouble() * 0.03f;
-                    Set(pixels, x, y, 0.86f + (n - 0.5f) * 0.10f + speck);
+                    float speck = (float)rng.NextDouble() * 0.012f;
+                    Set(pixels, x, y, 0.93f + (n - 0.5f) * 0.04f + speck);
                 }
         }
 
@@ -100,11 +104,14 @@ namespace EmotionRooms.EditorTools
             for (int y = 0; y < Size; y++)
                 for (int x = 0; x < Size; x++)
                 {
+                    // Darker, blotchier, with far more visible aggregate and a real pour
+                    // line. Against a near-flat plaster this now reads as a different
+                    // material rather than a slightly dirtier one.
                     float broad = Fbm(x * 0.008f, y * 0.008f, 4, 202);
                     float grain = Fbm(x * 0.09f, y * 0.09f, 2, 303);
-                    float v = 0.72f + (broad - 0.5f) * 0.26f + (grain - 0.5f) * 0.10f;
-                    if (rng.NextDouble() < 0.012) v -= (float)rng.NextDouble() * 0.22f;
-                    if (y % 171 == 0) v -= 0.05f;
+                    float v = 0.58f + (broad - 0.5f) * 0.42f + (grain - 0.5f) * 0.20f;
+                    if (rng.NextDouble() < 0.035) v -= (float)rng.NextDouble() * 0.34f;
+                    if (y % 171 == 0) v -= 0.12f;
                     Set(pixels, x, y, v);
                 }
         }

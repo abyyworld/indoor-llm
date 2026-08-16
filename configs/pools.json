@@ -21,13 +21,10 @@
       0,
       30,
       60,
-      90,
       120,
       180,
       240,
-      270,
-      300,
-      330
+      270
     ],
     "saturation": [
       0.2,
@@ -36,7 +33,6 @@
     "brightness": [
       150,
       300,
-      500,
       750
     ],
     "texture": [
@@ -92,7 +88,8 @@
       "only in microsurface. Her 10 Jul note flags that gloss must be controlled so it does",
       "not confound with roughness; letting specular move with smoothness would be exactly",
       "that confound. Unity smoothness values in roughness_levels below."
-    ]
+    ],
+    "reduced_15_aug_2026": "Reduced 15 Aug 2026, on the data. Participants could not separate yellow from yellow-green, purple from magenta from pink, or 300 lx from 500 lx, so those were three distinctions the design claimed to make and did not. Kept one per group: yellow, purple, 300. None of the removed values appears in the eight study rooms, so the stimuli are unchanged; what changes is what a corruption may use and what a participant may choose."
   },
   "researcher_set": {
     "shapes": [

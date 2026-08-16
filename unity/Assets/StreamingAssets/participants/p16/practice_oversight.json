@@ -3,6 +3,62 @@
   "practice": true,
   "trials": [
     {
+      "trial_id": "p16_practice01",
+      "condition": "faithful",
+      "target_emotion_shown": "calm",
+      "rationale_shown": "",
+      "explanation_shown": false,
+      "correction_source": "",
+      "sham_seed": 0,
+      "stimulus": {
+        "id": "practice_01",
+        "target_emotion": "calm",
+        "source": "practice",
+        "shape": "linear",
+        "hue": 30,
+        "saturation": 0.2,
+        "brightness": 150,
+        "texture": "plaster",
+        "roughness": "rough",
+        "rationale": "I chose a faint yellow for the walls and floor, lit at a medium level, on smooth painted plaster. Together the colour, the light and the surface are what carry calm in a room this size."
+      },
+      "ground_truth": {
+        "swapped_field": null,
+        "original_value": null,
+        "swapped_in_value": null,
+        "donor_emotion": null,
+        "rationale_is_wrong": false
+      }
+    },
+    {
+      "trial_id": "p16_practice03",
+      "condition": "faithful",
+      "target_emotion_shown": "tense",
+      "rationale_shown": "",
+      "explanation_shown": false,
+      "correction_source": "",
+      "sham_seed": 0,
+      "stimulus": {
+        "id": "practice_03",
+        "target_emotion": "tense",
+        "source": "practice",
+        "shape": "linear",
+        "hue": 0,
+        "saturation": 0.2,
+        "brightness": 750,
+        "texture": "textile",
+        "roughness": "rough",
+        "rationale": "I chose a faint yellow for the walls and floor, lit at a medium level, on smooth painted plaster. Together the colour, the light and the surface are what carry calm in a room this size."
+      },
+      "ground_truth": {
+        "swapped_field": null,
+        "original_value": null,
+        "swapped_in_value": null,
+        "donor_emotion": null,
+        "rationale_is_wrong": false
+      }
+    },
+    {
       "trial_id": "p16_practice04",
       "condition": "swapped",
       "target_emotion_shown": "depressed",
@@ -15,17 +71,17 @@
         "target_emotion": "depressed",
         "source": "practice",
         "shape": "linear",
-        "hue": 90,
+        "hue": 240,
         "saturation": 0.2,
-        "brightness": 300,
-        "texture": "textile",
+        "brightness": 150,
+        "texture": "concrete",
         "roughness": "smooth",
         "rationale": "I chose a faint yellow for the walls and floor, lit at a medium level, on smooth painted plaster. Together the colour, the light and the surface are what carry calm in a room this size."
       },
       "ground_truth": {
-        "swapped_field": "saturation",
-        "original_value": "0.4",
-        "swapped_in_value": "0.2",
+        "swapped_field": "roughness",
+        "original_value": "rough",
+        "swapped_in_value": "smooth",
         "donor_emotion": null,
         "rationale_is_wrong": false
       }
@@ -43,73 +99,17 @@
         "target_emotion": "calm",
         "source": "practice",
         "shape": "linear",
-        "hue": 120,
+        "hue": 60,
         "saturation": 0.2,
-        "brightness": 500,
+        "brightness": 300,
         "texture": "concrete",
         "roughness": "smooth",
         "rationale": "I chose a faint yellow for the walls and floor, lit at a medium level, on smooth painted plaster. Together the colour, the light and the surface are what carry calm in a room this size."
       },
       "ground_truth": {
         "swapped_field": "hue",
-        "original_value": "90",
-        "swapped_in_value": "120",
-        "donor_emotion": null,
-        "rationale_is_wrong": false
-      }
-    },
-    {
-      "trial_id": "p16_practice01",
-      "condition": "faithful",
-      "target_emotion_shown": "calm",
-      "rationale_shown": "",
-      "explanation_shown": false,
-      "correction_source": "",
-      "sham_seed": 0,
-      "stimulus": {
-        "id": "practice_01",
-        "target_emotion": "calm",
-        "source": "practice",
-        "shape": "linear",
-        "hue": 90,
-        "saturation": 0.2,
-        "brightness": 300,
-        "texture": "plaster",
-        "roughness": "rough",
-        "rationale": "I chose a faint yellow for the walls and floor, lit at a medium level, on smooth painted plaster. Together the colour, the light and the surface are what carry calm in a room this size."
-      },
-      "ground_truth": {
-        "swapped_field": null,
-        "original_value": null,
-        "swapped_in_value": null,
-        "donor_emotion": null,
-        "rationale_is_wrong": false
-      }
-    },
-    {
-      "trial_id": "p16_practice03",
-      "condition": "faithful",
-      "target_emotion_shown": "excited",
-      "rationale_shown": "",
-      "explanation_shown": false,
-      "correction_source": "",
-      "sham_seed": 0,
-      "stimulus": {
-        "id": "practice_03",
-        "target_emotion": "excited",
-        "source": "practice",
-        "shape": "linear",
-        "hue": 0,
-        "saturation": 0.2,
-        "brightness": 150,
-        "texture": "textile",
-        "roughness": "smooth",
-        "rationale": "I chose a faint yellow for the walls and floor, lit at a medium level, on smooth painted plaster. Together the colour, the light and the surface are what carry calm in a room this size."
-      },
-      "ground_truth": {
-        "swapped_field": null,
-        "original_value": null,
-        "swapped_in_value": null,
+        "original_value": "30",
+        "swapped_in_value": "60",
         "donor_emotion": null,
         "rationale_is_wrong": false
       }

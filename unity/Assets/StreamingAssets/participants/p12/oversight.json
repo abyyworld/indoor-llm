@@ -20,32 +20,61 @@
   "trials": [
     {
       "condition": "rationale_mismatched",
-      "target_emotion_shown": "excited",
+      "target_emotion_shown": "calm",
       "stimulus": {
-        "id": "excited_linear",
-        "target_emotion": "excited",
+        "id": "calm_linear",
+        "target_emotion": "calm",
         "source": "llm",
         "shape": "linear",
         "hue": 60,
-        "saturation": 0.4,
-        "brightness": 750.0,
-        "texture": "concrete",
+        "saturation": 0.2,
+        "brightness": 300.0,
+        "texture": "plaster",
         "roughness": "smooth",
-        "rationale": "I chose a vivid yellow for the walls and floor, lit at a very bright level, on smooth bare concrete. Together the colour, the light and the surface are what carry excited in a room this size."
+        "rationale": "I chose a faint yellow for the walls and floor, lit at a medium level, on smooth painted plaster. Together the colour, the light and the surface are what carry calm in a room this size."
       },
-      "rationale_shown": "I chose a faint yellow for the walls and floor, lit at a medium level, on smooth painted plaster. Together the colour, the light and the surface are what carry calm in a room this size.",
+      "rationale_shown": "I chose a vivid yellow for the walls and floor, lit at a very bright level, on smooth bare concrete. Together the colour, the light and the surface are what carry excited in a room this size.",
       "ground_truth": {
         "swapped_field": null,
         "original_value": null,
         "swapped_in_value": null,
-        "donor_emotion": "calm",
+        "donor_emotion": "excited",
         "rationale_is_wrong": true
       },
       "explanation_shown": true,
-      "correction_source": "yoked",
-      "sham_seed": 383368389,
+      "correction_source": "own",
+      "sham_seed": 632371365,
       "trial_index": 1,
       "trial_id": "p12_b001"
+    },
+    {
+      "condition": "swapped",
+      "target_emotion_shown": "calm",
+      "stimulus": {
+        "id": "calm_curved",
+        "target_emotion": "calm",
+        "source": "llm",
+        "shape": "curved",
+        "hue": 180,
+        "saturation": 0.2,
+        "brightness": 300.0,
+        "texture": "plaster",
+        "roughness": "smooth",
+        "rationale": "I chose a faint yellow for the walls and floor, lit at a medium level, on smooth painted plaster. Together the colour, the light and the surface are what carry calm in a room this size."
+      },
+      "rationale_shown": "I chose a faint yellow for the walls and floor, lit at a medium level, on smooth painted plaster. Together the colour, the light and the surface are what carry calm in a room this size.",
+      "ground_truth": {
+        "swapped_field": "hue",
+        "original_value": 60,
+        "swapped_in_value": 180,
+        "donor_emotion": "tense",
+        "rationale_is_wrong": false
+      },
+      "explanation_shown": true,
+      "correction_source": "yoked",
+      "sham_seed": 542801944,
+      "trial_index": 2,
+      "trial_id": "p12_b002"
     },
     {
       "condition": "swapped",
@@ -57,51 +86,22 @@
         "shape": "curved",
         "hue": 180,
         "saturation": 0.2,
-        "brightness": 150.0,
+        "brightness": 750.0,
         "texture": "concrete",
-        "roughness": "smooth",
+        "roughness": "rough",
         "rationale": "I chose a faint blue-green for the walls and floor, lit at a dim level, on rough bare concrete. Together the colour, the light and the surface are what carry tense in a room this size."
       },
       "rationale_shown": "I chose a faint blue-green for the walls and floor, lit at a dim level, on rough bare concrete. Together the colour, the light and the surface are what carry tense in a room this size.",
       "ground_truth": {
-        "swapped_field": "roughness",
-        "original_value": "rough",
-        "swapped_in_value": "smooth",
+        "swapped_field": "brightness",
+        "original_value": 150.0,
+        "swapped_in_value": 750.0,
         "donor_emotion": "excited",
         "rationale_is_wrong": false
       },
       "explanation_shown": true,
       "correction_source": "own",
-      "sham_seed": 241464331,
-      "trial_index": 2,
-      "trial_id": "p12_b002"
-    },
-    {
-      "condition": "swapped",
-      "target_emotion_shown": "depressed",
-      "stimulus": {
-        "id": "depressed_curved",
-        "target_emotion": "depressed",
-        "source": "llm",
-        "shape": "curved",
-        "hue": 60,
-        "saturation": 0.4,
-        "brightness": 150.0,
-        "texture": "textile",
-        "roughness": "rough",
-        "rationale": "I chose a vivid blue for the walls and floor, lit at a dim level, on rough woven cloth. Together the colour, the light and the surface are what carry depressed in a room this size."
-      },
-      "rationale_shown": "I chose a vivid blue for the walls and floor, lit at a dim level, on rough woven cloth. Together the colour, the light and the surface are what carry depressed in a room this size.",
-      "ground_truth": {
-        "swapped_field": "hue",
-        "original_value": 240,
-        "swapped_in_value": 60,
-        "donor_emotion": "excited",
-        "rationale_is_wrong": false
-      },
-      "explanation_shown": true,
-      "correction_source": "own",
-      "sham_seed": 640170320,
+      "sham_seed": 1033852880,
       "trial_index": 3,
       "trial_id": "p12_b003"
     },
@@ -135,78 +135,77 @@
     },
     {
       "condition": "rationale_mismatched",
-      "target_emotion_shown": "depressed",
+      "target_emotion_shown": "tense",
       "stimulus": {
-        "id": "depressed_curved",
-        "target_emotion": "depressed",
+        "id": "tense_linear",
+        "target_emotion": "tense",
         "source": "llm",
-        "shape": "curved",
-        "hue": 240,
-        "saturation": 0.4,
+        "shape": "linear",
+        "hue": 180,
+        "saturation": 0.2,
         "brightness": 150.0,
-        "texture": "textile",
+        "texture": "concrete",
         "roughness": "rough",
-        "rationale": "I chose a vivid blue for the walls and floor, lit at a dim level, on rough woven cloth. Together the colour, the light and the surface are what carry depressed in a room this size."
+        "rationale": "I chose a faint blue-green for the walls and floor, lit at a dim level, on rough bare concrete. Together the colour, the light and the surface are what carry tense in a room this size."
       },
-      "rationale_shown": "I chose a faint blue-green for the walls and floor, lit at a dim level, on rough bare concrete. Together the colour, the light and the surface are what carry tense in a room this size.",
+      "rationale_shown": "I chose a vivid yellow for the walls and floor, lit at a very bright level, on smooth bare concrete. Together the colour, the light and the surface are what carry excited in a room this size.",
       "ground_truth": {
         "swapped_field": null,
         "original_value": null,
         "swapped_in_value": null,
-        "donor_emotion": "tense",
+        "donor_emotion": "excited",
         "rationale_is_wrong": true
       },
       "explanation_shown": true,
-      "correction_source": "own",
-      "sham_seed": 997089758,
+      "correction_source": "yoked",
+      "sham_seed": 315434207,
       "trial_index": 5,
       "trial_id": "p12_b005"
     },
     {
-      "condition": "swapped",
+      "condition": "faithful",
       "target_emotion_shown": "calm",
       "stimulus": {
-        "id": "calm_curved",
+        "id": "calm_linear",
         "target_emotion": "calm",
         "source": "llm",
-        "shape": "curved",
+        "shape": "linear",
         "hue": 60,
         "saturation": 0.2,
         "brightness": 300.0,
-        "texture": "concrete",
+        "texture": "plaster",
         "roughness": "smooth",
         "rationale": "I chose a faint yellow for the walls and floor, lit at a medium level, on smooth painted plaster. Together the colour, the light and the surface are what carry calm in a room this size."
       },
       "rationale_shown": "I chose a faint yellow for the walls and floor, lit at a medium level, on smooth painted plaster. Together the colour, the light and the surface are what carry calm in a room this size.",
       "ground_truth": {
-        "swapped_field": "texture",
-        "original_value": "plaster",
-        "swapped_in_value": "concrete",
-        "donor_emotion": "tense",
+        "swapped_field": null,
+        "original_value": null,
+        "swapped_in_value": null,
+        "donor_emotion": null,
         "rationale_is_wrong": false
       },
       "explanation_shown": false,
-      "correction_source": "yoked",
-      "sham_seed": 24179919,
+      "correction_source": "",
       "trial_index": 6,
       "trial_id": "p12_b006"
     },
     {
       "condition": "faithful",
-      "target_emotion_shown": "depressed",
+      "target_emotion_shown": "tense",
       "stimulus": {
-        "id": "depressed_curved",
-        "target_emotion": "depressed",
+        "id": "tense_linear",
+        "target_emotion": "tense",
         "source": "llm",
-        "shape": "curved",
-        "hue": 240,
-        "saturation": 0.4,
+        "shape": "linear",
+        "hue": 180,
+        "saturation": 0.2,
         "brightness": 150.0,
-        "texture": "textile",
+        "texture": "concrete",
         "roughness": "rough",
-        "rationale": "I chose a vivid blue for the walls and floor, lit at a dim level, on rough woven cloth. Together the colour, the light and the surface are what carry depressed in a room this size."
+        "rationale": "I chose a faint blue-green for the walls and floor, lit at a dim level, on rough bare concrete. Together the colour, the light and the surface are what carry tense in a room this size."
       },
-      "rationale_shown": "I chose a vivid blue for the walls and floor, lit at a dim level, on rough woven cloth. Together the colour, the light and the surface are what carry depressed in a room this size.",
+      "rationale_shown": "I chose a faint blue-green for the walls and floor, lit at a dim level, on rough bare concrete. Together the colour, the light and the surface are what carry tense in a room this size.",
       "ground_truth": {
         "swapped_field": null,
         "original_value": null,
@@ -242,27 +241,27 @@
         "donor_emotion": null,
         "rationale_is_wrong": false
       },
-      "explanation_shown": false,
+      "explanation_shown": true,
       "correction_source": "",
       "trial_index": 8,
       "trial_id": "p12_b008"
     },
     {
       "condition": "faithful",
-      "target_emotion_shown": "tense",
+      "target_emotion_shown": "depressed",
       "stimulus": {
-        "id": "tense_linear",
-        "target_emotion": "tense",
+        "id": "depressed_curved",
+        "target_emotion": "depressed",
         "source": "llm",
-        "shape": "linear",
-        "hue": 180,
-        "saturation": 0.2,
+        "shape": "curved",
+        "hue": 240,
+        "saturation": 0.4,
         "brightness": 150.0,
-        "texture": "concrete",
+        "texture": "textile",
         "roughness": "rough",
-        "rationale": "I chose a faint blue-green for the walls and floor, lit at a dim level, on rough bare concrete. Together the colour, the light and the surface are what carry tense in a room this size."
+        "rationale": "I chose a vivid blue for the walls and floor, lit at a dim level, on rough woven cloth. Together the colour, the light and the surface are what carry depressed in a room this size."
       },
-      "rationale_shown": "I chose a faint blue-green for the walls and floor, lit at a dim level, on rough bare concrete. Together the colour, the light and the surface are what carry tense in a room this size.",
+      "rationale_shown": "I chose a vivid blue for the walls and floor, lit at a dim level, on rough woven cloth. Together the colour, the light and the surface are what carry depressed in a room this size.",
       "ground_truth": {
         "swapped_field": null,
         "original_value": null,
@@ -274,6 +273,63 @@
       "correction_source": "",
       "trial_index": 9,
       "trial_id": "p12_b009"
+    },
+    {
+      "condition": "faithful",
+      "target_emotion_shown": "excited",
+      "stimulus": {
+        "id": "excited_linear",
+        "target_emotion": "excited",
+        "source": "llm",
+        "shape": "linear",
+        "hue": 60,
+        "saturation": 0.4,
+        "brightness": 750.0,
+        "texture": "concrete",
+        "roughness": "smooth",
+        "rationale": "I chose a vivid yellow for the walls and floor, lit at a very bright level, on smooth bare concrete. Together the colour, the light and the surface are what carry excited in a room this size."
+      },
+      "rationale_shown": "I chose a vivid yellow for the walls and floor, lit at a very bright level, on smooth bare concrete. Together the colour, the light and the surface are what carry excited in a room this size.",
+      "ground_truth": {
+        "swapped_field": null,
+        "original_value": null,
+        "swapped_in_value": null,
+        "donor_emotion": null,
+        "rationale_is_wrong": false
+      },
+      "explanation_shown": false,
+      "correction_source": "",
+      "trial_index": 10,
+      "trial_id": "p12_b010"
+    },
+    {
+      "condition": "rationale_mismatched",
+      "target_emotion_shown": "depressed",
+      "stimulus": {
+        "id": "depressed_linear",
+        "target_emotion": "depressed",
+        "source": "llm",
+        "shape": "linear",
+        "hue": 240,
+        "saturation": 0.4,
+        "brightness": 150.0,
+        "texture": "textile",
+        "roughness": "rough",
+        "rationale": "I chose a vivid blue for the walls and floor, lit at a dim level, on rough woven cloth. Together the colour, the light and the surface are what carry depressed in a room this size."
+      },
+      "rationale_shown": "I chose a faint blue-green for the walls and floor, lit at a dim level, on rough bare concrete. Together the colour, the light and the surface are what carry tense in a room this size.",
+      "ground_truth": {
+        "swapped_field": null,
+        "original_value": null,
+        "swapped_in_value": null,
+        "donor_emotion": "tense",
+        "rationale_is_wrong": true
+      },
+      "explanation_shown": true,
+      "correction_source": "own",
+      "sham_seed": 906859844,
+      "trial_index": 11,
+      "trial_id": "p12_b011"
     },
     {
       "condition": "faithful",
@@ -298,39 +354,10 @@
         "donor_emotion": null,
         "rationale_is_wrong": false
       },
-      "explanation_shown": true,
+      "explanation_shown": false,
       "correction_source": "",
-      "trial_index": 10,
-      "trial_id": "p12_b010"
-    },
-    {
-      "condition": "rationale_mismatched",
-      "target_emotion_shown": "depressed",
-      "stimulus": {
-        "id": "depressed_linear",
-        "target_emotion": "depressed",
-        "source": "llm",
-        "shape": "linear",
-        "hue": 240,
-        "saturation": 0.4,
-        "brightness": 150.0,
-        "texture": "textile",
-        "roughness": "rough",
-        "rationale": "I chose a vivid blue for the walls and floor, lit at a dim level, on rough woven cloth. Together the colour, the light and the surface are what carry depressed in a room this size."
-      },
-      "rationale_shown": "I chose a vivid yellow for the walls and floor, lit at a very bright level, on smooth bare concrete. Together the colour, the light and the surface are what carry excited in a room this size.",
-      "ground_truth": {
-        "swapped_field": null,
-        "original_value": null,
-        "swapped_in_value": null,
-        "donor_emotion": "excited",
-        "rationale_is_wrong": true
-      },
-      "explanation_shown": true,
-      "correction_source": "own",
-      "sham_seed": 336700602,
-      "trial_index": 11,
-      "trial_id": "p12_b011"
+      "trial_index": 12,
+      "trial_id": "p12_b012"
     },
     {
       "condition": "swapped",
@@ -341,36 +368,7 @@
         "source": "llm",
         "shape": "linear",
         "hue": 60,
-        "saturation": 0.4,
-        "brightness": 750.0,
-        "texture": "concrete",
-        "roughness": "rough",
-        "rationale": "I chose a vivid yellow for the walls and floor, lit at a very bright level, on smooth bare concrete. Together the colour, the light and the surface are what carry excited in a room this size."
-      },
-      "rationale_shown": "I chose a vivid yellow for the walls and floor, lit at a very bright level, on smooth bare concrete. Together the colour, the light and the surface are what carry excited in a room this size.",
-      "ground_truth": {
-        "swapped_field": "roughness",
-        "original_value": "smooth",
-        "swapped_in_value": "rough",
-        "donor_emotion": "depressed",
-        "rationale_is_wrong": false
-      },
-      "explanation_shown": true,
-      "correction_source": "yoked",
-      "sham_seed": 904743833,
-      "trial_index": 12,
-      "trial_id": "p12_b012"
-    },
-    {
-      "condition": "faithful",
-      "target_emotion_shown": "excited",
-      "stimulus": {
-        "id": "excited_curved",
-        "target_emotion": "excited",
-        "source": "llm",
-        "shape": "curved",
-        "hue": 60,
-        "saturation": 0.4,
+        "saturation": 0.2,
         "brightness": 750.0,
         "texture": "concrete",
         "roughness": "smooth",
@@ -378,14 +376,15 @@
       },
       "rationale_shown": "I chose a vivid yellow for the walls and floor, lit at a very bright level, on smooth bare concrete. Together the colour, the light and the surface are what carry excited in a room this size.",
       "ground_truth": {
-        "swapped_field": null,
-        "original_value": null,
-        "swapped_in_value": null,
-        "donor_emotion": null,
+        "swapped_field": "saturation",
+        "original_value": 0.4,
+        "swapped_in_value": 0.2,
+        "donor_emotion": "tense",
         "rationale_is_wrong": false
       },
       "explanation_shown": true,
-      "correction_source": "",
+      "correction_source": "yoked",
+      "sham_seed": 383368389,
       "trial_index": 13,
       "trial_id": "p12_b013"
     },
@@ -400,7 +399,7 @@
         "hue": 60,
         "saturation": 0.2,
         "brightness": 300.0,
-        "texture": "concrete",
+        "texture": "textile",
         "roughness": "smooth",
         "rationale": "I chose a faint yellow for the walls and floor, lit at a medium level, on smooth painted plaster. Together the colour, the light and the surface are what carry calm in a room this size."
       },
@@ -408,18 +407,47 @@
       "ground_truth": {
         "swapped_field": "texture",
         "original_value": "plaster",
-        "swapped_in_value": "concrete",
-        "donor_emotion": "tense",
+        "swapped_in_value": "textile",
+        "donor_emotion": "depressed",
         "rationale_is_wrong": false
       },
       "explanation_shown": true,
-      "correction_source": "yoked",
-      "sham_seed": 166092821,
+      "correction_source": "own",
+      "sham_seed": 241464331,
       "trial_index": 14,
       "trial_id": "p12_b014"
     },
     {
-      "condition": "faithful",
+      "condition": "rationale_mismatched",
+      "target_emotion_shown": "excited",
+      "stimulus": {
+        "id": "excited_linear",
+        "target_emotion": "excited",
+        "source": "llm",
+        "shape": "linear",
+        "hue": 60,
+        "saturation": 0.4,
+        "brightness": 750.0,
+        "texture": "concrete",
+        "roughness": "smooth",
+        "rationale": "I chose a vivid yellow for the walls and floor, lit at a very bright level, on smooth bare concrete. Together the colour, the light and the surface are what carry excited in a room this size."
+      },
+      "rationale_shown": "I chose a vivid blue for the walls and floor, lit at a dim level, on rough woven cloth. Together the colour, the light and the surface are what carry depressed in a room this size.",
+      "ground_truth": {
+        "swapped_field": null,
+        "original_value": null,
+        "swapped_in_value": null,
+        "donor_emotion": "depressed",
+        "rationale_is_wrong": true
+      },
+      "explanation_shown": true,
+      "correction_source": "own",
+      "sham_seed": 640170320,
+      "trial_index": 15,
+      "trial_id": "p12_b015"
+    },
+    {
+      "condition": "rationale_mismatched",
       "target_emotion_shown": "calm",
       "stimulus": {
         "id": "calm_curved",
@@ -433,7 +461,36 @@
         "roughness": "smooth",
         "rationale": "I chose a faint yellow for the walls and floor, lit at a medium level, on smooth painted plaster. Together the colour, the light and the surface are what carry calm in a room this size."
       },
-      "rationale_shown": "I chose a faint yellow for the walls and floor, lit at a medium level, on smooth painted plaster. Together the colour, the light and the surface are what carry calm in a room this size.",
+      "rationale_shown": "I chose a vivid yellow for the walls and floor, lit at a very bright level, on smooth bare concrete. Together the colour, the light and the surface are what carry excited in a room this size.",
+      "ground_truth": {
+        "swapped_field": null,
+        "original_value": null,
+        "swapped_in_value": null,
+        "donor_emotion": "excited",
+        "rationale_is_wrong": true
+      },
+      "explanation_shown": true,
+      "correction_source": "own",
+      "sham_seed": 997089758,
+      "trial_index": 16,
+      "trial_id": "p12_b016"
+    },
+    {
+      "condition": "faithful",
+      "target_emotion_shown": "excited",
+      "stimulus": {
+        "id": "excited_linear",
+        "target_emotion": "excited",
+        "source": "llm",
+        "shape": "linear",
+        "hue": 60,
+        "saturation": 0.4,
+        "brightness": 750.0,
+        "texture": "concrete",
+        "roughness": "smooth",
+        "rationale": "I chose a vivid yellow for the walls and floor, lit at a very bright level, on smooth bare concrete. Together the colour, the light and the surface are what carry excited in a room this size."
+      },
+      "rationale_shown": "I chose a vivid yellow for the walls and floor, lit at a very bright level, on smooth bare concrete. Together the colour, the light and the surface are what carry excited in a room this size.",
       "ground_truth": {
         "swapped_field": null,
         "original_value": null,
@@ -441,39 +498,96 @@
         "donor_emotion": null,
         "rationale_is_wrong": false
       },
-      "explanation_shown": false,
+      "explanation_shown": true,
       "correction_source": "",
-      "trial_index": 15,
-      "trial_id": "p12_b015"
+      "trial_index": 17,
+      "trial_id": "p12_b017"
     },
     {
       "condition": "swapped",
-      "target_emotion_shown": "calm",
+      "target_emotion_shown": "tense",
       "stimulus": {
-        "id": "calm_curved",
-        "target_emotion": "calm",
+        "id": "tense_linear",
+        "target_emotion": "tense",
         "source": "llm",
-        "shape": "curved",
-        "hue": 60,
+        "shape": "linear",
+        "hue": 180,
         "saturation": 0.4,
-        "brightness": 300.0,
-        "texture": "plaster",
-        "roughness": "smooth",
-        "rationale": "I chose a faint yellow for the walls and floor, lit at a medium level, on smooth painted plaster. Together the colour, the light and the surface are what carry calm in a room this size."
+        "brightness": 150.0,
+        "texture": "concrete",
+        "roughness": "rough",
+        "rationale": "I chose a faint blue-green for the walls and floor, lit at a dim level, on rough bare concrete. Together the colour, the light and the surface are what carry tense in a room this size."
       },
-      "rationale_shown": "I chose a faint yellow for the walls and floor, lit at a medium level, on smooth painted plaster. Together the colour, the light and the surface are what carry calm in a room this size.",
+      "rationale_shown": "I chose a faint blue-green for the walls and floor, lit at a dim level, on rough bare concrete. Together the colour, the light and the surface are what carry tense in a room this size.",
       "ground_truth": {
         "swapped_field": "saturation",
         "original_value": 0.2,
         "swapped_in_value": 0.4,
-        "donor_emotion": "depressed",
+        "donor_emotion": "excited",
+        "rationale_is_wrong": false
+      },
+      "explanation_shown": false,
+      "correction_source": "yoked",
+      "sham_seed": 24179919,
+      "trial_index": 18,
+      "trial_id": "p12_b018"
+    },
+    {
+      "condition": "swapped",
+      "target_emotion_shown": "excited",
+      "stimulus": {
+        "id": "excited_curved",
+        "target_emotion": "excited",
+        "source": "llm",
+        "shape": "curved",
+        "hue": 60,
+        "saturation": 0.4,
+        "brightness": 150.0,
+        "texture": "concrete",
+        "roughness": "smooth",
+        "rationale": "I chose a vivid yellow for the walls and floor, lit at a very bright level, on smooth bare concrete. Together the colour, the light and the surface are what carry excited in a room this size."
+      },
+      "rationale_shown": "I chose a vivid yellow for the walls and floor, lit at a very bright level, on smooth bare concrete. Together the colour, the light and the surface are what carry excited in a room this size.",
+      "ground_truth": {
+        "swapped_field": "brightness",
+        "original_value": 750.0,
+        "swapped_in_value": 150.0,
+        "donor_emotion": "tense",
         "rationale_is_wrong": false
       },
       "explanation_shown": true,
-      "correction_source": "yoked",
-      "sham_seed": 608295282,
-      "trial_index": 16,
-      "trial_id": "p12_b016"
+      "correction_source": "own",
+      "sham_seed": 336700602,
+      "trial_index": 19,
+      "trial_id": "p12_b019"
+    },
+    {
+      "condition": "faithful",
+      "target_emotion_shown": "tense",
+      "stimulus": {
+        "id": "tense_curved",
+        "target_emotion": "tense",
+        "source": "llm",
+        "shape": "curved",
+        "hue": 180,
+        "saturation": 0.2,
+        "brightness": 150.0,
+        "texture": "concrete",
+        "roughness": "rough",
+        "rationale": "I chose a faint blue-green for the walls and floor, lit at a dim level, on rough bare concrete. Together the colour, the light and the surface are what carry tense in a room this size."
+      },
+      "rationale_shown": "I chose a faint blue-green for the walls and floor, lit at a dim level, on rough bare concrete. Together the colour, the light and the surface are what carry tense in a room this size.",
+      "ground_truth": {
+        "swapped_field": null,
+        "original_value": null,
+        "swapped_in_value": null,
+        "donor_emotion": null,
+        "rationale_is_wrong": false
+      },
+      "explanation_shown": true,
+      "correction_source": "",
+      "trial_index": 20,
+      "trial_id": "p12_b020"
     },
     {
       "condition": "swapped",
@@ -499,39 +613,211 @@
         "rationale_is_wrong": false
       },
       "explanation_shown": false,
-      "correction_source": "own",
-      "sham_seed": 939586869,
-      "trial_index": 17,
-      "trial_id": "p12_b017"
+      "correction_source": "yoked",
+      "sham_seed": 904743833,
+      "trial_index": 21,
+      "trial_id": "p12_b021"
     },
     {
       "condition": "rationale_mismatched",
-      "target_emotion_shown": "excited",
+      "target_emotion_shown": "depressed",
       "stimulus": {
-        "id": "excited_curved",
-        "target_emotion": "excited",
+        "id": "depressed_curved",
+        "target_emotion": "depressed",
+        "source": "llm",
+        "shape": "curved",
+        "hue": 240,
+        "saturation": 0.4,
+        "brightness": 150.0,
+        "texture": "textile",
+        "roughness": "rough",
+        "rationale": "I chose a vivid blue for the walls and floor, lit at a dim level, on rough woven cloth. Together the colour, the light and the surface are what carry depressed in a room this size."
+      },
+      "rationale_shown": "I chose a vivid yellow for the walls and floor, lit at a very bright level, on smooth bare concrete. Together the colour, the light and the surface are what carry excited in a room this size.",
+      "ground_truth": {
+        "swapped_field": null,
+        "original_value": null,
+        "swapped_in_value": null,
+        "donor_emotion": "excited",
+        "rationale_is_wrong": true
+      },
+      "explanation_shown": true,
+      "correction_source": "yoked",
+      "sham_seed": 166092821,
+      "trial_index": 22,
+      "trial_id": "p12_b022"
+    },
+    {
+      "condition": "faithful",
+      "target_emotion_shown": "calm",
+      "stimulus": {
+        "id": "calm_curved",
+        "target_emotion": "calm",
         "source": "llm",
         "shape": "curved",
         "hue": 60,
-        "saturation": 0.4,
-        "brightness": 750.0,
-        "texture": "concrete",
+        "saturation": 0.2,
+        "brightness": 300.0,
+        "texture": "plaster",
         "roughness": "smooth",
-        "rationale": "I chose a vivid yellow for the walls and floor, lit at a very bright level, on smooth bare concrete. Together the colour, the light and the surface are what carry excited in a room this size."
+        "rationale": "I chose a faint yellow for the walls and floor, lit at a medium level, on smooth painted plaster. Together the colour, the light and the surface are what carry calm in a room this size."
+      },
+      "rationale_shown": "I chose a faint yellow for the walls and floor, lit at a medium level, on smooth painted plaster. Together the colour, the light and the surface are what carry calm in a room this size.",
+      "ground_truth": {
+        "swapped_field": null,
+        "original_value": null,
+        "swapped_in_value": null,
+        "donor_emotion": null,
+        "rationale_is_wrong": false
+      },
+      "explanation_shown": true,
+      "correction_source": "",
+      "trial_index": 23,
+      "trial_id": "p12_b023"
+    },
+    {
+      "condition": "swapped",
+      "target_emotion_shown": "depressed",
+      "stimulus": {
+        "id": "depressed_linear",
+        "target_emotion": "depressed",
+        "source": "llm",
+        "shape": "linear",
+        "hue": 60,
+        "saturation": 0.4,
+        "brightness": 150.0,
+        "texture": "textile",
+        "roughness": "rough",
+        "rationale": "I chose a vivid blue for the walls and floor, lit at a dim level, on rough woven cloth. Together the colour, the light and the surface are what carry depressed in a room this size."
+      },
+      "rationale_shown": "I chose a vivid blue for the walls and floor, lit at a dim level, on rough woven cloth. Together the colour, the light and the surface are what carry depressed in a room this size.",
+      "ground_truth": {
+        "swapped_field": "hue",
+        "original_value": 240,
+        "swapped_in_value": 60,
+        "donor_emotion": "calm",
+        "rationale_is_wrong": false
+      },
+      "explanation_shown": true,
+      "correction_source": "yoked",
+      "sham_seed": 608295282,
+      "trial_index": 24,
+      "trial_id": "p12_b024"
+    },
+    {
+      "condition": "swapped",
+      "target_emotion_shown": "tense",
+      "stimulus": {
+        "id": "tense_linear",
+        "target_emotion": "tense",
+        "source": "llm",
+        "shape": "linear",
+        "hue": 180,
+        "saturation": 0.2,
+        "brightness": 150.0,
+        "texture": "textile",
+        "roughness": "rough",
+        "rationale": "I chose a faint blue-green for the walls and floor, lit at a dim level, on rough bare concrete. Together the colour, the light and the surface are what carry tense in a room this size."
+      },
+      "rationale_shown": "I chose a faint blue-green for the walls and floor, lit at a dim level, on rough bare concrete. Together the colour, the light and the surface are what carry tense in a room this size.",
+      "ground_truth": {
+        "swapped_field": "texture",
+        "original_value": "concrete",
+        "swapped_in_value": "textile",
+        "donor_emotion": "depressed",
+        "rationale_is_wrong": false
+      },
+      "explanation_shown": true,
+      "correction_source": "own",
+      "sham_seed": 939586869,
+      "trial_index": 25,
+      "trial_id": "p12_b025"
+    },
+    {
+      "condition": "swapped",
+      "target_emotion_shown": "depressed",
+      "stimulus": {
+        "id": "depressed_curved",
+        "target_emotion": "depressed",
+        "source": "llm",
+        "shape": "curved",
+        "hue": 240,
+        "saturation": 0.2,
+        "brightness": 150.0,
+        "texture": "textile",
+        "roughness": "rough",
+        "rationale": "I chose a vivid blue for the walls and floor, lit at a dim level, on rough woven cloth. Together the colour, the light and the surface are what carry depressed in a room this size."
+      },
+      "rationale_shown": "I chose a vivid blue for the walls and floor, lit at a dim level, on rough woven cloth. Together the colour, the light and the surface are what carry depressed in a room this size.",
+      "ground_truth": {
+        "swapped_field": "saturation",
+        "original_value": 0.4,
+        "swapped_in_value": 0.2,
+        "donor_emotion": "tense",
+        "rationale_is_wrong": false
+      },
+      "explanation_shown": true,
+      "correction_source": "yoked",
+      "sham_seed": 958746375,
+      "trial_index": 26,
+      "trial_id": "p12_b026"
+    },
+    {
+      "condition": "rationale_mismatched",
+      "target_emotion_shown": "tense",
+      "stimulus": {
+        "id": "tense_curved",
+        "target_emotion": "tense",
+        "source": "llm",
+        "shape": "curved",
+        "hue": 180,
+        "saturation": 0.2,
+        "brightness": 150.0,
+        "texture": "concrete",
+        "roughness": "rough",
+        "rationale": "I chose a faint blue-green for the walls and floor, lit at a dim level, on rough bare concrete. Together the colour, the light and the surface are what carry tense in a room this size."
+      },
+      "rationale_shown": "I chose a vivid yellow for the walls and floor, lit at a very bright level, on smooth bare concrete. Together the colour, the light and the surface are what carry excited in a room this size.",
+      "ground_truth": {
+        "swapped_field": null,
+        "original_value": null,
+        "swapped_in_value": null,
+        "donor_emotion": "excited",
+        "rationale_is_wrong": true
+      },
+      "explanation_shown": true,
+      "correction_source": "own",
+      "sham_seed": 1026252166,
+      "trial_index": 27,
+      "trial_id": "p12_b027"
+    },
+    {
+      "condition": "faithful",
+      "target_emotion_shown": "depressed",
+      "stimulus": {
+        "id": "depressed_linear",
+        "target_emotion": "depressed",
+        "source": "llm",
+        "shape": "linear",
+        "hue": 240,
+        "saturation": 0.4,
+        "brightness": 150.0,
+        "texture": "textile",
+        "roughness": "rough",
+        "rationale": "I chose a vivid blue for the walls and floor, lit at a dim level, on rough woven cloth. Together the colour, the light and the surface are what carry depressed in a room this size."
       },
       "rationale_shown": "I chose a vivid blue for the walls and floor, lit at a dim level, on rough woven cloth. Together the colour, the light and the surface are what carry depressed in a room this size.",
       "ground_truth": {
         "swapped_field": null,
         "original_value": null,
         "swapped_in_value": null,
-        "donor_emotion": "depressed",
-        "rationale_is_wrong": true
+        "donor_emotion": null,
+        "rationale_is_wrong": false
       },
       "explanation_shown": true,
-      "correction_source": "yoked",
-      "sham_seed": 958746375,
-      "trial_index": 18,
-      "trial_id": "p12_b018"
+      "correction_source": "",
+      "trial_index": 28,
+      "trial_id": "p12_b028"
     },
     {
       "condition": "faithful",
@@ -558,97 +844,11 @@
       },
       "explanation_shown": false,
       "correction_source": "",
-      "trial_index": 19,
-      "trial_id": "p12_b019"
-    },
-    {
-      "condition": "swapped",
-      "target_emotion_shown": "tense",
-      "stimulus": {
-        "id": "tense_curved",
-        "target_emotion": "tense",
-        "source": "llm",
-        "shape": "curved",
-        "hue": 180,
-        "saturation": 0.2,
-        "brightness": 150.0,
-        "texture": "textile",
-        "roughness": "rough",
-        "rationale": "I chose a faint blue-green for the walls and floor, lit at a dim level, on rough bare concrete. Together the colour, the light and the surface are what carry tense in a room this size."
-      },
-      "rationale_shown": "I chose a faint blue-green for the walls and floor, lit at a dim level, on rough bare concrete. Together the colour, the light and the surface are what carry tense in a room this size.",
-      "ground_truth": {
-        "swapped_field": "texture",
-        "original_value": "concrete",
-        "swapped_in_value": "textile",
-        "donor_emotion": "depressed",
-        "rationale_is_wrong": false
-      },
-      "explanation_shown": false,
-      "correction_source": "yoked",
-      "sham_seed": 1026252166,
-      "trial_index": 20,
-      "trial_id": "p12_b020"
-    },
-    {
-      "condition": "faithful",
-      "target_emotion_shown": "excited",
-      "stimulus": {
-        "id": "excited_linear",
-        "target_emotion": "excited",
-        "source": "llm",
-        "shape": "linear",
-        "hue": 60,
-        "saturation": 0.4,
-        "brightness": 750.0,
-        "texture": "concrete",
-        "roughness": "smooth",
-        "rationale": "I chose a vivid yellow for the walls and floor, lit at a very bright level, on smooth bare concrete. Together the colour, the light and the surface are what carry excited in a room this size."
-      },
-      "rationale_shown": "I chose a vivid yellow for the walls and floor, lit at a very bright level, on smooth bare concrete. Together the colour, the light and the surface are what carry excited in a room this size.",
-      "ground_truth": {
-        "swapped_field": null,
-        "original_value": null,
-        "swapped_in_value": null,
-        "donor_emotion": null,
-        "rationale_is_wrong": false
-      },
-      "explanation_shown": true,
-      "correction_source": "",
-      "trial_index": 21,
-      "trial_id": "p12_b021"
+      "trial_index": 29,
+      "trial_id": "p12_b029"
     },
     {
       "condition": "rationale_mismatched",
-      "target_emotion_shown": "tense",
-      "stimulus": {
-        "id": "tense_curved",
-        "target_emotion": "tense",
-        "source": "llm",
-        "shape": "curved",
-        "hue": 180,
-        "saturation": 0.2,
-        "brightness": 150.0,
-        "texture": "concrete",
-        "roughness": "rough",
-        "rationale": "I chose a faint blue-green for the walls and floor, lit at a dim level, on rough bare concrete. Together the colour, the light and the surface are what carry tense in a room this size."
-      },
-      "rationale_shown": "I chose a vivid yellow for the walls and floor, lit at a very bright level, on smooth bare concrete. Together the colour, the light and the surface are what carry excited in a room this size.",
-      "ground_truth": {
-        "swapped_field": null,
-        "original_value": null,
-        "swapped_in_value": null,
-        "donor_emotion": "excited",
-        "rationale_is_wrong": true
-      },
-      "explanation_shown": true,
-      "correction_source": "own",
-      "sham_seed": 819121362,
-      "trial_index": 22,
-      "trial_id": "p12_b022"
-    },
-    {
-      "condition": "swapped",
       "target_emotion_shown": "excited",
       "stimulus": {
         "id": "excited_curved",
@@ -656,257 +856,57 @@
         "source": "llm",
         "shape": "curved",
         "hue": 60,
-        "saturation": 0.2,
+        "saturation": 0.4,
         "brightness": 750.0,
         "texture": "concrete",
         "roughness": "smooth",
         "rationale": "I chose a vivid yellow for the walls and floor, lit at a very bright level, on smooth bare concrete. Together the colour, the light and the surface are what carry excited in a room this size."
-      },
-      "rationale_shown": "I chose a vivid yellow for the walls and floor, lit at a very bright level, on smooth bare concrete. Together the colour, the light and the surface are what carry excited in a room this size.",
-      "ground_truth": {
-        "swapped_field": "saturation",
-        "original_value": 0.4,
-        "swapped_in_value": 0.2,
-        "donor_emotion": "calm",
-        "rationale_is_wrong": false
-      },
-      "explanation_shown": true,
-      "correction_source": "own",
-      "sham_seed": 36092886,
-      "trial_index": 23,
-      "trial_id": "p12_b023"
-    },
-    {
-      "condition": "faithful",
-      "target_emotion_shown": "tense",
-      "stimulus": {
-        "id": "tense_curved",
-        "target_emotion": "tense",
-        "source": "llm",
-        "shape": "curved",
-        "hue": 180,
-        "saturation": 0.2,
-        "brightness": 150.0,
-        "texture": "concrete",
-        "roughness": "rough",
-        "rationale": "I chose a faint blue-green for the walls and floor, lit at a dim level, on rough bare concrete. Together the colour, the light and the surface are what carry tense in a room this size."
       },
       "rationale_shown": "I chose a faint blue-green for the walls and floor, lit at a dim level, on rough bare concrete. Together the colour, the light and the surface are what carry tense in a room this size.",
       "ground_truth": {
         "swapped_field": null,
         "original_value": null,
         "swapped_in_value": null,
-        "donor_emotion": null,
-        "rationale_is_wrong": false
-      },
-      "explanation_shown": true,
-      "correction_source": "",
-      "trial_index": 24,
-      "trial_id": "p12_b024"
-    },
-    {
-      "condition": "rationale_mismatched",
-      "target_emotion_shown": "calm",
-      "stimulus": {
-        "id": "calm_curved",
-        "target_emotion": "calm",
-        "source": "llm",
-        "shape": "curved",
-        "hue": 60,
-        "saturation": 0.2,
-        "brightness": 300.0,
-        "texture": "plaster",
-        "roughness": "smooth",
-        "rationale": "I chose a faint yellow for the walls and floor, lit at a medium level, on smooth painted plaster. Together the colour, the light and the surface are what carry calm in a room this size."
-      },
-      "rationale_shown": "I chose a vivid yellow for the walls and floor, lit at a very bright level, on smooth bare concrete. Together the colour, the light and the surface are what carry excited in a room this size.",
-      "ground_truth": {
-        "swapped_field": null,
-        "original_value": null,
-        "swapped_in_value": null,
-        "donor_emotion": "excited",
+        "donor_emotion": "tense",
         "rationale_is_wrong": true
       },
       "explanation_shown": true,
       "correction_source": "yoked",
-      "sham_seed": 599717197,
-      "trial_index": 25,
-      "trial_id": "p12_b025"
-    },
-    {
-      "condition": "swapped",
-      "target_emotion_shown": "depressed",
-      "stimulus": {
-        "id": "depressed_linear",
-        "target_emotion": "depressed",
-        "source": "llm",
-        "shape": "linear",
-        "hue": 240,
-        "saturation": 0.2,
-        "brightness": 150.0,
-        "texture": "textile",
-        "roughness": "rough",
-        "rationale": "I chose a vivid blue for the walls and floor, lit at a dim level, on rough woven cloth. Together the colour, the light and the surface are what carry depressed in a room this size."
-      },
-      "rationale_shown": "I chose a vivid blue for the walls and floor, lit at a dim level, on rough woven cloth. Together the colour, the light and the surface are what carry depressed in a room this size.",
-      "ground_truth": {
-        "swapped_field": "saturation",
-        "original_value": 0.4,
-        "swapped_in_value": 0.2,
-        "donor_emotion": "calm",
-        "rationale_is_wrong": false
-      },
-      "explanation_shown": false,
-      "correction_source": "own",
-      "sham_seed": 300094614,
-      "trial_index": 26,
-      "trial_id": "p12_b026"
-    },
-    {
-      "condition": "faithful",
-      "target_emotion_shown": "excited",
-      "stimulus": {
-        "id": "excited_linear",
-        "target_emotion": "excited",
-        "source": "llm",
-        "shape": "linear",
-        "hue": 60,
-        "saturation": 0.4,
-        "brightness": 750.0,
-        "texture": "concrete",
-        "roughness": "smooth",
-        "rationale": "I chose a vivid yellow for the walls and floor, lit at a very bright level, on smooth bare concrete. Together the colour, the light and the surface are what carry excited in a room this size."
-      },
-      "rationale_shown": "I chose a vivid yellow for the walls and floor, lit at a very bright level, on smooth bare concrete. Together the colour, the light and the surface are what carry excited in a room this size.",
-      "ground_truth": {
-        "swapped_field": null,
-        "original_value": null,
-        "swapped_in_value": null,
-        "donor_emotion": null,
-        "rationale_is_wrong": false
-      },
-      "explanation_shown": false,
-      "correction_source": "",
-      "trial_index": 27,
-      "trial_id": "p12_b027"
-    },
-    {
-      "condition": "rationale_mismatched",
-      "target_emotion_shown": "tense",
-      "stimulus": {
-        "id": "tense_linear",
-        "target_emotion": "tense",
-        "source": "llm",
-        "shape": "linear",
-        "hue": 180,
-        "saturation": 0.2,
-        "brightness": 150.0,
-        "texture": "concrete",
-        "roughness": "rough",
-        "rationale": "I chose a faint blue-green for the walls and floor, lit at a dim level, on rough bare concrete. Together the colour, the light and the surface are what carry tense in a room this size."
-      },
-      "rationale_shown": "I chose a vivid yellow for the walls and floor, lit at a very bright level, on smooth bare concrete. Together the colour, the light and the surface are what carry excited in a room this size.",
-      "ground_truth": {
-        "swapped_field": null,
-        "original_value": null,
-        "swapped_in_value": null,
-        "donor_emotion": "excited",
-        "rationale_is_wrong": true
-      },
-      "explanation_shown": true,
-      "correction_source": "yoked",
-      "sham_seed": 860308758,
-      "trial_index": 28,
-      "trial_id": "p12_b028"
-    },
-    {
-      "condition": "faithful",
-      "target_emotion_shown": "calm",
-      "stimulus": {
-        "id": "calm_curved",
-        "target_emotion": "calm",
-        "source": "llm",
-        "shape": "curved",
-        "hue": 60,
-        "saturation": 0.2,
-        "brightness": 300.0,
-        "texture": "plaster",
-        "roughness": "smooth",
-        "rationale": "I chose a faint yellow for the walls and floor, lit at a medium level, on smooth painted plaster. Together the colour, the light and the surface are what carry calm in a room this size."
-      },
-      "rationale_shown": "I chose a faint yellow for the walls and floor, lit at a medium level, on smooth painted plaster. Together the colour, the light and the surface are what carry calm in a room this size.",
-      "ground_truth": {
-        "swapped_field": null,
-        "original_value": null,
-        "swapped_in_value": null,
-        "donor_emotion": null,
-        "rationale_is_wrong": false
-      },
-      "explanation_shown": true,
-      "correction_source": "",
-      "trial_index": 29,
-      "trial_id": "p12_b029"
-    },
-    {
-      "condition": "swapped",
-      "target_emotion_shown": "depressed",
-      "stimulus": {
-        "id": "depressed_linear",
-        "target_emotion": "depressed",
-        "source": "llm",
-        "shape": "linear",
-        "hue": 60,
-        "saturation": 0.4,
-        "brightness": 150.0,
-        "texture": "textile",
-        "roughness": "rough",
-        "rationale": "I chose a vivid blue for the walls and floor, lit at a dim level, on rough woven cloth. Together the colour, the light and the surface are what carry depressed in a room this size."
-      },
-      "rationale_shown": "I chose a vivid blue for the walls and floor, lit at a dim level, on rough woven cloth. Together the colour, the light and the surface are what carry depressed in a room this size.",
-      "ground_truth": {
-        "swapped_field": "hue",
-        "original_value": 240,
-        "swapped_in_value": 60,
-        "donor_emotion": "calm",
-        "rationale_is_wrong": false
-      },
-      "explanation_shown": true,
-      "correction_source": "own",
-      "sham_seed": 865191714,
+      "sham_seed": 819121362,
       "trial_index": 30,
       "trial_id": "p12_b030"
     },
     {
       "condition": "swapped",
-      "target_emotion_shown": "tense",
+      "target_emotion_shown": "depressed",
       "stimulus": {
-        "id": "tense_linear",
-        "target_emotion": "tense",
+        "id": "depressed_curved",
+        "target_emotion": "depressed",
         "source": "llm",
-        "shape": "linear",
-        "hue": 60,
-        "saturation": 0.2,
+        "shape": "curved",
+        "hue": 240,
+        "saturation": 0.4,
         "brightness": 150.0,
         "texture": "concrete",
         "roughness": "rough",
-        "rationale": "I chose a faint blue-green for the walls and floor, lit at a dim level, on rough bare concrete. Together the colour, the light and the surface are what carry tense in a room this size."
+        "rationale": "I chose a vivid blue for the walls and floor, lit at a dim level, on rough woven cloth. Together the colour, the light and the surface are what carry depressed in a room this size."
       },
-      "rationale_shown": "I chose a faint blue-green for the walls and floor, lit at a dim level, on rough bare concrete. Together the colour, the light and the surface are what carry tense in a room this size.",
+      "rationale_shown": "I chose a vivid blue for the walls and floor, lit at a dim level, on rough woven cloth. Together the colour, the light and the surface are what carry depressed in a room this size.",
       "ground_truth": {
-        "swapped_field": "hue",
-        "original_value": 180,
-        "swapped_in_value": 60,
-        "donor_emotion": "calm",
+        "swapped_field": "texture",
+        "original_value": "textile",
+        "swapped_in_value": "concrete",
+        "donor_emotion": "tense",
         "rationale_is_wrong": false
       },
-      "explanation_shown": true,
+      "explanation_shown": false,
       "correction_source": "yoked",
-      "sham_seed": 828712950,
+      "sham_seed": 36092886,
       "trial_index": 31,
       "trial_id": "p12_b031"
     },
     {
-      "condition": "rationale_mismatched",
+      "condition": "swapped",
       "target_emotion_shown": "calm",
       "stimulus": {
         "id": "calm_linear",
@@ -915,22 +915,22 @@
         "shape": "linear",
         "hue": 60,
         "saturation": 0.2,
-        "brightness": 300.0,
+        "brightness": 750.0,
         "texture": "plaster",
         "roughness": "smooth",
         "rationale": "I chose a faint yellow for the walls and floor, lit at a medium level, on smooth painted plaster. Together the colour, the light and the surface are what carry calm in a room this size."
       },
-      "rationale_shown": "I chose a vivid yellow for the walls and floor, lit at a very bright level, on smooth bare concrete. Together the colour, the light and the surface are what carry excited in a room this size.",
+      "rationale_shown": "I chose a faint yellow for the walls and floor, lit at a medium level, on smooth painted plaster. Together the colour, the light and the surface are what carry calm in a room this size.",
       "ground_truth": {
-        "swapped_field": null,
-        "original_value": null,
-        "swapped_in_value": null,
+        "swapped_field": "brightness",
+        "original_value": 300.0,
+        "swapped_in_value": 750.0,
         "donor_emotion": "excited",
-        "rationale_is_wrong": true
+        "rationale_is_wrong": false
       },
-      "explanation_shown": true,
+      "explanation_shown": false,
       "correction_source": "own",
-      "sham_seed": 681379523,
+      "sham_seed": 599717197,
       "trial_index": 32,
       "trial_id": "p12_b032"
     }

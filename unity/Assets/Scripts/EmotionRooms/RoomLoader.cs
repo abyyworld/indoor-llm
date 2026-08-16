@@ -310,10 +310,14 @@ namespace EmotionRooms
 
         [Header("Roughness")]
         [Tooltip("Material smoothness when the config says 'smooth'.")]
-        [Range(0f, 1f)] public float smoothWhenSmooth = 0.55f;
+        [Range(0f, 1f)] public float smoothWhenSmooth = 0.92f;
 
         [Tooltip("Material smoothness when the config says 'rough'.")]
-        [Range(0f, 1f)] public float smoothWhenRough = 0.05f;
+        [Range(0f, 1f)] public float smoothWhenRough = 0.0f;
+
+        [Tooltip("How much the rough setting darkens and deepens the surface pattern. " +
+                 "Specular alone is nearly invisible at 150 lux.")]
+        [Range(0f, 0.5f)] public float roughTextureBite = 0.22f;
 
         /// <summary>
         /// Smoothness for this room. Driven by the config's roughness, not by the texture.
@@ -332,10 +336,21 @@ namespace EmotionRooms
             bool smooth = config.Roughness == "smooth";
             float basis = smooth ? smoothWhenSmooth : smoothWhenRough;
 
-            // Texture nudges it by up to +-0.1 around the roughness level, never enough
-            // to make a rough wall read as smoother than a smooth one.
+            // 0.92 against 0.0, where it used to be 0.55 against 0.05.
+            //
+            // Akbar could not tell rough from smooth, and the reason is that the only
+            // thing carrying the difference was a specular highlight. Specular needs a
+            // light bright enough to glint, and half these rooms are lit at 150 lux, so
+            // on those it carried nothing at all. Roughness has two values, so every
+            // roughness swap was that comparison and every one of them was a guaranteed
+            // miss.
+            //
+            // Widened to nearly the full range, and the texture is darkened and deepened
+            // on rough as well, so the difference survives a dim room. Needs a look in
+            // the headset: this is a rendering judgement and the numbers are a starting
+            // point, not a measurement.
             float offset = (wallTexture.smoothness - 0.2f) * 0.5f;
-            return Mathf.Clamp01(basis + Mathf.Clamp(offset, -0.1f, 0.1f));
+            return Mathf.Clamp01(basis + Mathf.Clamp(offset, -0.08f, 0.08f));
         }
 
         WallTexture FindTexture(string textureName)

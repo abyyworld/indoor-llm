@@ -11,13 +11,13 @@ namespace EmotionRooms
     public static class PoolConstants
     {
         /// <summary>HSV hue of the wall colour, in degrees.</summary>
-        public static readonly int[] Hues = { 0, 30, 60, 90, 120, 180, 240, 270, 300, 330 };
+        public static readonly int[] Hues = { 0, 30, 60, 120, 180, 240, 270 };
 
         /// <summary>HSV saturation of the wall colour.</summary>
         public static readonly float[] Saturations = { 0.2f, 0.4f };
 
         /// <summary>Normalised intensity of the room's light source.</summary>
-        public static readonly float[] Brightnesses = { 150f, 300f, 500f, 750f };
+        public static readonly float[] Brightnesses = { 150f, 300f, 750f };
 
         /// <summary>Greyscale wall materials.</summary>
         public static readonly string[] Textures = { "plaster", "concrete", "textile" };
@@ -41,7 +41,7 @@ namespace EmotionRooms
         public const float FloatTolerance = 0.0001f;
 
         /// <summary>Total distinct rooms the pools can express, ignoring shape.</summary>
-        public const int DesignSpaceSize = 480;
+        public const int DesignSpaceSize = 252;
 
         public static bool Contains(int[] pool, int value)
         {
