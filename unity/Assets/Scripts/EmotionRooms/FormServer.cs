@@ -629,7 +629,18 @@ namespace EmotionRooms
           'You can close this tab.</p>';
       });
   }
-  function retry(){ if(!pending) return; send().catch(function(){ setTimeout(retry,4000) }) }
+  // Three failures is about twelve seconds. A blip while the headset wakes should
+  // not drop a file in Downloads; an app that is actually gone should not wait for
+  // somebody to notice a button.
+  var misses=0;
+  function retry(){
+    if(!pending) return;
+    send().catch(function(){
+      misses++;
+      if(misses===3) saveLocally(true);
+      setTimeout(retry,4000);
+    });
+  }
   f.addEventListener('submit',function(e){
     e.preventDefault(); save(); pending=true;
     show('Saving...','#555');
@@ -654,7 +665,15 @@ namespace EmotionRooms
     b.textContent='Save answers to this laptop instead';
     b.style.cssText='display:block;margin:1rem auto;padding:.6rem 1.4rem;font:inherit;'+
       'border:0;border-radius:.5rem;background:#a12a2a;color:#fff;cursor:pointer';
-    b.onclick=function(){
+    b.onclick=function(){ saveLocally(false) };
+    f.appendChild(b);
+  }
+
+  // Writes the same CSV the app writes. Called by the button, and attempted on its
+  // own after three failed sends -- browsers usually allow a programmatic download
+  // that began life in a click, and when they refuse, the button is already there.
+  function saveLocally(automatic){
+    try{
       var o=values(), rows=['participant,form,item,answer,state,utc'];
       var utc=new Date().toISOString();
       Object.keys(o).forEach(function(k){
@@ -669,10 +688,13 @@ namespace EmotionRooms
       a.href=URL.createObjectURL(blob);
       a.download='questionnaire_rescue_'+(o['__participant']||'unknown')+'.csv';
       a.click();
-      show('Downloaded. Keep that file: it is the only copy outside this tab. '+
-           'It will still send itself if the app comes back.','#b4690e');
-    };
-    f.appendChild(b);
+      show((automatic?'The app has not answered for a while, so the answers were '+
+            'saved to this laptop automatically. ':'Downloaded. ')+
+           'Keep that file. It will still send itself if the app comes back.','#b4690e');
+    }catch(e){
+      if(!automatic) show('Could not save the file. Copy the answers by hand '+
+                          'before closing this tab.','#a12a2a');
+    }
   }
 
   window.addEventListener('online',retry);
