@@ -563,6 +563,7 @@ namespace EmotionRooms
             // task and is what separates disagreement with the design, which is not
             // measured here, from detection of tampering, which is.
             yield return RunTour(block);
+            yield return RunCalibration();
 
             if (board != null)
                 board.Show("Checking the system's work\n\n" +
@@ -631,6 +632,95 @@ namespace EmotionRooms
         /// Built from the first trial's stimulus, so every room shown is in-pool and
         /// passes the same validator as a real one.
         /// </summary>
+        [Tooltip("Calibration trials answered with right/wrong feedback, before the " +
+                 "scored block. Empty to skip them.")]
+        public string practiceBlockFileName = "practice_oversight.json";
+
+        [Tooltip("Seconds a calibration room is shown. Shorter than a scored trial: " +
+                 "this is about the question, not about the room.")]
+        public float practiceExposureSeconds = 10f;
+
+        /// <summary>
+        /// Answer a few rooms and be told whether you were right, before anything counts.
+        ///
+        /// Participant one called fourteen of twenty unaltered rooms altered. The swaps
+        /// were not subtle and she caught ten of twelve, so sensitivity was fine and
+        /// criterion was not: "does this look wrong for calm" was being read as "do I
+        /// disagree with this design", which is a taste judgement and answers yes to
+        /// nearly everything. A d-prime resting on a false-alarm rate of .70 is a floor.
+        ///
+        /// Feedback moves criterion without touching sensitivity, which is the standard
+        /// remedy. It happens only here and it says only whether the room was changed --
+        /// never which setting, and never anything about the emotion. Naming the setting
+        /// would teach the mapping and make the scored block a memory test.
+        ///
+        /// The rooms are not the eight study rooms, so the first time a participant
+        /// meets one of those is the time it is scored. That first rating is the thesis
+        /// measure and it only happens once.
+        /// </summary>
+        IEnumerator RunCalibration()
+        {
+            if (string.IsNullOrEmpty(practiceBlockFileName) || loader == null) yield break;
+
+            string json = ParticipantPacks.Read(participantId, practiceBlockFileName);
+            if (string.IsNullOrEmpty(json)) yield break;
+
+            var practice = OversightBlockData.FromJson(json);
+            if (practice == null || practice.trials == null || practice.trials.Count == 0)
+                yield break;
+
+            if (board != null)
+                board.Show("A few practice rooms first.\n\n" +
+                           "Same question as the real ones, and you will be told whether " +
+                           "you were right.\nNothing here is recorded.");
+            if (events != null) events.Write("calibration_started", null);
+            yield return new WaitForSeconds(briefingSeconds * 0.6f);
+            if (board != null) board.Hide();
+
+            int correct = 0;
+            for (int i = 0; i < practice.trials.Count; i++)
+            {
+                var trial = practice.trials[i];
+                if (trial.stimulus == null || trial.stimulus.Validate().Count > 0) continue;
+
+                loader.Load(trial.stimulus);
+                yield return new WaitForSeconds(practiceExposureSeconds);
+
+                detectionAnswered = false;
+                if (detectionPanel != null)
+                    detectionPanel.Show("Practice " + (i + 1) + " of " + practice.trials.Count +
+                                        ".\nThe system designed this room to feel: " +
+                                        trial.target_emotion_shown + ".\n" +
+                                        "Was one setting changed after the system designed " +
+                                        "this room?");
+                yield return WaitForAnswer(() => detectionAnswered, detectionPanel, "calibration");
+                if (detectionPanel != null) detectionPanel.Hide();
+
+                bool wasChanged = trial.condition == "swapped";
+                bool right = pendingDetected == wasChanged;
+                if (right) correct++;
+
+                // What it was, never which setting it was.
+                if (board != null)
+                    board.Show((right ? "Correct.\n\n" : "Not quite.\n\n") +
+                               (wasChanged
+                                   ? "One setting HAD been changed on that room."
+                                   : "That room was exactly as the system designed it."));
+                if (events != null)
+                    events.WriteValues("calibration_answered", trial.trial_id,
+                        pendingDetected ? "said_changed" : "said_unchanged",
+                        wasChanged ? "truth=changed" : "truth=unchanged");
+                yield return new WaitForSeconds(3.5f);
+                if (board != null) board.Hide();
+            }
+
+            loader.HideRooms();
+            if (events != null)
+                events.WriteValues("calibration_finished",
+                    correct.ToString(CultureInfo.InvariantCulture),
+                    practice.trials.Count.ToString(CultureInfo.InvariantCulture), null);
+        }
+
         IEnumerator RunTour(OversightBlockData data)
         {
             if (!familiarisationTour || loader == null ||
@@ -861,9 +951,10 @@ namespace EmotionRooms
                 // room has no answer at all and confused everyone it was shown to.
                 detectionPanel.Show("The system designed this room to feel: " +
                                     trial.target_emotion_shown + ".\n" +
-                                    "About a third of the rooms had one setting secretly " +
-                                    "altered.\n" +
-                                    "Was this room altered?");
+                                    "About a third of the rooms had one setting changed " +
+                                    "afterwards.\n" +
+                                    "Was one setting changed after the system designed " +
+                                    "this room?");
             if (telemetry != null) { telemetry.SetReviewSegment(true, false, false); telemetry.Mark("detection_shown"); }
             if (events != null) events.Write("detection_shown", null);
             yield return WaitForAnswer(() => detectionAnswered, detectionPanel, "detection");

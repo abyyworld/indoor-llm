@@ -450,6 +450,94 @@ def build_oversight_block(
     }
 
 
+def build_practice_block(configs, participant: str, seed: int, trials: int = 4) -> dict:
+    """A short calibration block, answered with feedback, before anything is scored.
+
+    Participant one flagged fourteen of twenty unaltered rooms. The swaps were not
+    subtle -- yellow to blue-green, plaster to concrete -- and she caught ten of
+    twelve, so sensitivity was fine. What was wrong was criterion: "does this look
+    wrong for calm" got read as "do I disagree with this design", which is a taste
+    judgement and answers yes to almost everything. A d-prime built on a false-alarm
+    rate of .70 is a floor, and a floor is not a result.
+
+    Telling someone they were right or wrong fixes a criterion without touching
+    sensitivity, which is the standard remedy and the reason this exists. It happens
+    only here, never in the scored block, and it says only whether the room was
+    changed -- never which setting, never anything about the emotion. Naming the
+    setting would teach the mapping and turn the scored block into a memory test.
+
+    The rooms are deliberately NOT the eight study rooms. A participant who has
+    already stood in the calm room and been told about it is not meeting it fresh
+    when it is scored, and that first rating is the thesis measure.
+    """
+    if not configs:
+        raise OversightError("need at least one config to build practice from")
+
+    from pipeline import pools
+
+    pool = {
+        "hue": list(pools.HUES),
+        "saturation": list(pools.SATURATIONS),
+        "brightness": list(pools.BRIGHTNESSES),
+        "texture": list(pools.TEXTURES),
+        "roughness": list(pools.ROUGHNESSES),
+    }
+
+    rng = random.Random((seed * 7919) ^ 0x9E3779B9)
+    base = dict(configs[0])
+
+    # Move every manipulated field off its study value, so no practice room can equal
+    # one of the eight. Hue moves furthest: it is the most visible field and the one
+    # a participant is most likely to carry over.
+    out: list[dict] = []
+    for index in range(trials):
+        room = dict(base)
+        room["hue"] = rng.choice([h for h in pool["hue"] if h != base.get("hue")])
+        room["saturation"] = rng.choice(pool["saturation"])
+        room["brightness"] = rng.choice(pool["brightness"])
+        room["texture"] = rng.choice(pool["texture"])
+        room["roughness"] = rng.choice(pool["roughness"])
+        room["id"] = f"practice_{index + 1:02d}"
+        room["target_emotion"] = rng.choice(list(pools.EMOTIONS))
+        room["source"] = "practice"
+
+        # Half changed, half not, so feedback teaches the rate as well as the task.
+        changed = index % 2 == 1
+        truth = None
+        if changed:
+            # Only the five the practice rooms actually carry.
+            field = rng.choice(list(pool))
+            was = room[field]
+            options = [v for v in pool[field] if v != was]
+            room[field] = rng.choice(options)
+            truth = {
+                "swapped_field": field,
+                "original_value": str(was),
+                "swapped_in_value": str(room[field]),
+                "donor_emotion": None,
+                "rationale_is_wrong": False,
+            }
+
+        out.append({
+            "trial_id": f"{participant}_practice{index + 1:02d}",
+            "condition": SWAPPED if changed else FAITHFUL,
+            "target_emotion_shown": room["target_emotion"],
+            "rationale_shown": "",
+            "explanation_shown": False,
+            "correction_source": "",
+            "sham_seed": 0,
+            "stimulus": room,
+            "ground_truth": truth or {
+                "swapped_field": None, "original_value": None,
+                "swapped_in_value": None, "donor_emotion": None,
+                "rationale_is_wrong": False,
+            },
+        })
+
+    rng.shuffle(out)
+    return {"participant": participant, "practice": True, "trials": out}
+
+
 def build_rationale_block(
     configs: Sequence[dict],
     *,

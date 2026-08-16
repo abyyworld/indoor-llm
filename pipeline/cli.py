@@ -364,7 +364,8 @@ def cmd_build_participants(args: argparse.Namespace) -> int:
     from pathlib import Path
 
     from .controls import random_rooms
-    from .oversight import OversightError, build_oversight_block, build_rationale_block
+    from .oversight import (OversightError, build_oversight_block,
+                            build_practice_block, build_rationale_block)
     from .session import build_session
 
     rooms = _rooms_of(_load(args.batch))
@@ -414,6 +415,12 @@ def cmd_build_participants(args: argparse.Namespace) -> int:
             rationale = build_rationale_block(
                 rooms, participant=participant, seed=args.seed + i
             )
+            # Calibration trials, answered with right/wrong feedback before anything
+            # is scored. Rooms deliberately outside the eight, so the first time a
+            # participant meets a study room is the time it counts.
+            practice_block = build_practice_block(
+                rooms, participant=participant, seed=args.seed + i
+            )
         except (ValueError, OversightError) as exc:
             print(f"error building {participant}: {exc}", file=sys.stderr)
             return 1
@@ -438,6 +445,8 @@ def cmd_build_participants(args: argparse.Namespace) -> int:
         (folder / "oversight.json").write_text(
             json.dumps(block, indent=2) + "\n", encoding="utf-8"
         )
+        (folder / "practice_oversight.json").write_text(
+            json.dumps(practice_block, indent=2) + "\n", encoding="utf-8")
         (folder / "rationale.json").write_text(
             json.dumps(rationale, indent=2) + "\n", encoding="utf-8"
         )
@@ -718,6 +727,45 @@ def cmd_export_unity(args: argparse.Namespace) -> int:
 # ---------------------------------------------------------------- parser
 
 
+def cmd_false_alarms(args) -> int:
+    """Hit and false-alarm rate per participant, from a pulled data folder.
+
+    Ten seconds a participant, and it is what stops a floor effect being discovered
+    at twenty. Participant one flagged fourteen of twenty unaltered rooms; if that
+    repeats it is the whole paper, and it is visible here after every session.
+
+    A rationale_mismatched room is genuine, so it is an unaltered trial for this
+    purpose. The question is about the room, not about the reasoning.
+    """
+    import csv as _csv
+    from pathlib import Path
+
+    path = Path(args.data) / "oversight_responses.csv"
+    if not path.exists():
+        print(f"no oversight_responses.csv in {args.data}", file=sys.stderr)
+        return 1
+
+    rows = list(_csv.DictReader(path.open(encoding="utf-8-sig")))
+    people: dict[str, list] = {}
+    for row in rows:
+        people.setdefault(row.get("participant", "?"), []).append(row)
+
+    print(f"{'participant':<14}{'trials':>7}{'hit':>7}{'FA':>7}   verdict")
+    for who, mine in sorted(people.items()):
+        signal = [r for r in mine if r.get("condition") == "swapped"]
+        noise = [r for r in mine
+                 if r.get("condition") in ("faithful", "rationale_mismatched")]
+        if not signal or not noise:
+            continue
+        hit = sum(r.get("detected") == "1" for r in signal) / len(signal)
+        fa = sum(r.get("detected") == "1" for r in noise) / len(noise)
+        verdict = ("ok" if fa <= 0.45 else
+                   "high, watch it" if fa <= 0.60 else
+                   "FLOOR RISK, stop and look")
+        print(f"{who:<14}{len(mine):>7}{hit:>7.2f}{fa:>7.2f}   {verdict}")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="pipeline", description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -784,6 +832,17 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--seed", type=int, default=40)
     p.add_argument("--out", default="unity/Assets/StreamingAssets/participants")
     p.set_defaults(func=cmd_build_participants)
+
+    p = sub.add_parser(
+        "false-alarms",
+        help="hit and false-alarm rate per participant, to catch a floor early",
+    )
+    p.add_argument(
+        "--data",
+        required=True,
+        help="the pulled data folder, e.g. runs/headset-data/files",
+    )
+    p.set_defaults(func=cmd_false_alarms)
 
     p = sub.add_parser(
         "bundle-participant",
