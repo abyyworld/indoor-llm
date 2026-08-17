@@ -1044,13 +1044,21 @@ namespace EmotionRooms
             }
 
 
-            // Both questions about the reasoning are behind us, so it can go.
-            if (board != null)
-            {
-                board.Hide();
-                board.follow = true;
-                board.verticalOffset = 0f;
-            }
+            // It stays up through attribution and the correction too.
+            //
+            // It used to go here, which put it away exactly when somebody was deciding
+            // WHICH setting had been changed -- the moment the system's own account of
+            // the room is most worth having in front of you. Taking it away there makes
+            // that judgement a memory exercise for the second time in one trial.
+            //
+            // Worth being clear about what this costs, because it is not free. On an
+            // explained trial the text names the original value, so a participant who
+            // reads carefully can diff it against the room rather than perceiving the
+            // fault. Attribution accuracy on explained trials therefore measures
+            // something different from attribution on unexplained ones. That is a
+            // property of the explanation manipulation rather than a confound -- having
+            // the account available IS the condition -- but the write-up has to say so
+            // rather than reporting one attribution number across both.
 
             // Attribution and correction are only asked when they said something is
             // wrong. Forcing an attribution out of someone who noticed nothing would
@@ -1208,6 +1216,15 @@ namespace EmotionRooms
                     appliedValue = applyValue;
                     correctionSource = yoked ? "yoked" : "own";
 
+                    // Gone before the repaired room, which is a fresh stimulus to be
+                    // rated on its own and not against a description of the old one.
+                    if (board != null)
+                    {
+                        board.Hide();
+                        board.follow = true;
+                        board.verticalOffset = 0f;
+                    }
+
                     loader.HideRooms();
                     loader.Load(corrected);
                     if (events != null)
@@ -1243,6 +1260,12 @@ namespace EmotionRooms
             }
 
             loader.HideRooms();
+            if (board != null)
+            {
+                board.Hide();
+                board.follow = true;
+                board.verticalOffset = 0f;
+            }
 
             var record = new OversightRecord
             {
