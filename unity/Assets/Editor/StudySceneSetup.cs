@@ -553,10 +553,14 @@ namespace EmotionRooms.EditorTools
         {
             var go = new GameObject(name);
             go.transform.SetParent(root.transform, false);
+            // A starting position only. The panel re-places itself in front of the
+            // participant every time it is shown, because where they actually stand is
+            // not knowable when the scene is generated.
             go.transform.position = camera.transform.position + camera.transform.forward * 1.2f;
             go.transform.rotation = Quaternion.LookRotation(camera.transform.forward);
 
             var panel = go.AddComponent<QuestionPanel>();
+            panel.viewer = camera;
 
             // Laid out in a grid so a long option list stays reachable without leaning.
             int perRow = values.Length > 6 ? 5 : Mathf.Max(values.Length, 1);

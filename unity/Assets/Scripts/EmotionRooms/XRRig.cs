@@ -265,6 +265,9 @@ namespace EmotionRooms
                     Time.realtimeSinceStartup - askingSince > FloorOriginPatience)
                     FallBackToAssumedEyeHeight();
             }
+
+            // Once the pose is real, put them where the study says they stand.
+            if (HeadsetPresent && floorConfirmed) RecentreHorizontally();
         }
 
         /// <summary>
@@ -321,6 +324,53 @@ namespace EmotionRooms
         static bool Tracked(XRNode node)
         {
             return InputDevices.GetDeviceAtXRNode(node).isValid;
+        }
+
+        [Tooltip("Slide the rig sideways so the participant starts at the researcher-set " +
+                 "standing position, wherever they happen to be standing in the room.")]
+        public bool recentreOnStart = true;
+
+        bool recentred;
+
+        /// <summary>
+        /// Put the participant where the study says they are, not where their room is.
+        ///
+        /// Floor-referenced tracking reports a real-world position: where somebody is
+        /// standing relative to their own play space. That is what makes their height
+        /// correct, and it also means their sideways position is wherever they physically
+        /// happen to be. Two people who set up a metre apart start a metre apart in the
+        /// room, and neither is at the standing position the two shells were dimensioned
+        /// around.
+        ///
+        /// That matters more here than in most VR. The linear and curved shells are
+        /// matched on sightlines from ONE point -- same distance to the side wall, same
+        /// distance to the facing wall or vault apex -- and the shape contrast is the
+        /// thesis question. A participant standing off to one side is not seeing the
+        /// geometry the study is comparing.
+        ///
+        /// So the rig slides sideways once, at the first tracked pose, to cancel the
+        /// offset. Height is untouched: that is measured and correct.
+        /// </summary>
+        void RecentreHorizontally()
+        {
+            if (!recentreOnStart || recentred || Origin == null || headCamera == null) return;
+
+            var head = headCamera.transform.position;
+            var want = Origin.position;
+            var drift = new Vector3(head.x - want.x, 0f, head.z - want.z);
+            if (drift.sqrMagnitude < 0.0004f) { recentred = true; return; }   // already there
+
+            Origin.position -= drift;
+            recentred = true;
+            Debug.Log("[XRRig] Recentred by " + drift.magnitude.ToString("0.00") +
+                      " m so the participant starts at the standing position.");
+        }
+
+        /// <summary>Recentre again, for a participant who has drifted mid-session.</summary>
+        public void Recentre()
+        {
+            recentred = false;
+            RecentreHorizontally();
         }
 
         /// <summary>When a trigger last fired, whatever the device list claims.</summary>

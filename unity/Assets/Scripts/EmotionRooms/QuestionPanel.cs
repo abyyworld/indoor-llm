@@ -128,6 +128,7 @@ namespace EmotionRooms
                     inGroup && (allowed == null || allowed.Contains(option.value)));
             }
 
+            PlaceInFrontOfViewer();
             gameObject.SetActive(true);
 
             // A panel with nothing pressable is a hang, and it is silent.
@@ -259,7 +260,42 @@ namespace EmotionRooms
             return -1;
         }
 
-        bool StripRequired()
+        [Tooltip("Whose view the panel places itself in front of. Wired by scene setup.")]
+        public Camera viewer;
+
+        [Tooltip("Metres in front of the participant when it appears.")]
+        public float distance = 1.2f;
+
+        /// <summary>
+        /// Put the panel where the participant is actually looking, each time it appears.
+        ///
+        /// It used to be positioned once when the scene was generated, at wherever the
+        /// camera happened to be then, and never moved again. That is fine only if the
+        /// participant is standing exactly where the scene builder assumed. They are
+        /// not: a floor-referenced pose puts somebody wherever they physically are in
+        /// their own room, so the panel ends up off to one side and turned away, and the
+        /// buttons are read at an angle. Akbar hit exactly that -- questions "shown
+        /// sideways" and hard to read.
+        ///
+        /// Placed on Show and then left alone. A panel that chased the head every frame
+        /// would be unreadable and could not be pointed at, since aiming requires the
+        /// target to hold still.
+        /// </summary>
+        void PlaceInFrontOfViewer()
+        {
+            var camera = viewer != null ? viewer : Camera.main;
+            if (camera == null) return;
+
+            var forward = camera.transform.forward;
+            forward.y = 0f;
+            if (forward.sqrMagnitude < 0.0001f) return;
+            forward.Normalize();
+
+            transform.position = camera.transform.position + forward * distance;
+            transform.rotation = Quaternion.LookRotation(forward);
+        }
+
+        bool StripRequired()        bool StripRequired()
         {
             return confidenceStrip != null && confidenceStrip.gameObject.activeInHierarchy;
         }
