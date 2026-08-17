@@ -295,7 +295,7 @@ namespace EmotionRooms
             transform.rotation = Quaternion.LookRotation(forward);
         }
 
-        bool StripRequired()        bool StripRequired()
+        bool StripRequired()
         {
             return confidenceStrip != null && confidenceStrip.gameObject.activeInHierarchy;
         }
