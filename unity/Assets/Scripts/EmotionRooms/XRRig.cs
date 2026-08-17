@@ -43,8 +43,13 @@ namespace EmotionRooms
 
         void Update()
         {
+            // No isValid gate. It goes stale across the pause and resume cycle Horizon
+            // OS runs whenever the headset shifts on someone's head, and a stale flag
+            // here stops the pose driver: the head stops tracking while the runtime is
+            // perfectly happy to report a pose. The two TryGetFeatureValue calls below
+            // already return false when there is genuinely nothing to read, so the gate
+            // bought nothing and could freeze the view.
             var device = InputDevices.GetDeviceAtXRNode(node);
-            if (!device.isValid) return;
 
             Vector3 position;
             Quaternion rotation;
@@ -436,8 +441,9 @@ namespace EmotionRooms
 
         static bool Pressed(XRNode node)
         {
+            // Same reason as the pose driver: a stale flag here swallows trigger
+            // presses from a controller that is sending them.
             var device = InputDevices.GetDeviceAtXRNode(node);
-            if (!device.isValid) return false;
 
             bool down;
             if (!device.TryGetFeatureValue(CommonUsages.triggerButton, out down))

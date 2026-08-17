@@ -846,7 +846,10 @@ namespace EmotionRooms
             if (board != null) board.Hide();
             if (events != null) events.Write("phase_skipped", null);
 
-            if (trialRunner != null && trialRunner.IsRunning) trialRunner.SkipSession();
+            // The example and practice rooms skip to the real ones, not out of the study.
+            if (oversightReview != null && oversightReview.InPreamble)
+                oversightReview.SkipPreamble();
+            else if (trialRunner != null && trialRunner.IsRunning) trialRunner.SkipSession();
             else if (oversightReview != null && oversightReview.IsRunning) oversightReview.SkipBlock();
             else if (rationaleReview != null && rationaleReview.IsRunning) rationaleReview.SkipBlock();
             return true;

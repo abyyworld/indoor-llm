@@ -289,6 +289,27 @@ namespace EmotionRooms
 
         public bool IsRunning { get; private set; }
 
+        /// <summary>True while the familiarisation or calibration rooms are running.</summary>
+        public bool InPreamble { get; private set; }
+
+        bool skipPreamble;
+
+        /// <summary>
+        /// Abandon the familiarisation or calibration rooms and get on with the block.
+        ///
+        /// The skip button used to call SkipBlock from anywhere, which ends the whole
+        /// session. Pressed during the example rooms -- the part somebody is most likely
+        /// to want to skip, because they have seen it before -- that threw away all
+        /// thirty-two scored trials and reported the study complete. Skipping the
+        /// preamble should mean starting the rooms, not finishing.
+        /// </summary>
+        public void SkipPreamble()
+        {
+            if (!InPreamble) return;
+            skipPreamble = true;
+            if (events != null) events.Write("preamble_skipped", null);
+        }
+
         [Tooltip("Run only the first N trials. 0 runs all of them.\n\n" +
                  "Practice mode sets this so a rehearsal is the real task in miniature " +
                  "rather than a different, shorter thing.")]
@@ -566,8 +587,11 @@ namespace EmotionRooms
             // exactly that reading. Stating the base rate is standard for a detection
             // task and is what separates disagreement with the design, which is not
             // measured here, from detection of tampering, which is.
+            InPreamble = true;
             yield return RunTour(block);
             yield return RunCalibration();
+            InPreamble = false;
+            skipPreamble = false;
 
             if (board != null)
                 board.Show("Checking the system's work\n\n" +
@@ -684,6 +708,7 @@ namespace EmotionRooms
             int correct = 0;
             for (int i = 0; i < practice.trials.Count; i++)
             {
+                if (skipPreamble) break;
                 var trial = practice.trials[i];
                 if (trial.stimulus == null || trial.stimulus.Validate().Count > 0) continue;
 
@@ -753,8 +778,10 @@ namespace EmotionRooms
                     ? values
                     : new[] { values[0], values[values.Length - 1] };
 
+                if (skipPreamble) break;
                 foreach (string value in ends)
                 {
+                    if (skipPreamble) break;
                     var room = baseRoom.With(field, value);
                     if (room == null) continue;
                     var problems = room.Validate();

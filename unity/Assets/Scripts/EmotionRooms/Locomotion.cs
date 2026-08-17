@@ -198,12 +198,25 @@ namespace EmotionRooms
             return position;
         }
 
+        /// <summary>
+        /// Read a thumbstick. Deliberately not gated on isValid.
+        ///
+        /// InputDevices.GetDeviceAtXRNode(...).isValid goes stale across the pause and
+        /// resume cycle Horizon OS runs every time the headset shifts on someone's
+        /// head, and it reports invalid for a controller that is sending input
+        /// perfectly well. The same flag produced a "No controller detected" message on
+        /// screen while the event log filled with trigger presses, and here it made
+        /// walking silently do nothing: the stick was readable and the gate in front of
+        /// it said there was no controller.
+        ///
+        /// TryGetFeatureValue already returns false when there is genuinely nothing to
+        /// read, so the gate bought nothing and cost the feature.
+        /// </summary>
         static bool Stick(XRNode node, out Vector2 value)
         {
             value = Vector2.zero;
-            var device = InputDevices.GetDeviceAtXRNode(node);
-            return device.isValid &&
-                   device.TryGetFeatureValue(CommonUsages.primary2DAxis, out value);
+            return InputDevices.GetDeviceAtXRNode(node)
+                               .TryGetFeatureValue(CommonUsages.primary2DAxis, out value);
         }
     }
 }
