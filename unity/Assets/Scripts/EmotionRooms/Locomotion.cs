@@ -55,7 +55,19 @@ namespace EmotionRooms
         [Tooltip("Walking on the thumbstick. OFF by default: see the note at the top " +
                  "of this file. Turn it on only with a reason that outweighs losing the " +
                  "matched viewpoint.")]
-        public bool enableMovement = false;
+        // On, at Akbar's call, 16 Aug 2026, overruling fdfeb50.
+        //
+        // The cost is real and belongs in the limitations rather than being argued
+        // about again: the two shells are matched on sightlines from one point, so a
+        // participant who wanders sees a geometry nobody specified, and a difference
+        // between curved and linear can then be a difference in where they chose to
+        // stand. What makes it acceptable is that everyone still MEETS each room from
+        // the matched viewpoint -- OversightReview recentres at the start of every
+        // trial -- and that head position is logged at 20 Hz, so how far anyone
+        // actually moved is measurable rather than assumed. An uncontrolled factor that
+        // is recorded can be checked, and if movement turns out not to predict the
+        // ratings, that is a sentence in the paper rather than a hole in it.
+        public bool enableMovement = true;
 
         [Tooltip("Snap turning. Stays on: a seated participant has to be able to look " +
                  "behind them, and snapping is the single biggest reduction in " +

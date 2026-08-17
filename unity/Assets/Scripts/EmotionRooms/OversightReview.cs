@@ -194,6 +194,10 @@ namespace EmotionRooms
         public EventLog events;
         public StudyTelemetry telemetry;
 
+        [Tooltip("Head tracking. Recentred at the start of each trial so every room is " +
+                 "first seen from the standing position the shells are matched on.")]
+        public XRRig xrRig;
+
         [Tooltip("The same affect grid used in Phase A. Needed for the re-rating step: " +
                  "after a participant corrects a room they see their corrected version " +
                  "and rate it, which is what closes the delegation loop.")]
@@ -845,6 +849,16 @@ namespace EmotionRooms
                     trial.ground_truth != null ? trial.ground_truth.swapped_field : null,
                     "shown_as=" + trial.target_emotion_shown);
             }
+
+            // Everyone meets every room from the same spot, even though they can walk.
+            //
+            // Walking is on now, which costs the matched viewpoint the two shells were
+            // dimensioned around. Recentring at the top of each trial gets most of it
+            // back: wherever somebody wandered on the last room, the next one starts
+            // from the standing position, so the first look at every room is the look
+            // the geometry was designed for. What they do after that is theirs, and the
+            // telemetry records it.
+            if (xrRig != null) xrRig.Recentre();
 
             CurrentStimulus = trial.stimulus;
 

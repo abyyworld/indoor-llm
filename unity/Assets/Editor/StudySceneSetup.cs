@@ -187,6 +187,8 @@ namespace EmotionRooms.EditorTools
             xr.headCamera = camera;
             bootstrap.xrRig = xr;
 
+            review.xrRig = xr;
+
             var walking = root.AddComponent<Locomotion>();
             walking.xrRig = xr;
             walking.headCamera = camera;
