@@ -625,8 +625,20 @@ namespace EmotionRooms
       .then(function(r){ if(!r.ok) throw new Error(r.status);
         try{localStorage.removeItem(key)}catch(e){}
         pending=false;
+        // Keep the way onward.
+        //
+        // This used to replace the body with a bare "Saved", which threw away the
+        // links the server's own thanks page carries -- so after finishing the
+        // before-forms there was no route to the after-forms, and the researcher
+        // had to retype the address. The confirmation is worth having; removing
+        // the navigation with it was not.
+        var g=values()['__group']||'';
+        var other=g==='before'?'after':(g==='after'?'before':'');
+        var onward=other
+          ? '<p><a href=\'/group?when='+other+'\'>Go to the '+other+' questionnaires</a></p>'
+          : '';
         document.body.innerHTML='<h1>Saved.</h1><p>Answers are on the headset. '+
-          'You can close this tab.</p>';
+          'You can close this tab.</p>'+onward+'<p><a href=\'/\'>All forms</a></p>';
       });
   }
   // Three failures is about twelve seconds. A blip while the headset wakes should
