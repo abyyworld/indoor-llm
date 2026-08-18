@@ -90,6 +90,10 @@ namespace EmotionRooms
                  "do not sit on top of each other.")]
         public float verticalOffset;
 
+        [Tooltip("Metres to the side. Negative is left. Used to park the reasoning beside " +
+                 "the buttons rather than above them.")]
+        public float horizontalOffset;
+
         public void Show(string message)
         {
             // Wrapped, and the plate resized to fit what wrapping produced.
@@ -150,8 +154,10 @@ namespace EmotionRooms
             if (forward.sqrMagnitude < 0.0001f) return;
             forward.Normalize();
 
+            var right = Vector3.Cross(Vector3.up, forward).normalized * -1f;
             var wanted = camera.transform.position + forward * distance
-                         + Vector3.up * verticalOffset;
+                         + Vector3.up * verticalOffset
+                         + right * horizontalOffset;
             // Eased, not snapped: text glued rigidly to the head is unreadable and
             // nauseating; text that drifts after it reads as a sign hanging in space.
             board.position = Vector3.Lerp(board.position, wanted, Time.deltaTime * 3f);
@@ -172,8 +178,10 @@ namespace EmotionRooms
             if (forward.sqrMagnitude < 0.0001f) forward = Vector3.forward;
             forward.Normalize();
 
+            var side = Vector3.Cross(Vector3.up, forward).normalized * -1f;
             board.position = camera.transform.position + forward * distance
-                           + Vector3.up * verticalOffset;
+                           + Vector3.up * verticalOffset
+                           + side * horizontalOffset;
             board.rotation = Quaternion.LookRotation(forward);
         }
     }

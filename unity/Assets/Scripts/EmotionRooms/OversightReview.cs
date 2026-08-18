@@ -976,8 +976,15 @@ namespace EmotionRooms
                 // else, which is exactly what answering requires.
                 if (board != null)
                 {
+                    // Beside the buttons, not above them. Above works when the panel is
+                    // one row of two, and stops working the moment it is the correction
+                    // panel with ten values on it: the reasoning ends up over the
+                    // participant's head while the thing they are reading it against is
+                    // in front of their chest. Side by side, both are in one glance.
                     board.follow = false;
-                    board.verticalOffset = 0.42f;
+                    board.verticalOffset = 0.05f;
+                    board.horizontalOffset = -1.05f;
+                    board.charactersPerLine = 24;
                     board.Show(shown);
                 }
             }
@@ -999,6 +1006,16 @@ namespace EmotionRooms
             // stays about the artifact, and whether a wrong explanation drives false
             // alarms on the room question becomes something the data can show rather
             // than something the instrument confounds.
+            // Back to the standing position before the questions.
+            //
+            // The panels are fixed in the room, which is what Akbar asked for and is
+            // right: a target that moves has to be found before it can be pointed at.
+            // But walking is on now, so somebody can spend the twenty seconds crossing
+            // the room and end up with the panel behind them. Recentring here puts them
+            // back where the panel is, once, at the point the trial stops being about
+            // looking and starts being about answering.
+            if (xrRig != null) xrRig.Recentre();
+
             detectionAnswered = false;
             if (detectionPanel != null)
                 // Wording and the yes/no mapping in StudyBootstrap.OnDetectionAnswered
@@ -1264,6 +1281,8 @@ namespace EmotionRooms
                         board.Hide();
                         board.follow = true;
                         board.verticalOffset = 0f;
+                        board.horizontalOffset = 0f;
+                        board.charactersPerLine = 30;
                     }
 
                     loader.HideRooms();
@@ -1306,6 +1325,8 @@ namespace EmotionRooms
                 board.Hide();
                 board.follow = true;
                 board.verticalOffset = 0f;
+                board.horizontalOffset = 0f;
+                board.charactersPerLine = 30;
             }
 
             var record = new OversightRecord

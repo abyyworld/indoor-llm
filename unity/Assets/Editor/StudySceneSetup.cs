@@ -562,7 +562,7 @@ namespace EmotionRooms.EditorTools
             go.transform.rotation = Quaternion.LookRotation(camera.transform.forward);
 
             var panel = go.AddComponent<QuestionPanel>();
-            panel.viewer = camera;
+
 
             // Laid out in a grid so a long option list stays reachable without leaning.
             int perRow = values.Length > 6 ? 5 : Mathf.Max(values.Length, 1);

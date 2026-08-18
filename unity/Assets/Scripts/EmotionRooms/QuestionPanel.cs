@@ -128,7 +128,6 @@ namespace EmotionRooms
                     inGroup && (allowed == null || allowed.Contains(option.value)));
             }
 
-            PlaceInFrontOfViewer();
             gameObject.SetActive(true);
 
             // A panel with nothing pressable is a hang, and it is silent.
@@ -140,7 +139,27 @@ namespace EmotionRooms
             int pressable = 0;
             foreach (var option in options)
                 if (option.target != null && option.target.gameObject.activeSelf) pressable++;
+
+            // A floor, not just a complaint.
+            //
+            // A filter that matches nothing leaves a question on screen with no way to
+            // answer it, and the block then waits forever on an answer that cannot be
+            // given. Akbar hit exactly that: a question and no buttons. Showing every
+            // option is wrong in a small way -- it offers values that do not belong to
+            // the attributed field -- and it is wrong in a way somebody can act on and
+            // the analysis can see, which a hang is not.
             if (pressable == 0)
+            {
+                foreach (var option in options)
+                    if (option.target != null) option.target.gameObject.SetActive(true);
+                pressable = options.Count;
+
+                if (events != null)
+                    events.WriteValues("panel_filter_matched_nothing", name, group ?? "none",
+                                       prompt);
+            }
+
+            if (options.Count == 0)
                 Debug.LogError("QuestionPanel " + name + ": no options are pressable for \"" +
                                prompt + "\" (group=" + (group ?? "none") + "). The session " +
                                "will wait here forever. This is a wiring or filter bug.");
@@ -260,41 +279,20 @@ namespace EmotionRooms
             return -1;
         }
 
-        [Tooltip("Whose view the panel places itself in front of. Wired by scene setup.")]
-        public Camera viewer;
-
-        [Tooltip("Metres in front of the participant when it appears.")]
-        public float distance = 1.2f;
-
         /// <summary>
-        /// Put the panel where the participant is actually looking, each time it appears.
+        /// Deliberately NOT repositioned when shown.
         ///
-        /// It used to be positioned once when the scene was generated, at wherever the
-        /// camera happened to be then, and never moved again. That is fine only if the
-        /// participant is standing exactly where the scene builder assumed. They are
-        /// not: a floor-referenced pose puts somebody wherever they physically are in
-        /// their own room, so the panel ends up off to one side and turned away, and the
-        /// buttons are read at an angle. Akbar hit exactly that -- questions "shown
-        /// sideways" and hard to read.
+        /// It used to place itself in front of wherever the participant was looking,
+        /// which was an attempt to fix panels appearing off to one side. That was the
+        /// wrong fix: the cause was participants not starting at the standing position,
+        /// and XRRig recentres for that now, at the start of every trial. Moving the
+        /// panel as well made it arrive somewhere new each time, which is worse -- a
+        /// target that has to be found before it can be pointed at, and one that lands
+        /// wherever somebody happened to have turned.
         ///
-        /// Placed on Show and then left alone. A panel that chased the head every frame
-        /// would be unreadable and could not be pointed at, since aiming requires the
-        /// target to hold still.
+        /// Fixed in the room, in front of the standing position. Recentring is what
+        /// guarantees that is in front of the participant.
         /// </summary>
-        void PlaceInFrontOfViewer()
-        {
-            var camera = viewer != null ? viewer : Camera.main;
-            if (camera == null) return;
-
-            var forward = camera.transform.forward;
-            forward.y = 0f;
-            if (forward.sqrMagnitude < 0.0001f) return;
-            forward.Normalize();
-
-            transform.position = camera.transform.position + forward * distance;
-            transform.rotation = Quaternion.LookRotation(forward);
-        }
-
         bool StripRequired()
         {
             return confidenceStrip != null && confidenceStrip.gameObject.activeInHierarchy;
