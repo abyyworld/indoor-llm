@@ -2398,3 +2398,88 @@ class BlockMetadataTests(unittest.TestCase):
                       if t["condition"] in ("swapped", "random"))
         self.assertEqual(block["altered_rooms"], altered)
         self.assertEqual(block["unaltered_rooms"], len(block["trials"]) - altered)
+
+
+class VerbatimStringTests(unittest.TestCase):
+    """A bare double quote inside a C# @"..." literal ends it early.
+
+    FormServer keeps an entire JavaScript program inside one verbatim string. A
+    comment I added in it contained a quoted word, which terminated the string
+    mid-script: everything after it, including the rest of the JS, the stylesheet and
+    every method below, was parsed as C#. One pair of quotes produced a hundred and
+    thirty errors, and the build it broke was the one Mengkai pulled.
+
+    The failure is invisible when reading the diff, because the offending line looks
+    like an ordinary comment. It is trivial to detect mechanically, so it is detected
+    mechanically.
+    """
+
+    FILES = ("FormServer.cs",)
+
+    def _spans(self, text):
+        """Every @"..." span as (open_line, close_line). Raises if one never closes."""
+        spans, i, line = [], 0, 1
+        while i < len(text):
+            if text[i] == "\n":
+                line += 1
+                i += 1
+                continue
+            if text.startswith('@"', i):
+                opened, i = line, i + 2
+                while i < len(text):
+                    if text[i] == '"':
+                        if i + 1 < len(text) and text[i + 1] == '"':
+                            i += 2
+                            continue
+                        break
+                    if text[i] == "\n":
+                        line += 1
+                    i += 1
+                if i >= len(text):
+                    raise AssertionError(
+                        "verbatim string opened at line %d never closes" % opened)
+                spans.append((opened, line))
+                i += 1
+                continue
+            i += 1
+        return spans
+
+    def test_verbatim_strings_close(self):
+        for name in self.FILES:
+            path = os.path.join(ROOT, "unity", "Assets", "Scripts", "EmotionRooms", name)
+            with open(path, encoding="utf-8") as handle:
+                spans = self._spans(handle.read())
+            self.assertTrue(spans, "%s has no verbatim strings; has it moved?" % name)
+
+    def test_embedded_javascript_is_balanced(self):
+        """The script inside the verbatim string still has matching brackets.
+
+        Not a parser, and not a substitute for one. It catches the specific damage an
+        early-terminated string does: half a program, with the second half gone.
+        """
+        path = os.path.join(ROOT, "unity", "Assets", "Scripts", "EmotionRooms",
+                            "FormServer.cs")
+        with open(path, encoding="utf-8") as handle:
+            text = handle.read()
+
+        marker = 'const string Keeper = @"'
+        start = text.index(marker) + len(marker)
+        out, i = [], start
+        while i < len(text):
+            if text[i] == '"':
+                if i + 1 < len(text) and text[i + 1] == '"':
+                    out.append('"')
+                    i += 2
+                    continue
+                break
+            out.append(text[i])
+            i += 1
+        script = "".join(out)
+
+        self.assertIn("<script>", script)
+        self.assertIn("</script>", script)
+        for opener, closer in (("{", "}"), ("(", ")"), ("[", "]")):
+            self.assertEqual(
+                script.count(opener), script.count(closer),
+                "unbalanced %s%s in the embedded script, which usually means the "
+                "verbatim string ended early" % (opener, closer))

@@ -625,13 +625,9 @@ namespace EmotionRooms
       .then(function(r){ if(!r.ok) throw new Error(r.status);
         try{localStorage.removeItem(key)}catch(e){}
         pending=false;
-        // Keep the way onward.
-        //
-        // This used to replace the body with a bare "Saved", which threw away the
-        // links the server's own thanks page carries -- so after finishing the
-        // before-forms there was no route to the after-forms, and the researcher
-        // had to retype the address. The confirmation is worth having; removing
-        // the navigation with it was not.
+        // Keep the way onward. Replacing the whole body with a bare confirmation
+        // threw away the links the thanks page carries, so finishing the
+        // before-forms left no route to the after-forms.
         var g=values()['__group']||'';
         var other=g==='before'?'after':(g==='after'?'before':'');
         var onward=other
